@@ -400,14 +400,14 @@ postproc_add_disconnected_clients_TTRP<-function(rutas_res, rutas, input, R, Rha
 
         if (((node_cap + rutas_res[[j]]$capacity) <= limit_cap) && (next_r)) {
           subroute <- append(0, node_to_add)
-          subroute <- append(subroute, rutas_res[[j]]$subroute[2:length(rutas_res[[j]]$subroute)])
+          subroute <- append(subroute, rutas_res[[j]]$route[2:length(rutas_res[[j]]$route)])
           cost <- calc_load2(subroute, input$vector.demandas)
           if (cost < min_value ) {
             min_value <- cost
             index_to_insert <- j
             subroute_selected <- subroute
           }
-          subroute <- append(rutas_res[[j]]$subroute[1:(length(rutas_res[[j]]$subroute)-1)], node_to_add)
+          subroute <- append(rutas_res[[j]]$route[1:(length(rutas_res[[j]]$route)-1)], node_to_add)
           subroute <- append(subroute, 0)
           cost <- calc_load2(subroute, input$vector.demandas)
           if (cost < min_value ) {
@@ -419,14 +419,14 @@ postproc_add_disconnected_clients_TTRP<-function(rutas_res, rutas, input, R, Rha
         }
       }
       if (index_to_insert != -1) {
-        rutas_res[[index_to_insert]]$subroute <- subroute_selected
+        rutas_res[[index_to_insert]]$route <- subroute_selected
         rutas_res[[index_to_insert]]$type <- select_type
       } else {
         index_to_insert <- length(rutas_res)+1
         subroute <- append(0, node_to_add)
         subroute <- append(subroute, 0)
         rutas_res[[index_to_insert]] <- list()
-        rutas_res[[index_to_insert]]$subroute <-  subroute
+        rutas_res[[index_to_insert]]$route <-  subroute
         if (node_to_add <= input$n1) { rutas_res[[index_to_insert]]$type <- "PVR"; }
         else {  rutas_res[[index_to_insert]]$type <- "PTR"; }
         rutas_res[[index_to_insert]]$capacity <-calc_load2(subroute, input$vector.demandas)
@@ -464,8 +464,8 @@ postproc_add_new_subroutes_TTRP<-function(rutas_res, rutas, input, opt){
                 ((rutas_res[[i]]$capacity_truck + new_rutas_res[[j]]$capacity_truck) <= input$capacidad.truck)){
 
 
-                subroute_pvr <- rutas_res[[i]]$subroute
-                subroute_ptr <- new_rutas_res[[j]]$subroute
+                subroute_pvr <- rutas_res[[i]]$route
+                subroute_ptr <- new_rutas_res[[j]]$route
 
                 #print("INTENTANDO METER:")
                 #print(subroute_pvr)
@@ -473,12 +473,11 @@ postproc_add_new_subroutes_TTRP<-function(rutas_res, rutas, input, opt){
                 #print(subroute_ptr)
 
                 for (z in 2:(length(subroute_pvr)-1)) {
-
-                    new_route <- new_rutas_res
-                    aux <- append(subroute_pvr[1:z], subroute_ptr[2:(length(subroute_ptr)-1)])
-                    aux <- append(aux, subroute_pvr[z:length(subroute_pvr)])
-                    #print(j)
-                    new_route[[j]]$subroute <- aux
+                    
+                  new_route <- new_rutas_res
+                  aux <- append(subroute_pvr[1:z], subroute_ptr[2:(length(subroute_ptr)-1)])
+                  aux <- append(aux, subroute_pvr[z:length(subroute_pvr)])
+                    new_route[[j]]$route <- aux
                     new_route[[j]]$type <- "CVR"
                     new_route[[j]]$capacity <- calc_load2(aux, input$vector.demandas)
                     new_route[[j]]$capacity_truck <- calc_load_only_truck(aux, input$vector.demandas, input)
@@ -487,16 +486,13 @@ postproc_add_new_subroutes_TTRP<-function(rutas_res, rutas, input, opt){
                     feasible <- 0
                     if ((new_route[[j]]$capacity <= input$capacidad.vehiculo) &&
                         (new_route[[j]]$capacity_truck <= input$capacidad.truck)) feasible <- 1
-                    #print(paste0(z, " con coste ", cost , " min_cost ", min_cost))
-                    #print(new_route[[j]]$subroute)
                     if ((cost < min_cost) && (feasible == 1)) {
-                      #print("EEEEEEEEEEEXITIIIITTOOOOO")
-                      #print(convert_in_route(new_route_eval))
                       success <- 1
                       index_j <- j
                       selected_subroute <- new_route
                       min_cost <- cost
                     }
+
                 }
 
             }
@@ -523,7 +519,7 @@ convert_in_route<-function(route_res) {
   route <- list()
   route <- 0
   for (i in 1:length(route_res)) {
-    route <- c(route, route_res[[i]]$subroute[2:length(route_res[[i]]$subroute)])
+    route <- c(route, route_res[[i]]$route[2:length(route_res[[i]]$route)])
     route <- c(route, 0)
   }
 

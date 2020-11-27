@@ -47,7 +47,7 @@ CW_algorithm<-function(string, option, verbose){
     totaltime <- difftime(Sys.time(), start_time, units = "secs")
 
     print(paste0("Result: ", string))
-    print(paste0("    Cost ", result$coste))
+    print(paste0("    Cost ", result$cost))
     print(paste0("    Time ", totaltime," seconds"))
     print(paste0("    N trucks ", result$n_trucks))
     print(paste0("    N trailers ", result$n_trailers))
@@ -55,8 +55,8 @@ CW_algorithm<-function(string, option, verbose){
     print(paste0("    PVR ", result$PVR))
     print(paste0("    CVR ", result$CVR))
     string_route <- "    Route: "
-    for (i in 1:length(result$rutas)) {
-      string_route <- paste0(string_route, " ", result$rutas[i])
+    for (i in 1:length(result$routes)) {
+      string_route <- paste0(string_route, " ", result$routes[i])
     }
     print(string_route)
     print("")
@@ -101,8 +101,8 @@ CW_algorithm<-function(string, option, verbose){
     print(paste0("    PVR ", result$PVR))
     print(paste0("    CVR ", result$CVR))
     string_route <- "    Route: "
-    for (i in 1:length(result$rutas)) {
-      string_route <- paste0(string_route, " ", result$rutas[i])
+    for (i in 1:length(result$routes)) {
+      string_route <- paste0(string_route, " ", result$routes[i])
     }
     print(string_route)
     print("")

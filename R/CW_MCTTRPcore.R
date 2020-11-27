@@ -233,6 +233,7 @@ CW_MCTTRPcore<-function(matriz.demandas, matriz.distancia, capacidad.truck, capa
   }  #Fin del while
 
   rutas <- return_route_MCTTRP(CWTTRP_struct, Tolvas, R, Rhat, n, n1, verbose)
+  rutas <- delete_dupl_zeros_route(rutas)
 
   ##################################################################################
   # POSTPROCESSING
@@ -246,7 +247,7 @@ CW_MCTTRPcore<-function(matriz.demandas, matriz.distancia, capacidad.truck, capa
                                                         CWTTRP_struct$demandas_res,
                                                         n1, n, nf,
                                                         CWTTRP_struct$t, num_clientes)
-  rutas <- result_postproc1$rutas
+  rutas <- delete_dupl_zeros_route(result_postproc1$rutas)
   Tolvas <- result_postproc1$Tolvas
   CWTTRP_struct$H.trailer_res <- result_postproc1$H.trailer_res
   CWTTRP_struct$H.camion_res <- result_postproc1$H.camion_res
@@ -254,17 +255,16 @@ CW_MCTTRPcore<-function(matriz.demandas, matriz.distancia, capacidad.truck, capa
   CWTTRP_struct$t <- result_postproc1$t
   num_clientes <- result_postproc1$num_clientes #rev1
 
-
   result_postproc2 <- postproc_subroutes_trailer_routes(rutas, matriz.distancia,
                                                         Tolvas, R, Rhat, 0)
-  rutas <- result_postproc2$rutas
+  rutas <- delete_dupl_zeros_route(result_postproc2$rutas)
   R <- result_postproc2$R
   Rhat <- result_postproc2$Rhat
   rutas.des <- result_postproc2$rutas.des
 
   result_postproc2 <- postproc_subroutes_trailer_routes(rutas, matriz.distancia,
                                                         Tolvas, R, Rhat, 1)
-  rutas <- result_postproc2$rutas
+  rutas <- delete_dupl_zeros_route(result_postproc2$rutas)
   R <- result_postproc2$R
   Rhat <- result_postproc2$Rhat
   rutas.des <- result_postproc2$rutas.des
@@ -288,8 +288,11 @@ CW_MCTTRPcore<-function(matriz.demandas, matriz.distancia, capacidad.truck, capa
   final_result <- createResultStruct_MCTTRP(rutas, coste.total, R, Rhat, Tolvas,
                                      CWTTRP_struct$H.camion_res,
                                      CWTTRP_struct$H.trailer_res,
-                                     CWTTRP_struct$demandas_res, rutas.des, input)
+                                     input$matriz.demandas, rutas.des, input)
 
 
   return(final_result)
 } #Fin de la funcion
+
+
+

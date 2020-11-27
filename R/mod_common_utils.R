@@ -127,7 +127,7 @@ return_route_TTRP<-function(CWTTRP_struct, R, Rhat, n, n1, verbose){
         else if ((R[i,3]==0) && (sum(CWTTRP_struct$parking_list==i)==1)){
           # dado que esta en el MT, comenzamos por incluirlo. Y ahora tambien tenemos
           # que ir recorriendo su correspondiente ruta
-          print(R[i,])
+#          print(R[i,])
 
             rutas[indicador] <- (i-1)
 
@@ -361,6 +361,28 @@ calc_load_only_truck<-function(local_route, vector.demandas, input) {
   return(load)
 }
 
+calc_load2_MC<-function(local_route, matrix.demands) {
+  load <- 0.0
+  for(i in 1:(length(local_route))){
+    for (j in 1:length(matrix.demands[local_route[i]+1,])) {
+         load<-load + matrix.demands[local_route[i]+1,j]
+    }
+  }
+  return(load)
+}
+
+calc_load_only_truck_MC<-function(local_route, matrix.demands, input) {
+  load <- 0.0
+  for(i in 1:(length(local_route))){
+    if (local_route[i] > input$n1) {
+      for (j in 1:length(matrix.demands[local_route[i]+1,])) {
+          load<-load + matrix.demands[local_route[i]+1,j]
+      }
+    }
+  }
+  return(load)
+}
+
 analyse<-function(rutas, input, rutas_res) {
 
   lista <- sort(unique(rutas))
@@ -441,30 +463,31 @@ analyse<-function(rutas, input, rutas_res) {
 
 
 
-create_result_struct<-function(rutas, input) {
+create_result_struct<-function(rutas, input, option) {
 
+  
   rutas_res <- list()
   counter <- 1
   for (i in 2:(length(rutas))) {
 
     if ((rutas[i-1] == 0) && (rutas[i] != 0)) {
-      subroute <- list()
-      subroute <- c(0, rutas[i])
+      route <- list()
+      route <- c(0, rutas[i])
     }
     else if ((rutas[i-1] != 0) && (rutas[i] == 0)) {
-      exist_subroute <- 0
-      if (sum(duplicated(subroute))) exist_subroute <- 1
-      subroute <- c(subroute, 0)
+      exist_route <- 0
+      if (sum(duplicated(route))) exist_route <- 1
+      route <- c(route, 0)
 
       exist_truck <- 0
 
-      if (sum(subroute>input$n1)) exist_truck <- 1
+      if (sum(route>input$n1)) exist_truck <- 1
 
-      if (exist_subroute == 1) {
+      if (exist_route == 1) {
         rutas_res[[counter]] <- list()
         rutas_res[[counter]]$type <-  "CVR"
       }
-      else if ((exist_subroute == 0) && (exist_truck == 1)) {
+      else if ((exist_route == 0) && (exist_truck == 1)) {
         rutas_res[[counter]] <- list()
         rutas_res[[counter]]$type <-  "PTR"
       }
@@ -472,13 +495,19 @@ create_result_struct<-function(rutas, input) {
         rutas_res[[counter]] <- list()
         rutas_res[[counter]]$type <-  "PVR"
       }
-      rutas_res[[counter]]$subroute <-  subroute
-      rutas_res[[counter]]$capacity <-  calc_load2(subroute, input$vector.demandas)
-      rutas_res[[counter]]$capacity_truck <- calc_load_only_truck(subroute, input$vector.demandas, input)
-      rutas_res[[counter]]$cost <- local_cost(subroute, input$matriz.distancia)
+      rutas_res[[counter]]$route <-  route
+      if (option == "TTRP") {
+          rutas_res[[counter]]$capacity <-  calc_load2(route, input$vector.demandas)
+          rutas_res[[counter]]$capacity_truck <- calc_load_only_truck(route, input$vector.demandas, input)
+      } 
+      else if (option == "MCTTRP")  {
+        rutas_res[[counter]]$capacity <-  calc_load2_MC(route, input$matriz.demandas)
+        rutas_res[[counter]]$capacity_truck <- calc_load_only_truck_MC(route, input$matriz.demandas, input)        
+      }
+      rutas_res[[counter]]$cost <- local_cost(route, input$matriz.distancia)
       counter <- counter + 1
     } else if ((rutas[i-1] != 0) && (rutas[i] != 0)) {
-      subroute <- c(subroute, rutas[i])
+      route <- c(route, rutas[i])
     }
 
   }
@@ -502,13 +531,33 @@ check_pvr<-function(position, R, input, option) {
 
   result <- 1
   if ((condition == 1) && (load > threshold)) {
-    #print("EVITAAAAA!!!!!!")
     result <- 0
   }
 
   return(result)
 }
 
+delete_dupl_zeros_route<-function(route) {
+  new_route <- c(0)
+  for (i in 2:length(route)) {
+    if (!(route[i-1] == 0 && route[i] == 0)) {
+      new_route <- c(new_route, route[i])
+    }
+  } 
+    return (new_route)
+}
 
+
+delete_zeros<-function(route) {
+  bool_route <- (route != 0)
+  new_route <- c(-1)
+  for (i in 1:length(bool_route)) {
+    if (bool_route[i]) {
+      new_route <- c(new_route, route[i])
+    }
+  } 
+  new_route <- new_route[2:length(new_route)]
+  return (new_route)
+}
 
 

@@ -195,7 +195,7 @@ while(Sm>0){ #Mientras existan ahorros mayores que cero buscamos rutas factibles
 
 rutas <- return_route_TTRP(CWTTRP_struct, R, Rhat, n, n1, verbose)
 
-rutas_res <- create_result_struct(rutas, input)
+rutas_res <- create_result_struct(rutas, input, "TTRP")
 
 rutas_res <- postproc_add_disconnected_clients_TTRP(rutas_res, rutas, input, R, Rhat)
 
@@ -203,7 +203,7 @@ rutas_res <- postproc_add_new_subroutes_TTRP(rutas_res, rutas, input, 0)
 
 rutas <- convert_in_route(rutas_res)
 
-result <- createFinalResult_TTRP(rutas, R, Rhat, matriz.distancia, rutas_res)
+result <- createFinalResult_TTRP(rutas, R, Rhat, matriz.distancia, rutas_res, vector.demandas)
 
   return(result)
 } #Fin de la funcion

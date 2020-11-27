@@ -95,8 +95,8 @@ createResultStruct_MCTTRP<-function(rutas, coste.total, R, Rhat, Tolvas, H.camio
                                     H.trailer_res, demandas_res, rutas.des, input){
   # result$res <<- repasar
   result=list()
-  result$rutas <- rutas
-  result$coste <- coste.total
+  result$routes <- rutas
+  result$cost <- coste.total
   result$R <- R
   result$Rhat <- Rhat
   result$Tolvas <- Tolvas
@@ -109,7 +109,7 @@ createResultStruct_MCTTRP<-function(rutas, coste.total, R, Rhat, Tolvas, H.camio
   ptr <- 0
   pvr <- 0
   cvr <- 0
-  result_res <- create_result_struct(rutas, input)
+  result_res <- create_result_struct(rutas, input, "MCTTRP")
   for (i in 1:length(result_res)) {
     if (result_res[[i]]$type == "PTR") {
       n_trucks <- n_trucks + 1
@@ -120,6 +120,24 @@ createResultStruct_MCTTRP<-function(rutas, coste.total, R, Rhat, Tolvas, H.camio
       if (result_res[[i]]$type == "PVR") pvr <- pvr + 1
       if (result_res[[i]]$type == "CVR") cvr <- cvr + 1
     }
+    result_res[[i]]$clients <- list() 
+    num_clients <- delete_zeros(unique(result_res[[i]]$route))
+    counter <- 1
+    for (j in num_clients) {
+      client <- list()
+      client$id <- j
+      client$demands <- result$demandas_res[j+1,]
+      client$hoppers <- list()
+      counter2 <- 1
+      for (z in 1:length(result$Tolvas[,1])) {
+        if (result$Tolvas[z,1] == j) {
+          client$hoppers[[counter2]] <- result$Tolvas[z,]
+          counter2 <- counter2 + 1
+        }
+      }
+      result_res[[i]]$clients[[counter]] <- client
+      counter <- counter + 1
+    }
   }
 
   result$n_trucks <- n_trucks
@@ -127,6 +145,7 @@ createResultStruct_MCTTRP<-function(rutas, coste.total, R, Rhat, Tolvas, H.camio
   result$PTR <- ptr
   result$PVR <- pvr
   result$CVR <- cvr
+  result$result_res <- result_res
 
   return(result)
 }
@@ -233,7 +252,7 @@ matrixShat<-function(matriz.distancia,n, n1){
 #'
 #' @param input Input structure list
 #' @return A list with all information about the route.
-createFinalResult_TTRP<-function(rutas, R, Rhat, matriz.distancia, result_res){
+createFinalResult_TTRP<-function(rutas, R, Rhat, matriz.distancia, result_res, vector.demandas){
   # rutas[which(rutas==0)]<-1
   coste.total<-0
   for(i in 1:(length(rutas)-1)){
@@ -256,11 +275,23 @@ createFinalResult_TTRP<-function(rutas, R, Rhat, matriz.distancia, result_res){
         if (result_res[[i]]$type == "PVR") pvr <- pvr + 1
         if (result_res[[i]]$type == "CVR") cvr <- cvr + 1
       }
+
+      result_res[[i]]$clients <- list() 
+      
+        num_clients <- delete_zeros(unique(result_res[[i]]$route))
+        counter <- 1
+        for (j in num_clients) {
+          client <- list()
+          client$id <- j
+          client$demands <- vector.demandas[j+1]
+          result_res[[i]]$clients[[counter]] <- client
+          counter <- counter + 1
+        }    
   }
 
   result = list()
-  result$rutas = rutas
-  result$coste = coste.total
+  result$routes = rutas
+  result$cost = coste.total
   result$R = R
   result$Rhat = Rhat
   result$n_trucks = n_trucks
@@ -268,6 +299,7 @@ createFinalResult_TTRP<-function(rutas, R, Rhat, matriz.distancia, result_res){
   result$PVR <- pvr
   result$PTR <- ptr
   result$CVR <- cvr
+  result$result_res <- result_res
 
   return(result)
 }
