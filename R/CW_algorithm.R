@@ -93,7 +93,7 @@ CW_algorithm<-function(string, option, verbose){
 
     totaltime <- difftime(Sys.time(), start_time, units = "secs")
     print(paste0("Result: ", string))
-    print(paste0("    Cost ", result$coste))
+    print(paste0("    Cost ", result$cost))
     print(paste0("    Time ", totaltime," seconds"))
     print(paste0("    N trucks ", result$n_trucks))
     print(paste0("    N trailers ", result$n_trailers))
