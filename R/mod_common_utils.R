@@ -401,7 +401,7 @@ analyse<-function(rutas, input, rutas_res) {
 
   for (i in 1:length(rutas_res)) {
     if (rutas_res[[i]]$type == "CVR") {
-        if (rutas_res[[i]]$capacity_truck > input$capacidad.truck) {
+        if (rutas_res[[i]]$total_load_tc_clients > input$capacidad.truck) {
           print(paste0("ERROR in CVR ", i))
           counter_errors <- counter_errors +  1
         }
@@ -463,6 +463,97 @@ analyse<-function(rutas, input, rutas_res) {
 
 
 
+update_Tolvas<-function(Hoppers, rutas) {
+  rutas_num <- rutas
+
+  for (i in 1:(length(rutas))) {
+    if (rutas[i]==0) {
+      rutas_num[i] = 0
+    } else {
+      for (j in 1:length(Hoppers[,1])) {
+        if (Hoppers[j, 1] == rutas[i]) {
+          rutas_num[i] = Hoppers[j, 4]
+          break;
+        } 
+      }
+    }
+  }
+  
+  return(rutas_num)
+}
+
+check_Hoppers_route<-function(rutas_id) {
+  error <- "NO ERROR IN HOPPERS"
+  current_id <- 0
+  
+  for (i in 2:(length(rutas_id))) {
+    if ((rutas_id[i-1]==0) && ((rutas_id[i]!=0))) {
+      current_id = rutas_id[i]
+    }
+    else if ((rutas_id[i-1]!=0) && ((rutas_id[i]!=0))) {
+      if (current_id != rutas_id[i]) {
+        error <- "ERROR IN HOPPERS"
+        break
+      }
+    }
+  }
+  
+  return(error)
+}
+
+update_Hopper_matrix<-function(Hoppers, H.trailer_res, H.truck_res, input, rutas) {
+  rutas <- delete_dupl_zeros_route(rutas)
+  counter_routes <- 1
+  for (i in 2:(length(rutas))) {
+    if (rutas[i]==0) {
+      counter_routes = counter_routes + 1
+    } else {
+      for (j in 1:length(Hoppers[,1])) {
+        if (Hoppers[j, 1] == rutas[i]) {
+          Hoppers[j, 4] = counter_routes
+        } 
+      }
+    }
+  }
+  
+  H.truck_res  <-  input$H.camion
+  H.trailer_res <- input$H.trailer
+  counter_routes <- counter_routes - 1
+
+  for (i in 1:counter_routes) {
+    counter_hoppers_trailer <- 0
+    counter_hoppers_truck <- 0
+    for (j in 1:length(Hoppers[,1])) {
+      if ((Hoppers[j, 4] == i)&&(Hoppers[j, 3] == "trailer")) {
+        counter_hoppers_trailer <- counter_hoppers_trailer + 1
+      }
+      if ((Hoppers[j, 4] == i)&&(Hoppers[j, 3] == "truck")) {
+        counter_hoppers_truck <- counter_hoppers_truck + 1
+      }
+    }
+    
+    if (counter_hoppers_truck) {
+      for (z in 1:counter_hoppers_truck) {
+          H.truck_res[i,z] = -1
+      }
+    }
+    
+    if (counter_hoppers_trailer) {
+      for (z in 1:counter_hoppers_trailer) {
+          H.trailer_res[i,z] = -1
+      }
+    }
+    
+  }
+  
+  result <- list()
+  result$Hoppers <- Hoppers
+  result$H.trailer_res <- H.trailer_res
+  result$H.truck_res <- H.truck_res
+  
+  return(result)
+}
+
 create_result_struct<-function(rutas, input, option) {
 
   
@@ -497,12 +588,12 @@ create_result_struct<-function(rutas, input, option) {
       }
       rutas_res[[counter]]$route <-  route
       if (option == "TTRP") {
-          rutas_res[[counter]]$capacity <-  calc_load2(route, input$vector.demandas)
-          rutas_res[[counter]]$capacity_truck <- calc_load_only_truck(route, input$vector.demandas, input)
+          rutas_res[[counter]]$total_load <-  calc_load2(route, input$vector.demandas)
+          rutas_res[[counter]]$total_load_tc_clients <- calc_load_only_truck(route, input$vector.demandas, input)
       } 
       else if (option == "MCTTRP")  {
-        rutas_res[[counter]]$capacity <-  calc_load2_MC(route, input$matriz.demandas)
-        rutas_res[[counter]]$capacity_truck <- calc_load_only_truck_MC(route, input$matriz.demandas, input)        
+        rutas_res[[counter]]$total_load <-  calc_load2_MC(route, input$matriz.demandas)
+        rutas_res[[counter]]$total_load_tc_clients <- calc_load_only_truck_MC(route, input$matriz.demandas, input)        
       }
       rutas_res[[counter]]$cost <- local_cost(route, input$matriz.distancia)
       counter <- counter + 1
@@ -511,9 +602,34 @@ create_result_struct<-function(rutas, input, option) {
     }
 
   }
+  
+  
 
   return(rutas_res)
 }
+
+
+calc_load_hoppers<-function(Hoppers, num_veh, cap_hoppers_truck, cap_hoppers_trailer) {
+  num_hoppers_truck <- 0
+  num_hoppers_trailer <- 0
+  for (i in 1:length(Hoppers[,1])) {
+    if (Hoppers[i, 4] == num_veh) {
+      if (Hoppers[i, 3] == "trailer") {
+        num_hoppers_trailer = num_hoppers_trailer + 1
+      }
+      else if (Hoppers[i, 3] == "truck") {
+        num_hoppers_truck = num_hoppers_truck + 1
+      }
+    }
+  }
+  
+  result_load <- list()
+  
+  result_load$used_hoppers_truck <- num_hoppers_truck 
+  result_load$used_hoppers_trailer <- num_hoppers_trailer 
+  return(result_load)
+}
+
 
 check_pvr<-function(position, R, input, option) {
   if (option == "left") dir <-1

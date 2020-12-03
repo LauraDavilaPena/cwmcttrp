@@ -84,13 +84,11 @@ addWorkload_R_check_subtour<-function(R, Rhat, Tolvas, input, CWTTRP_struct,
       pos1 <- result_sub$pos1
       n.truck <- result_sub$n.truck
       n.trailer <- result_sub$n.trailer
-
     }
 
     result_sub <- check_tolvas(pos1, Tolvas, n.truck, n.trailer)
     n.truck <- result_sub$n.truck
     n.trailer <- result_sub$n.trailer
-
     CWTTRP_struct$CargaT<-CWTTRP_struct$CargaT+sum(input$matriz.demandas[R[pos1,rr1]+1,])
     pos1<- R[pos1,rr1] + 1
     if(pos1==pos4) a2 <- a2 + 1

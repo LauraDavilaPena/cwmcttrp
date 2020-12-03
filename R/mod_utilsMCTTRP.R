@@ -1,3 +1,7 @@
+reprow <- function(x, m) {
+  x[rep(seq_len(nrow(x)), times=m),,drop=FALSE]
+}
+
 check_tolvas<-function(position, Tolvas, n.truck, n.trailer){
 
   if(sum(Tolvas[,1]==(position-1))>0){

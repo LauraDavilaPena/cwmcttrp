@@ -116,17 +116,17 @@ SmInShat_TcVc_with_hoppers<-function(CWTTRP_struct, Tolvas, R, Rhat, S, Shat,
 
     # if there are previous or later clients
     if (a>1 && b>1){
-      if (Rhat[pos$Positioncolumnas,3]!=0){
-        cliente_subruta <- (Rhat[pos$Positioncolumnas,3]+1)
-        Carga_subruta <- sum(input$matriz.demandas[Rhat[cliente_subruta,2]+1,])
-
-        while(Rhat[cliente_subruta,3]!=(pos$Positioncolumnas-1)){
-          Carga_subruta <- Carga_subruta + sum(input$matriz.demandas[Rhat[cliente_subruta,3]+1,])
-          cliente_subruta <- Rhat[cliente_subruta,3]+1
+        if (Rhat[pos$Positioncolumnas,3]!=0){
+            cliente_subruta <- (Rhat[pos$Positioncolumnas,3]+1)
+            Carga_subruta <- sum(input$matriz.demandas[Rhat[cliente_subruta,2]+1,])
+    
+            while(Rhat[cliente_subruta,3]!=(pos$Positioncolumnas-1)){
+              Carga_subruta <- Carga_subruta + sum(input$matriz.demandas[Rhat[cliente_subruta,3]+1,])
+              cliente_subruta <- Rhat[cliente_subruta,3]+1
+            }
+    
+            CWTTRP_struct$CargaT <- CWTTRP_struct$CargaT - Carga_subruta
         }
-
-        CWTTRP_struct$CargaT <- CWTTRP_struct$CargaT - Carga_subruta
-      }
     }
 
     CWTTRP_struct$aux <- 0
@@ -155,8 +155,9 @@ SmInShat_TcVc_with_hoppers<-function(CWTTRP_struct, Tolvas, R, Rhat, S, Shat,
            input$matriz.distancia[pos$Positionfilas,pos$Positioncolumnas] >= 0) ){#Anhadimos la ruta si es factible
 
         if(n.truck_j==0 && n.trailer_j==0){
-          ss <- min(which(CWTTRP_struct$H.trailer_res[,1]!=-1))
-          ss <- as.numeric(ss)
+          ss <- max(n.truck_i, n.trailer_i)
+          #min(which(CWTTRP_struct$H.trailer_res[,1]!=-1))
+          #ss <- as.numeric(ss)
 
           tt <- 1 # comenzamos llenando la primera tolva
 
@@ -200,10 +201,12 @@ SmInShat_TcVc_with_hoppers<-function(CWTTRP_struct, Tolvas, R, Rhat, S, Shat,
 
           }# aqui acaba el bucle "for (i in 1:nf)" para el cliente vc.
         }
-
+        
         if(n.truck_i==0 && n.trailer_i==0){
-          s <- min(which(CWTTRP_struct$H.camion_res[,1]!=-1))
-          s <- as.numeric(s)
+          s <- max(n.truck_j, n.trailer_j)
+
+          # s <- min(which(CWTTRP_struct$H.camion_res[,1]!=-1))
+          #s <- as.numeric(s)
           tc <- 1
 
           for (i in 1:nf){
@@ -367,11 +370,6 @@ SmInShat_TcVc_with_hoppers<-function(CWTTRP_struct, Tolvas, R, Rhat, S, Shat,
   result$S <- S
   result$Shat <- Shat
   result$Tolvas <- Tolvas
-  result$t <- t
-  result$s <- s
-  result$tc <- tc
-  result$tt <- tt
-  result$ss <- ss
   result$n  <- n
   result$merge <- merge
   return(result)
@@ -479,12 +477,6 @@ SmInShat_TcVc<-function(CWTTRP_struct, R, Rhat, S, Shat, input, debug){
         print(paste0("feasible ->", unfeasibility))
         print(paste0(vc_load_route1," ",tc_load_route1 ))
         print(paste0(vc_load_route2," ",tc_load_route2))
-        readline()
-        readline()
-        print(R)
-        print(Rhat)
-        readline()
-        readline()
       }
 
       feasible_condition1 <- input$matriz.distancia[1,CWTTRP_struct$new$Positionfilas]+

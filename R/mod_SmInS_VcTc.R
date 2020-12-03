@@ -86,11 +86,6 @@ SmInS_VcTc_with_hoppers<-function(CWTTRP_struct, Tolvas, R, Rhat, S, Shat, input
   result$S <- S
   result$Shat <- Shat
   result$Tolvas <- Tolvas
-  result$t <- t
-  result$s <- s
-  result$tc <- tc
-  result$tt <- tt
-  result$ss <- ss
   result$n  <- n
   result$merge <- merge
 
@@ -220,22 +215,42 @@ SmInS_VcTc_apply_fusion_with_hoppers<-function(CWTTRP_struct, Tolvas, R, Rhat, S
       ss.aux <- ss
       ss.aux <- as.numeric(ss.aux)
 
-      if(sum(Tolvas[,1]==(pos$Positionfilas-1))>0){
+      if (sum(Tolvas[,1]==(pos$Positionfilas-1))>0){
         CWTTRP_struct$aux <- max(which(Tolvas[,1]==(pos$Positionfilas-1)))
         if (Tolvas[CWTTRP_struct$aux,3]=="trailer"){
           ss <- Tolvas[CWTTRP_struct$aux,4]
           ss <- as.numeric(ss)
-        }else{
+        }
+        else{
           s <- Tolvas[CWTTRP_struct$aux,4]
           s <- as.numeric(s)
         }
       }
-      if(sum(Tolvas[,1]==(pos$Positionfilas-1))==0 && sum(Tolvas[,1]==(pos$Positioncolumnas-1))==0 && sum(CWTTRP_struct$H.trailer_res[ss.aux,])!=sum(input$H.trailer[ss.aux,]) && ss == ss.aux){
-        ss <- ss + 1
-        ss <- as.numeric(ss)}
-      if(sum(Tolvas[,1]==(pos$Positionfilas-1))==0 && sum(Tolvas[,1]==(pos$Positioncolumnas-1))==0  && sum(CWTTRP_struct$H.camion_res[s.aux,])!=sum(input$H.camion[s.aux,]) && s == s.aux){
-        s <- s + 1
-        s <- as.numeric(s)}
+      
+      if (sum(Tolvas[,1]==(pos$Positionfilas-1))==0 && 
+         sum(Tolvas[,1]==(pos$Positioncolumnas-1))==0 && 
+         ss == ss.aux){
+         #sum(CWTTRP_struct$H.trailer_res[ss.aux,])!=sum(input$H.trailer[ss.aux,]) && ss == ss.aux){
+          for (i in 1:length(CWTTRP_struct$H.trailer_res[,1])) {
+            if ((sum(CWTTRP_struct$H.trailer_res[i,] == -1)  == 0) &&
+                (sum(CWTTRP_struct$H.camion_res[i,] == -1)  == 0)) {
+              ss <- i
+              s <- i
+              break;
+            }
+          }
+      }
+      
+      #if(sum(Tolvas[,1]==(pos$Positionfilas-1))==0 && 
+      #   sum(Tolvas[,1]==(pos$Positioncolumnas-1))==0  && 
+      #   sum(CWTTRP_struct$H.camion_res[s.aux,])!=sum(input$H.camion[s.aux,]) && s == s.aux){
+      #  #s <- s + 1
+      #  #s <- as.numeric(s)
+      #  auxv = which(CWTTRP_struct$H.camion_res[,1]!=-1)
+      #  for (cc in 1:length(auxv)) {
+      #    if (CWTTRP_struct$H.trailer_res[cc,1]!=-1) { s <- as.numeric(cc); break; }
+      #  }
+      #}
 
       if(sum(Tolvas[,1]==(pos$Positioncolumnas-1))>0){
         CWTTRP_struct$aux1 <- min(which(Tolvas[,1]==(pos$Positioncolumnas-1)))

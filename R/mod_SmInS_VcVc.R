@@ -8,6 +8,8 @@ SmInS_VcVc_with_hoppers<-function(CWTTRP_struct, Tolvas, R, Rhat, S, Shat,
   ss <- CWTTRP_struct$ss
   merge <- 0
 
+  
+  
   if(R[pos$Positionfilas,3]==0 && R[pos$Positioncolumnas,1]==0 &&
      CWTTRP_struct$CargaT<=input$capacidad.vehiculo){ # no hay clientes posteriores a i ni anteriores a j
     CWTTRP_struct$newPositionfilas<-pos$Positionfilas
@@ -28,7 +30,6 @@ SmInS_VcVc_with_hoppers<-function(CWTTRP_struct, Tolvas, R, Rhat, S, Shat,
     n.truck_j <- 0
     n.trailer_j <- 0
 
-
     result_sub <- addWorkload_R_check_subtour(R, Rhat, Tolvas, input, CWTTRP_struct,
                                               CWTTRP_struct$newPositionfilas,
                                               CWTTRP_struct$newPositionfilas3,
@@ -46,8 +47,7 @@ SmInS_VcVc_with_hoppers<-function(CWTTRP_struct, Tolvas, R, Rhat, S, Shat,
     a <- result_sub$a1
     x <- result_sub$a2
     z <- result_sub$a3
-
-
+    
     result_sub <- addWorkload_R_check_subtour(R, Rhat, Tolvas, input, CWTTRP_struct,
                                               CWTTRP_struct$newPositioncolumnas,
                                               CWTTRP_struct$newPositioncolumnas3,
@@ -66,7 +66,6 @@ SmInS_VcVc_with_hoppers<-function(CWTTRP_struct, Tolvas, R, Rhat, S, Shat,
     x <- result_sub$a2
     z <- result_sub$a3
 
-
     result_sub <- SmInS_VcVc_manage_parking(CWTTRP_struct, Tolvas, R, Rhat, input, a, b,
                                         n.truck_i, n.trailer_i, n.truck_j, n.trailer_j,
                                         verbose)
@@ -79,7 +78,7 @@ SmInS_VcVc_with_hoppers<-function(CWTTRP_struct, Tolvas, R, Rhat, S, Shat,
     n.truck_j <- result_sub$n.truck_j
     n.trailer_j <- result_sub$n.trailer_j
 
-
+    
     parada <- 0
 
 
@@ -87,7 +86,7 @@ SmInS_VcVc_with_hoppers<-function(CWTTRP_struct, Tolvas, R, Rhat, S, Shat,
                                                     input, s, t,
                                                     n.trailer_i, n.truck_i,
                                                     n.trailer_j, n.truck_j,
-                                                    parada, verbose)
+                                                    parada, pos, verbose)
     CWTTRP_struct <- result_sub$CWTTRP_struct
     Tolvas <- result_sub$Tolvas
     s <- result_sub$s
@@ -98,27 +97,29 @@ SmInS_VcVc_with_hoppers<-function(CWTTRP_struct, Tolvas, R, Rhat, S, Shat,
     result_sub <- SmInS_VcVc_control_fusion(CWTTRP_struct, Tolvas, R, input,
                                                       n.trailer_i, n.truck_i,
                                                       n.trailer_j, n.truck_j,
-                                                      z, parada, verbose)
+                                                      z, parada, pos, verbose)
     CWTTRP_struct <- result_sub$CWTTRP_struct
     Tolvas <- result_sub$Tolvas
     parada <- result_sub$flag_stop
 
+    
     result_sub <- SmInS_VcVc_apply_fusion_with_hoppers(CWTTRP_struct, Tolvas, R, Rhat, S,
                                                    Shat, input, n.truck_i, n.trailer_i,
                                                    n.truck_j, n.trailer_j, pos, n, z, x,
                                                    a, b, t, s, tc, tt, ss, nf, parada, verbose)
 
     CWTTRP_struct <- result_sub$CWTTRP_struct
+    t  <- CWTTRP_struct$t
+    s  <- CWTTRP_struct$s
+    tc <- CWTTRP_struct$tc
+    tt <- CWTTRP_struct$tt
+    ss <- CWTTRP_struct$ss
+    
     Tolvas <- result_sub$Tolvas
     R <- result_sub$R
     Rhat <- result_sub$Rhat
     S <- result_sub$S
     Shat <- result_sub$Shat
-    t  <- result_sub$t
-    s  <- result_sub$s
-    tc <- result_sub$tc
-    tt <- result_sub$tt
-    ss <- result_sub$ss
     merge <- result_sub$merge
 
     #Si no es factible tambien lo borramos
@@ -141,11 +142,6 @@ SmInS_VcVc_with_hoppers<-function(CWTTRP_struct, Tolvas, R, Rhat, S, Shat,
   result$S <- S
   result$Shat <- Shat
   result$Tolvas <- Tolvas
-  result$t <- t
-  result$s <- s
-  result$tc <- tc
-  result$tt <- tt
-  result$ss <- ss
   result$n  <- n
   result$merge <- merge
 
@@ -246,17 +242,24 @@ SmInS_VcVc_manage_hoppers_trailer<-function(CWTTRP_struct, Tolvas, R,
                                             input, s, t,
                                             n.trailer_i, n.truck_i,
                                             n.trailer_j, n.truck_j,
-                                            parada, verbose){
+                                            parada, pos, verbose){
 
+
+  
   if(n.trailer_i!=0 && n.trailer_j!=0 && n.trailer_i!=n.trailer_j &&
      sum(CWTTRP_struct$H.trailer_res[n.trailer_i,]==-1)+
      sum(CWTTRP_struct$H.trailer_res[n.trailer_j,]==-1)>dim(input$H.trailer)[2]){
-
+    
+                  if ((R[pos$Positionfilas,2]==19)&&(R[pos$Positioncolumnas,2]==15)) {
+                    print("666666")
+                    print(parada)
+                  }
+    
     parada <- 1
-
+    
     if(n.truck_i==0 && n.truck_j==0){
       # primer truck vacio
-      s <- min(which(CWTTRP_struct$H.camion_res[,1]!=-1))
+      # s <- min(which(CWTTRP_struct$H.camion_res[,1]!=-1))
       # numero de Tolvas libres en n.trailer_i
       tol.lib_i <- sum(CWTTRP_struct$H.trailer_res[n.trailer_i,]!=-1)
       # numero de Tolvas libres en n.trailer_j
@@ -271,8 +274,11 @@ SmInS_VcVc_manage_hoppers_trailer<-function(CWTTRP_struct, Tolvas, R,
       }
       else{
         trailer_ocup <- n.trailer_i
-        trailer_lib <- n.trailer_j}
-
+        trailer_lib <- n.trailer_j
+      }
+      
+      s <- trailer_ocup
+      
       # Si las Tolvas vacias entre el camion (libre) y el trailer (mas ocupado)
       # son mayores que las Tolvas ocupadas del trailer mas liberado, quiere
       # decir que podemos cambiar la mercancia de este trailer mas liberado
@@ -439,21 +445,15 @@ SmInS_VcVc_manage_hoppers_trailer<-function(CWTTRP_struct, Tolvas, R,
       parada <- 2
     }
 
-
   }
 
   else if(n.trailer_i!=0 && n.trailer_j!=0 && n.trailer_i!=n.trailer_j &&
           sum(CWTTRP_struct$H.trailer_res[n.trailer_i,]==-1)+
           sum(CWTTRP_struct$H.trailer_res[n.trailer_j,]==-1)<=dim(input$H.trailer)[2]){
-
+    
+    # aqui lo que tendria que hacer es meter la mercancia de los clientes q estaban 
+    # utilizando el trailer "mas libre" en el trailer "mas ocupado" 
     parada <- 1
-    # aqui lo que tendria que hacer es meter la mercancia de los clientes q estaban utilizando el trailer "mas libre" en
-    # el trailer "mas ocupado" (sin necesidad de utilizar el camion)
-
-
-    # (aqui hice un copia/pega de lo anterior modificando ligeramente
-    # para contemplar esta situacion. No obstante, no se me ha presentado esta
-    # casuistica todav?a asi que puede que haya algo que se me escapa llegada la hora)
 
     #numero de Tolvas libres en n.trailer_i ?necesario?
     tol.lib_i <- sum(CWTTRP_struct$H.trailer_res[n.trailer_i,]!=-1)
@@ -461,7 +461,7 @@ SmInS_VcVc_manage_hoppers_trailer<-function(CWTTRP_struct, Tolvas, R,
     tol.lib_j <- sum(CWTTRP_struct$H.trailer_res[n.trailer_j,]!=-1)
 
     # es menor que el num de Tolvas ocupadas en n.trailer_j
-    if(sum(CWTTRP_struct$H.trailer_res[n.trailer_i,]==-1)<sum(CWTTRP_struct$H.trailer_res[n.trailer_j,]==-1)){ # si el num de Tolvas ocupadas en n.trailer_i
+    if(tol.lib_i < tol.lib_j){
       trailer_ocup <- n.trailer_j #trailer_ocup <- trailer mas ocupado
       trailer_lib <- n.trailer_i #trailer_lib <- trailer mas liberado
     }
@@ -471,11 +471,11 @@ SmInS_VcVc_manage_hoppers_trailer<-function(CWTTRP_struct, Tolvas, R,
     }
 
     ss.prueba <- trailer_ocup
+    
     # estas son las Tolvas libres en el trailer ocupado
     tol.lib_ocup <- sum(CWTTRP_struct$H.trailer_res[ss.prueba,]!=-1)
     # la primera tolva libre del trailer ocupado
-    #ntol.lib_ocup <- min(which(CWTTRP_struct$H.trailer_res[ss.prueba,]!=-1))
-    if(sum(CWTTRP_struct$H.trailer_res[ss.prueba,]!=-1)>0){
+    if(tol.lib_ocup>0){
       # la primera tolva libre del trailer ocupado
       ntol.lib_ocup <- min(which(CWTTRP_struct$H.trailer_res[ss.prueba,]!=-1))
     }else{
@@ -486,14 +486,6 @@ SmInS_VcVc_manage_hoppers_trailer<-function(CWTTRP_struct, Tolvas, R,
     #ultima tolva ocupada en el trailer libre (coincide con lo anterior)
     ntol.ocup_lib <- max(which(CWTTRP_struct$H.trailer_res[trailer_lib,]==-1))
 
-    # Una vez llegados a esta situacion, yo se que tengo dos rutas, y las quiero
-    # fusionar. No necesito hacer la movida de los compartimentos porque se
-    # supone que ya estan los clientes servidos. Solo necesito "reescribir"
-    # lo que vendrian siendo las matrices de Tolvas, H.trailer_res
-
-    # ahora tendria que coger las Tolvas ocupadas del trailer_lib y meterlas en
-    # este ss.prueba (trailer)
-
     # "vaciamos" el trailer libre
     CWTTRP_struct$H.trailer_res[trailer_lib,] <-
       rep(input$H.trailer[trailer_lib,1],dim(input$H.trailer)[2])
@@ -501,14 +493,12 @@ SmInS_VcVc_manage_hoppers_trailer<-function(CWTTRP_struct, Tolvas, R,
     # "llenamos" el trailer ocupado
     CWTTRP_struct$H.trailer_res[ss.prueba,ntol.lib_ocup:(ntol.lib_ocup+tol.ocup_lib-1)] <-
       rep(-1,tol.ocup_lib)
-
-    #min.TolvasLib <- min(which(Tolvas[,4]==trailer_lib)) #primera tolva en la matriz Tolvas q estaba siendo usada por el trailer_lib
-    #for (k in min.TolvasLib:(min.TolvasLib+tol.lib_ocup-1)){
-    #  Tolvas[k,4] <- trailer_ocup
-    #}
+    
     for (k in which(Tolvas[,4]==trailer_lib & Tolvas[,3]=="trailer")){
       Tolvas[k,4] <- trailer_ocup
     }
+    
+    
 
   }
   result <- list()
@@ -524,8 +514,9 @@ SmInS_VcVc_manage_hoppers_trailer<-function(CWTTRP_struct, Tolvas, R,
 SmInS_VcVc_control_fusion<-function(CWTTRP_struct, Tolvas, R,
                                     input, n.trailer_i, n.truck_i,
                                     n.trailer_j, n.truck_j, z,
-                                    flag_stop, verbose){
+                                    flag_stop, pos, verbose){
 
+  
   # If we have a PTR and trailer route, the fusion is not possible
 
   if( (n.truck_i!=0 || n.truck_j!=0) && n.truck_i*n.truck_j==0 &&
@@ -574,7 +565,6 @@ SmInS_VcVc_control_fusion<-function(CWTTRP_struct, Tolvas, R,
     flag_stop <- 1
 
     # the algorithm puts the elements of less ocuppied truck, in the most occupied.
-
 
     tol.lib_i <- sum(CWTTRP_struct$H.camion_res[n.truck_i,]!=-1)
     tol.lib_j <- sum(CWTTRP_struct$H.camion_res[n.truck_j,]!=-1)
@@ -647,35 +637,51 @@ SmInS_VcVc_apply_fusion_with_hoppers<-function(CWTTRP_struct, Tolvas, R, Rhat, S
                                                n.truck_j, n.trailer_j, pos, n,
                                                z, x, a, b, t,
                                                s, tc, tt, ss, nf, flag_stop, verbose) {
+  
   merge <- 0
   if( flag_stop == 0 ){
-
+    
     if( z == 0 ){
 
       if(CWTTRP_struct$CargaT<=input$capacidad.vehiculo && x==0){
 
         if( a > 0 || b > 0){
+
           if(n.trailer_i!=0){ss <- n.trailer_i; ss <- as.numeric(ss)}
           if(n.trailer_j!=0){ss <- n.trailer_j; ss <- as.numeric(ss)}
           if(n.truck_i!=0){s <- n.truck_i; s <- as.numeric(s)}
           if(n.truck_j!=0){s <- n.truck_j; s <- as.numeric(s)}
-
-
+          
           if( (n.trailer_i!=0 || n.trailer_j!=0) &&
               n.trailer_i*n.trailer_j==0 &&
               n.truck_i==0 && n.truck_j==0) {
-            s <- min(which(CWTTRP_struct$H.camion_res[,1]!=-1))
+            s <- ss##min(which(CWTTRP_struct$H.camion_res[,1]!=-1))
             s <- as.numeric(s)
           }
 
         }
         else {
+          
           s.aux <- s
           s.aux <- as.numeric(s.aux)
           ss.aux <- ss
           ss.aux <- as.numeric(ss.aux)
-
+          
+          if((sum(Tolvas[,1]==(pos$Positionfilas-1))==0)&&
+             (sum(Tolvas[,1]==(pos$Positioncolumnas-1))==0)){
+            
+            for (i in 1:length(CWTTRP_struct$H.trailer_res[,1])) {
+              if ((sum(CWTTRP_struct$H.trailer_res[i,] == -1)  == 0) &&
+                  (sum(CWTTRP_struct$H.camion_res[i,] == -1)  == 0)) {
+                ss <- i
+                s <- i
+                break;
+              }
+            }
+          }
+          
           if(sum(Tolvas[,1]==(pos$Positionfilas-1))>0){
+            
             CWTTRP_struct$aux <- max(which(Tolvas[,1]==(pos$Positionfilas-1)))
             if (Tolvas[CWTTRP_struct$aux,3]=="trailer"){
               ss <- Tolvas[CWTTRP_struct$aux,4]
@@ -687,6 +693,7 @@ SmInS_VcVc_apply_fusion_with_hoppers<-function(CWTTRP_struct, Tolvas, R, Rhat, S
           }
 
           if(sum(Tolvas[,1]==(pos$Positioncolumnas-1))>0){
+            
             CWTTRP_struct$aux1 <- min(which(Tolvas[,1]==(pos$Positioncolumnas-1)))
             CWTTRP_struct$aux2 <- max(which(Tolvas[,1]==(pos$Positioncolumnas-1)))
             if(Tolvas[CWTTRP_struct$aux2,3]=="trailer"){
@@ -1070,8 +1077,11 @@ SmInS_VcVc_apply_fusion_with_hoppers<-function(CWTTRP_struct, Tolvas, R, Rhat, S
 
   if(flag_stop == 0 || flag_stop == 1){
     if (z==0){
+      
       if(CWTTRP_struct$CargaT<=input$capacidad.vehiculo && x==0){ #Anhadimos la ruta si es factible
-        if(sum(CWTTRP_struct$demandas_res[pos$Positionfilas,])+(sum(CWTTRP_struct$demandas_res[pos$Positioncolumnas,]))==0){ # efectuamos la fusion
+      
+        if(sum(CWTTRP_struct$demandas_res[pos$Positionfilas,])+
+          (sum(CWTTRP_struct$demandas_res[pos$Positioncolumnas,]))==0){ # efectuamos la fusion
           merge <- 1
           R[pos$Positionfilas,3]<-(pos$Positioncolumnas-1)
           R[pos$Positioncolumnas,1]<-(pos$Positionfilas-1)
@@ -1095,7 +1105,10 @@ SmInS_VcVc_apply_fusion_with_hoppers<-function(CWTTRP_struct, Tolvas, R, Rhat, S
           Shat[pos$Positioncolumnas,pos$Positionfilas]<-0
 
 
-        }else{#si no se han encontrado Tolvas para servir a los clientes, "deshago"
+        }
+        else{
+          
+          #si no se han encontrado Tolvas para servir a los clientes, "deshago"
           flag_stop_i <- 0
           flag_stop_j <- 0
           if (sum(CWTTRP_struct$demandas_res[pos$Positionfilas,])!=0){
@@ -1251,7 +1264,13 @@ SmInS_VcVc_apply_fusion_with_hoppers<-function(CWTTRP_struct, Tolvas, R, Rhat, S
     S[pos$Positionfilas,pos$Positioncolumnas]<-0 #Si no es factible tambien lo borramos
     Shat[pos$Positionfilas,pos$Positioncolumnas]<-0
   }
-
+  
+  CWTTRP_struct$t <- t
+  CWTTRP_struct$s <- s
+  CWTTRP_struct$tc <- tc
+  CWTTRP_struct$tt <- tt
+  CWTTRP_struct$ss <- ss
+  
   result <- list()
   result$CWTTRP_struct <- CWTTRP_struct
   result$Tolvas <- Tolvas
@@ -1259,11 +1278,6 @@ SmInS_VcVc_apply_fusion_with_hoppers<-function(CWTTRP_struct, Tolvas, R, Rhat, S
   result$Rhat <- Rhat
   result$S <- S
   result$Shat <- Shat
-  result$t <- t
-  result$s <- s
-  result$tc <- tc
-  result$tt <- tt
-  result$ss <- ss
   result$merge <- merge
 
 

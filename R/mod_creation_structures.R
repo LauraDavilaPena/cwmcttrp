@@ -25,8 +25,8 @@ createCWMCTTRPStruct<-function(input){
   CWTTRP_struct$ultimoclienteMT <- 0
 
   CWTTRP_struct$demandas_res  <- input$matriz.demandas
-  CWTTRP_struct$H.camion_res  <- input$H.camion
-  CWTTRP_struct$H.trailer_res <- input$H.trailer
+  CWTTRP_struct$H.camion_res  <- reprow(input$H.camion, 10)
+  CWTTRP_struct$H.trailer_res <- reprow(input$H.trailer, 10)
   CWTTRP_struct$parking <- numeric(input$n1)
   CWTTRP_struct$park_index <- 1
 
@@ -39,6 +39,7 @@ createCWMCTTRPStruct<-function(input){
 
   return(CWTTRP_struct)
 }
+
 
 #' Create input structure for MC-TTRP problem
 #'
@@ -109,8 +110,21 @@ createResultStruct_MCTTRP<-function(rutas, coste.total, R, Rhat, Tolvas, H.camio
   ptr <- 0
   pvr <- 0
   cvr <- 0
+
+  
+  #print(rutas)
+  #print(update_Tolvas(Tolvas, rutas))
+  
+  
   result_res <- create_result_struct(rutas, input, "MCTTRP")
+  
   for (i in 1:length(result_res)) {
+    
+    r_h <- calc_load_hoppers(result$Tolvas, i, input$H.camion[1], input$H.trailer[1])
+    result_res[[i]]$used_hoppers_truck <- r_h$used_hoppers_truck[1]
+    result_res[[i]]$used_hoppers_trailer <- r_h$used_hoppers_trailer[1]
+    
+    
     if (result_res[[i]]$type == "PTR") {
       n_trucks <- n_trucks + 1
       ptr <- ptr + 1
@@ -138,6 +152,7 @@ createResultStruct_MCTTRP<-function(rutas, coste.total, R, Rhat, Tolvas, H.camio
       result_res[[i]]$clients[[counter]] <- client
       counter <- counter + 1
     }
+    
   }
 
   result$n_trucks <- n_trucks

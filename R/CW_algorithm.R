@@ -14,13 +14,12 @@ CW_algorithm<-function(string, option, verbose){
     print("Initilize CW_algorithm")
   }
   options(show.error.locations = TRUE)
-  options(error=function()traceback(2))
-  options(max.print=3000)
+  options(error=traceback)
+  options(max.print=2000)
 
   result <- list()
   if (option == 'TTRP') {
     if (verbose) {
-      print("Type of problem: TTRP")
       print("Reading file ...")
     }
     input_result <- input_TTRP( string )

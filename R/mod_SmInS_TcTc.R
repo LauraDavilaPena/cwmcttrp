@@ -64,16 +64,17 @@ SmInS_TcTc_with_hoppers<-function(CWTTRP_struct, Tolvas, R, Rhat, S, Shat, input
                                                    x, a, b, t, s, tc, tt, ss,
                                                    flag_stop, nf, verbose)
     CWTTRP_struct <- result_sub$CWTTRP_struct
+    t <- CWTTRP_struct$t
+    s <- CWTTRP_struct$s
+    tc <- CWTTRP_struct$tc
+    tt <- CWTTRP_struct$tt
+    ss <- CWTTRP_struct$ss
+    
     Tolvas <- result_sub$Tolvas
     R <- result_sub$R
     Rhat <- result_sub$Rhat
     S <- result_sub$S
     Shat <- result_sub$Shat
-    t <- result_sub$t
-    s <- result_sub$s
-    tc <- result_sub$tc
-    tt <- result_sub$tt
-    ss <- result_sub$ss
     merge <- result_sub$merge
 
   }
@@ -94,11 +95,6 @@ SmInS_TcTc_with_hoppers<-function(CWTTRP_struct, Tolvas, R, Rhat, S, Shat, input
   result$S <- S
   result$Shat <- Shat
   result$Tolvas <- Tolvas
-  result$t <- t
-  result$s <- s
-  result$tc <- tc
-  result$tt <- tt
-  result$ss <- ss
   result$n  <- n
   result$merge <- merge
 
@@ -266,19 +262,28 @@ SmInS_TcTc_apply_fusion_with_hoppers<-function(CWTTRP_struct, Tolvas, R, Rhat, S
           s <- as.numeric(s)
         }
       }
+      
 
-      if(sum(Tolvas[,1]==(pos$Positionfilas-1))==0 &&
-         sum(Tolvas[,1]==(pos$Positioncolumnas-1))==0 &&
-         sum(CWTTRP_struct$H.trailer_res[ss.aux,])!=sum(input$H.trailer[ss.aux,]) &&
-         ss == ss.aux){
-        ss <- min(which(CWTTRP_struct$H.trailer_res[,1]!=-1))
-        ss <- as.numeric(ss)
-      }
-
+      # new in hoppers in truck
+#      if(sum(Tolvas[,1]==(pos$Positionfilas-1))==0 &&
+#         sum(Tolvas[,1]==(pos$Positioncolumnas-1))==0 &&
+#         sum(CWTTRP_struct$H.trailer_res[ss.aux,])!=sum(input$H.trailer[ss.aux,]) &&
+#          ss == ss.aux){
+#          ss <- min(which(CWTTRP_struct$H.trailer_res!=-1))
+#          ss <- as.numeric(ss)
+#      }
+      
+      # new in hoppers in truck
       if(sum(Tolvas[,1]==(pos$Positionfilas-1))==0 &&
          sum(Tolvas[,1]==(pos$Positioncolumnas-1))==0){
-        s <- min(which(CWTTRP_struct$H.camion_res[,1]!=-1))
-        s <- as.numeric(s)
+          for (i in 1:length(CWTTRP_struct$H.trailer_res[,1])) {
+            if ((sum(CWTTRP_struct$H.trailer_res[i,] == -1)  == 0) &&
+              (sum(CWTTRP_struct$H.camion_res[i,] == -1)  == 0)) {
+              ss <- i
+              s <- i
+              break;
+            }
+          }
       }
 
       # En este momento ya tengo decidido cual es el camion y cual es el trailer
@@ -553,8 +558,11 @@ SmInS_TcTc_apply_fusion_with_hoppers<-function(CWTTRP_struct, Tolvas, R, Rhat, S
     Shat[pos$Positionfilas,pos$Positioncolumnas]<-0
   }
 
-
-
+  CWTTRP_struct$t <- t
+  CWTTRP_struct$s <- s
+  CWTTRP_struct$tc <- tc
+  CWTTRP_struct$tt <- tt
+  CWTTRP_struct$ss <- ss
 
   result <- list()
   result$CWTTRP_struct <- CWTTRP_struct
@@ -563,11 +571,6 @@ SmInS_TcTc_apply_fusion_with_hoppers<-function(CWTTRP_struct, Tolvas, R, Rhat, S
   result$Rhat <- Rhat
   result$S <- S
   result$Shat <- Shat
-  result$t <- t
-  result$s <- s
-  result$tc <- tc
-  result$tt <- tt
-  result$ss <- ss
   result$merge <- merge
 
 

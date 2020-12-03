@@ -106,7 +106,8 @@ postproc_add_disconnected_clients<-function(rutas, input, Tolvas, R, Rhat, H.cam
 #' @param input
 #' @return A list of results ...
 postproc_subroutes_trailer_routes<-function(rutas, matriz.distancia,
-                                            Tolvas, R, Rhat, opt){
+                                            Tolvas, R, Rhat, H.trailer_res, 
+                                            H.truck_res, input, opt){
 
   rutas.des <- creation_routes_post(rutas, Tolvas)
   coste<-0
@@ -234,13 +235,19 @@ postproc_subroutes_trailer_routes<-function(rutas, matriz.distancia,
 
   # Add subroute in rutas.des
   rutas.des <- creation_routes_post(rutas, Tolvas)
-
+  
+  rupdate <- update_Hopper_matrix(Tolvas, H.trailer_res, H.truck_res, input, rutas) 
+  
   results<-list()
   results$rutas<-rutas
   results$R<-R
   results$Rhat<-Rhat
-  results$rutas.des = rutas.des
-
+  results$rutas.des <- rutas.des
+  results$Hoppers <- rupdate$Hoppers
+  results$H.trailer_res <- rupdate$H.trailer_res
+  results$H.truck_res <- rupdate$H.truck_res
+  
+  
   return(results)
 }
 
@@ -398,7 +405,7 @@ postproc_add_disconnected_clients_TTRP<-function(rutas_res, rutas, input, R, Rha
           change_type <- "CVR"
         }
 
-        if (((node_cap + rutas_res[[j]]$capacity) <= limit_cap) && (next_r)) {
+        if (((node_cap + rutas_res[[j]]$total_load) <= limit_cap) && (next_r)) {
           subroute <- append(0, node_to_add)
           subroute <- append(subroute, rutas_res[[j]]$route[2:length(rutas_res[[j]]$route)])
           cost <- calc_load2(subroute, input$vector.demandas)
@@ -429,8 +436,8 @@ postproc_add_disconnected_clients_TTRP<-function(rutas_res, rutas, input, R, Rha
         rutas_res[[index_to_insert]]$route <-  subroute
         if (node_to_add <= input$n1) { rutas_res[[index_to_insert]]$type <- "PVR"; }
         else {  rutas_res[[index_to_insert]]$type <- "PTR"; }
-        rutas_res[[index_to_insert]]$capacity <-calc_load2(subroute, input$vector.demandas)
-        rutas_res[[index_to_insert]]$capacity_truck <- calc_load_only_truck(subroute, input$vector.demandas, input)
+        rutas_res[[index_to_insert]]$total_load <-calc_load2(subroute, input$vector.demandas)
+        rutas_res[[index_to_insert]]$total_load_tc_clients <- calc_load_only_truck(subroute, input$vector.demandas, input)
         rutas_res[[index_to_insert]]$cost <- local_cost(subroute, input$matriz.distancia)
       }
     }
@@ -460,8 +467,8 @@ postproc_add_new_subroutes_TTRP<-function(rutas_res, rutas, input, opt){
       min_cost <- local_cost(rutas, input$matriz.distancia) * correc
       for (j in 1:length(new_rutas_res)) {
         if (new_rutas_res[[j]]$type == "PTR" ) {
-            if (((rutas_res[[i]]$capacity + new_rutas_res[[j]]$capacity) <= input$capacidad.vehiculo) &&
-                ((rutas_res[[i]]$capacity_truck + new_rutas_res[[j]]$capacity_truck) <= input$capacidad.truck)){
+            if (((rutas_res[[i]]$total_load + new_rutas_res[[j]]$total_load) <= input$capacidad.vehiculo) &&
+                ((rutas_res[[i]]$total_load_tc_clients + new_rutas_res[[j]]$total_load_tc_clients) <= input$capacidad.truck)){
 
 
                 subroute_pvr <- rutas_res[[i]]$route
@@ -479,13 +486,13 @@ postproc_add_new_subroutes_TTRP<-function(rutas_res, rutas, input, opt){
                   aux <- append(aux, subroute_pvr[z:length(subroute_pvr)])
                     new_route[[j]]$route <- aux
                     new_route[[j]]$type <- "CVR"
-                    new_route[[j]]$capacity <- calc_load2(aux, input$vector.demandas)
-                    new_route[[j]]$capacity_truck <- calc_load_only_truck(aux, input$vector.demandas, input)
+                    new_route[[j]]$total_load <- calc_load2(aux, input$vector.demandas)
+                    new_route[[j]]$total_load_tc_clients <- calc_load_only_truck(aux, input$vector.demandas, input)
                     new_route_eval <- new_route[-i]
                     cost <- local_cost(convert_in_route(new_route_eval), input$matriz.distancia)
                     feasible <- 0
-                    if ((new_route[[j]]$capacity <= input$capacidad.vehiculo) &&
-                        (new_route[[j]]$capacity_truck <= input$capacidad.truck)) feasible <- 1
+                    if ((new_route[[j]]$total_load <= input$capacidad.vehiculo) &&
+                        (new_route[[j]]$total_load_tc_clients <= input$capacidad.truck)) feasible <- 1
                     if ((cost < min_cost) && (feasible == 1)) {
                       success <- 1
                       index_j <- j

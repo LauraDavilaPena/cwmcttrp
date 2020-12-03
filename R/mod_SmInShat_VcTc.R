@@ -1,6 +1,8 @@
 SmInShat_VcTc_with_hoppers<-function(CWTTRP_struct, Tolvas, R, Rhat, S, Shat, input,
                                      pos, n, n1, nf, verbose){
 
+
+  
   t <- CWTTRP_struct$t
   s <- CWTTRP_struct$s
   tc <- CWTTRP_struct$tc
@@ -106,7 +108,6 @@ SmInShat_VcTc_with_hoppers<-function(CWTTRP_struct, Tolvas, R, Rhat, S, Shat, in
 
     }
 
-
     if (a>1 && b>1){.
       if (Rhat[pos$Positionfilas,3]!=0){
 
@@ -133,8 +134,7 @@ SmInShat_VcTc_with_hoppers<-function(CWTTRP_struct, Tolvas, R, Rhat, S, Shat, in
 
       }
     }
-
-
+    
     while(R[CWTTRP_struct$newPositioncolumnas,3]!=0){
 
       result_sub <- check_tolvas(CWTTRP_struct$newPositioncolumnas, Tolvas, n.truck_j, n.trailer_j)
@@ -150,7 +150,7 @@ SmInShat_VcTc_with_hoppers<-function(CWTTRP_struct, Tolvas, R, Rhat, S, Shat, in
       CWTTRP_struct$aux <- CWTTRP_struct$aux + 1
     }
 
-
+    
     if(CWTTRP_struct$CargaT<=input$capacidad.vehiculo &&
         sum(input$matriz.demandas[pos$Positioncolumnas,])<=
        input$capacidad.truck[1:length(input$capacidad.trailer)] &&
@@ -159,10 +159,13 @@ SmInShat_VcTc_with_hoppers<-function(CWTTRP_struct, Tolvas, R, Rhat, S, Shat, in
            input$matriz.distancia[CWTTRP_struct$newPositioncolumnas,1]-
            input$matriz.distancia[pos$Positionfilas,pos$Positioncolumnas]-
            input$matriz.distancia[CWTTRP_struct$newPositioncolumnas,pos$Positionfilas]>=0) ){
-
+        
         if(n.truck_i==0 && n.trailer_i==0){
-          ss <- min(which(CWTTRP_struct$H.trailer_res[,1]!=-1))
-          ss <- as.numeric(ss)
+          
+          ss <-  max(n.truck_j, n.trailer_j)
+          
+          #(which(CWTTRP_struct$H.trailer_res[,1]!=-1))
+          #ss <- as.numeric(ss)
 
           tt <- 1
 
@@ -202,10 +205,11 @@ SmInShat_VcTc_with_hoppers<-function(CWTTRP_struct, Tolvas, R, Rhat, S, Shat, in
           }# aqui acaba el bucle "for (i in 1:nf)" para el cliente vc.
         }
 
-
+        
         if(n.truck_j==0 && n.trailer_j==0){
-          s <- min(which(CWTTRP_struct$H.camion_res[,1]!=-1))
-          s <- as.numeric(s)
+          s <- max(n.truck_i, n.trailer_i)
+           #min(which(CWTTRP_struct$H.camion_res[,1]!=-1))
+          #s <- as.numeric(s)
 
           tc <- 1
 
@@ -254,7 +258,7 @@ SmInShat_VcTc_with_hoppers<-function(CWTTRP_struct, Tolvas, R, Rhat, S, Shat, in
 
         }
 
-
+        
         if(sum(CWTTRP_struct$demandas_res[pos$Positionfilas,])+
            sum(CWTTRP_struct$demandas_res[pos$Positioncolumnas,])==0){
           merge <- 1
@@ -360,7 +364,7 @@ SmInShat_VcTc_with_hoppers<-function(CWTTRP_struct, Tolvas, R, Rhat, S, Shat, in
   CWTTRP_struct$tc <- tc
   CWTTRP_struct$tt <- tt
   CWTTRP_struct$ss <- ss
-
+  
   result <- list()
   result$CWTTRP_struct <- CWTTRP_struct
   result$R <- R
@@ -368,11 +372,6 @@ SmInShat_VcTc_with_hoppers<-function(CWTTRP_struct, Tolvas, R, Rhat, S, Shat, in
   result$S <- S
   result$Shat <- Shat
   result$Tolvas <- Tolvas
-  result$t <- t
-  result$s <- s
-  result$tc <- tc
-  result$tt <- tt
-  result$ss <- ss
   result$n  <- n
   result$merge <- merge
   return(result)
