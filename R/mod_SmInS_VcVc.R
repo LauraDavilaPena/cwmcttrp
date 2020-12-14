@@ -1359,7 +1359,6 @@ SmInS_VcVc<-function(CWTTRP_struct, R, Rhat, S, Shat, input, debug){
     vc_load_route2 <- vc_load_route2 + result$vc_load_route
     CWTTRP_struct$new$Positioncolumnas <- result$pos1
 
-    ##print(paste0("carga second workload ->", CWTTRP_struct$CargaT))
     if (is_parking == 1) {
       ##print("is_parking part 2")
       ##print(CWTTRP_struct$parking_list)
@@ -1370,9 +1369,6 @@ SmInS_VcVc<-function(CWTTRP_struct, R, Rhat, S, Shat, input, debug){
       vc_load_subroute2 <- 0
       tc_load_subroute2 <- 0
     }
-
-    #print(paste0("carga parking ->", CWTTRP_struct$CargaT))
-
 
     # Calc the load and the maximum capacity of vehicles
 
@@ -1386,7 +1382,7 @@ SmInS_VcVc<-function(CWTTRP_struct, R, Rhat, S, Shat, input, debug){
 
 
 
-    if(unfeasibility<=0 && x==0){
+    if(unfeasibility<=0 && x==0 ){
       merge <- 1
       #Anhadimos la ruta si es factible
       R[CWTTRP_struct$pos$Positionfilas,3]<-(CWTTRP_struct$pos$Positioncolumnas-1)

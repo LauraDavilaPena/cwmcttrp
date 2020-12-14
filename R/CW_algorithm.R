@@ -8,8 +8,8 @@
 #' result <- CW_algorithm('instances/CHAO_MCTTRP_01.txt', 'MCTTRP', 0)
 #' result <- CW_algorithm('instances/CHAO_TTRP_01.txt', 'TTRP', 0)
 #' result <- CW_algorithm('instances/P1.csv', 'MCTTRP', 0)
-CW_algorithm<-function(string, option, verbose){
-
+CW_algorithm<-function(string, option, n_trucks, n_trailers, verbose){
+  
   if (verbose) {
     print("Initilize CW_algorithm")
   }
@@ -38,7 +38,7 @@ CW_algorithm<-function(string, option, verbose){
     }
 
     result <- CWTTRPcore(demand_vector_list,matriz.distancia,capacidad.truck,capacidad.trailer,
-                         capacidad.vehiculo,n1,0)
+                         capacidad.vehiculo,n1,n_trucks, n_trailers,0)
     if (verbose) {
       print("Solver finished with success")
     }

@@ -331,10 +331,18 @@ local_cost<-function(local_route, matriz.distancia) {
   return(cost)
 }
 
+
 calc_load<-function(local_route, vector.demandas, capacity) {
   load <- 0.0
+  repeated_index <- list() 
+  counter_rep <- 1  
   for(i in 1:(length(local_route))){
-    load<-load + vector.demandas[local_route[i]+1]
+    if (sum(local_route == local_route[i])>= 2) {
+      repeated_index[counter_rep] <- local_route[i]
+    }    
+    if (!sum(repeated_index==local_route[i])) {
+      load<-load + vector.demandas[local_route[i]+1]
+    }
   }
   is_posible <- 1
   if (load > capacity) {
@@ -345,16 +353,47 @@ calc_load<-function(local_route, vector.demandas, capacity) {
 
 calc_load2<-function(local_route, vector.demandas) {
   load <- 0.0
+  repeated_index <- list() 
+  counter_rep <- 1  
   for(i in 1:(length(local_route))){
-    load<-load + vector.demandas[local_route[i]+1]
+    if (sum(local_route == local_route[i])>= 2) {
+      repeated_index[counter_rep] <- local_route[i]
+      counter_rep <- counter_rep + 1
+    }    
+    
+    if (!sum(repeated_index==local_route[i])) {
+      load<-load + vector.demandas[local_route[i]+1]
+    }
   }
   return(load)
 }
 
+calc_load2_subroute<-function(local_route, vector.demandas) {
+  load <- 0.0
+
+  state <- 0
+  for(i in 2:(length(local_route)-1)){
+    if (sum(local_route == local_route[i])>= 2) {
+      if (state == 1) state <- 0
+      else  state <- 1
+    }
+    if ((state == 1) && (sum(local_route == local_route[i])== 1)) {
+      load<-load + vector.demandas[local_route[i]+1]
+    }
+  }
+  return(load)
+}
+
+
 calc_load_only_truck<-function(local_route, vector.demandas, input) {
   load <- 0.0
+  repeated_index <- list() 
+  counter_rep <- 1
   for(i in 1:(length(local_route))){
-    if (local_route[i] > input$n1) {
+    if (sum(local_route == local_route[i])>= 2) {
+      repeated_index[counter_rep] <- local_route[i]
+    }
+    if ((local_route[i] > input$n1)&&(!sum(repeated_index==local_route[i]))) {
       load<-load + vector.demandas[local_route[i]+1]
     }
   }
@@ -363,9 +402,16 @@ calc_load_only_truck<-function(local_route, vector.demandas, input) {
 
 calc_load2_MC<-function(local_route, matrix.demands) {
   load <- 0.0
+  repeated_index <- list() 
+  counter_rep <- 1
   for(i in 1:(length(local_route))){
-    for (j in 1:length(matrix.demands[local_route[i]+1,])) {
+    if (sum(local_route == local_route[i])>= 2) {
+      repeated_index[counter_rep] <- local_route[i]
+    }
+    if ((!sum(repeated_index==local_route[i]))) {
+      for (j in 1:length(matrix.demands[local_route[i]+1,])) {
          load<-load + matrix.demands[local_route[i]+1,j]
+      }
     }
   }
   return(load)
@@ -373,8 +419,13 @@ calc_load2_MC<-function(local_route, matrix.demands) {
 
 calc_load_only_truck_MC<-function(local_route, matrix.demands, input) {
   load <- 0.0
+  repeated_index <- list() 
+  counter_rep <- 1
   for(i in 1:(length(local_route))){
-    if (local_route[i] > input$n1) {
+    if (sum(local_route == local_route[i])>= 2) {
+      repeated_index[counter_rep] <- local_route[i]
+    }
+    if ((local_route[i] > input$n1)&&((!sum(repeated_index==local_route[i])))) {
       for (j in 1:length(matrix.demands[local_route[i]+1,])) {
           load<-load + matrix.demands[local_route[i]+1,j]
       }
@@ -385,14 +436,14 @@ calc_load_only_truck_MC<-function(local_route, matrix.demands, input) {
 
 analyse<-function(rutas, input, rutas_res) {
 
-  lista <- sort(unique(rutas))
-  counter <- 0
-  for (i in 1:length(input$vector.demandas)) {
-      if ((i+counter) != (lista[i]+1)) {
-        print(paste0("no route for ", i, "   ", lista[i]))
-        counter <- counter + 1
-      }
-  }
+#  lista <- sort(unique(rutas))
+#  counter <- 0
+#  for (i in 1:length(input$vector.demandas)) {
+#      if ((i+counter) != (lista[i]+1)) {
+#        print(paste0("no route for ", i, "   ", lista[i]))
+#        counter <- counter + 1
+#      }
+#  }
 
   counter_errors <- 0
   cvr <- 0
@@ -409,6 +460,7 @@ analyse<-function(rutas, input, rutas_res) {
   }
 
 
+  counter_route <- 1
   for (i in 2:(length(rutas))) {
 
      if ((rutas[i-1] == 0) && (rutas[i] != 0)) {
@@ -420,32 +472,41 @@ analyse<-function(rutas, input, rutas_res) {
        if (sum(duplicated(subroute))) exist_subroute <- 1
        subroute <- c(subroute, 0)
        print("")
-       print("ROUTE: ")
+       print(paste0(counter_route, " ROUTE: "))
        print(subroute)
        exist_truck <- 0
+       counter_route <- counter_route + 1
 
        if (sum(subroute>input$n1)) exist_truck <- 1
        if (exist_subroute == 1) {
           print(paste0("CVR -> max capacity ", input$capacidad.vehiculo))
           c <- calc_load2(subroute, input$vector.demandas)
+          cc <- local_cost(subroute, input$matriz.distancia) 
           print(paste0("current capacity -> ", c))
+          print(paste0("cost -> ", cc))
           if (c > input$capacidad.vehiculo) counter_errors <- counter_errors + 1
           cvr <- cvr + 1
        }
        else if ((exist_subroute == 0) && (exist_truck == 1)) {
          print(paste0("PTR -> max capacity ", input$capacidad.truck))
          c <- calc_load2(subroute, input$vector.demandas)
+         cc <- local_cost(subroute, input$matriz.distancia) 
          print(paste0("current capacity -> ", c))
+         print(paste0("cost -> ", cc))
          if (c > input$capacidad.truck) counter_errors <- counter_errors + 1
          ptr <- ptr + 1
+         
        }
        else {
          print(paste0("PVR -> max capacity ", input$capacidad.vehiculo))
          c <- calc_load2(subroute, input$vector.demandas)
+         cc <- local_cost(subroute, input$matriz.distancia) 
          print(paste0("current capacity -> ", c))
+         print(paste0("cost -> ", cc))
          if (c > input$capacidad.vehiculo) counter_errors <- counter_errors + 1
          pvr <- pvr + 1
        }
+       
      } else if ((rutas[i-1] != 0) && (rutas[i] != 0)) {
        subroute <- c(subroute, rutas[i])
      }
@@ -453,8 +514,8 @@ analyse<-function(rutas, input, rutas_res) {
   }
 
   print("SUMMARY:")
-  print(paste0("PVR ->", pvr))
   print(paste0("PTR ->", ptr))
+  print(paste0("PVR ->", pvr))
   print(paste0("CVR ->", cvr))
 
   print("")
@@ -675,5 +736,9 @@ delete_zeros<-function(route) {
   new_route <- new_route[2:length(new_route)]
   return (new_route)
 }
+
+
+
+
 
 

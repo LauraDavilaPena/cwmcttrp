@@ -472,8 +472,8 @@ SmInShat_VcTc<-function(CWTTRP_struct, R, Rhat, S, Shat, input, debug){
     #print(unfeasibility)
     #print(paste0("load truck ", load_truck, " x ", x))
 
-    if(unfeasibility<=0 && load_truck <= input$capacidad.truck && x==0){
-
+    if(unfeasibility<=0 && load_truck <= input$capacidad.truck && x==0 ){
+        
       feasible_condition1 <- input$matriz.distancia[1,CWTTRP_struct$pos$Positioncolumnas]+
                              input$matriz.distancia[CWTTRP_struct$new$Positioncolumnas,1]-
                              input$matriz.distancia[CWTTRP_struct$pos$Positionfilas,CWTTRP_struct$pos$Positioncolumnas]-

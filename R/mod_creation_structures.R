@@ -75,7 +75,7 @@ createInputStruct<-function(matriz.demandas, matriz.distancia, capacidad.truck,
 #' @param n1
 #' @return A input list with all input data.
 createInputStruct_TTRP<-function(vector.demandas, matriz.distancia, capacidad.truck,
-                                 capacidad.trailer, n1){
+                                 capacidad.trailer, n1, n_trucks, n_trailers){
   input <- list()
   input$vector.demandas <- rep(vector.demandas)
   input$matriz.distancia <- matrix(rep(matriz.distancia), nrow = nrow(matriz.distancia))
@@ -83,6 +83,9 @@ createInputStruct_TTRP<-function(vector.demandas, matriz.distancia, capacidad.tr
   input$capacidad.trailer <- capacidad.trailer
   input$capacidad.vehiculo <- input$capacidad.truck+input$capacidad.trailer
   input$n1 <- n1
+  input$n <- dim(input$matriz.distancia)[1]
+  input$n_trucks <- n_trucks
+  input$n_trailers <- n_trailers
 
   return(input)
 }
@@ -134,23 +137,47 @@ createResultStruct_MCTTRP<-function(rutas, coste.total, R, Rhat, Tolvas, H.camio
       if (result_res[[i]]$type == "PVR") pvr <- pvr + 1
       if (result_res[[i]]$type == "CVR") cvr <- cvr + 1
     }
-    result_res[[i]]$clients <- list() 
+    result_res[[i]]$clients_tc <- list() 
+    result_res[[i]]$clients_vc <- list() 
+    
     num_clients <- delete_zeros(unique(result_res[[i]]$route))
     counter <- 1
+    
     for (j in num_clients) {
-      client <- list()
-      client$id <- j
-      client$demands <- result$demandas_res[j+1,]
-      client$hoppers <- list()
-      counter2 <- 1
-      for (z in 1:length(result$Tolvas[,1])) {
-        if (result$Tolvas[z,1] == j) {
-          client$hoppers[[counter2]] <- result$Tolvas[z,]
-          counter2 <- counter2 + 1
+      if (j < input$n1) {
+        client_vc <- list()
+        client_vc$id <- j
+        client_vc$demands <- result$demandas_res[j+1,]
+        client_vc$hoppers <- list()
+        counter2 <- 1
+        for (z in 1:length(result$Tolvas[,1])) {
+          if (result$Tolvas[z,1] == j) {
+            client_vc$hoppers[[counter2]] <- result$Tolvas[z,]
+            counter2 <- counter2 + 1
+          }
         }
+        result_res[[i]]$clients_vc[[counter]] <- client_vc
+        counter <- counter + 1
       }
-      result_res[[i]]$clients[[counter]] <- client
-      counter <- counter + 1
+    }
+    
+    counter <- 1
+    for (j in num_clients) {
+      if (j >= input$n1) {
+        client_tc <- list()
+        client_tc$id <- j
+        client_tc$demands <- result$demandas_res[j+1,]
+        client_tc$hoppers <- list()
+        counter2 <- 1
+        for (z in 1:length(result$Tolvas[,1])) {
+          if (result$Tolvas[z,1] == j) {
+            client_tc$hoppers[[counter2]] <- result$Tolvas[z,]
+            counter2 <- counter2 + 1
+          }
+        }
+        result_res[[i]]$clients_tc[[counter]] <- client_tc
+        counter <- counter + 1
+      }
     }
     
   }
@@ -170,7 +197,7 @@ createResultStruct_MCTTRP<-function(rutas, coste.total, R, Rhat, Tolvas, H.camio
 #' @param matriz.distancia
 #' @param n
 #' @return Savings matrix
-matrixS<-function(matriz.distancia,n){
+matrixS<-function(matriz.distancia,n, n1){
   #matrixS: Calcular la matriz de ahorros "usual", donde S_ij=c_0i+c_j0-c_ij
 
   S<-matrix(0,nrow=n,ncol=n) #Matriz ahorros
@@ -181,7 +208,7 @@ matrixS<-function(matriz.distancia,n){
     for(j in 2:n){
       {
         if(i!=j){
-          S[i,j]<-matriz.distancia[1,i]+matriz.distancia[1,j]-matriz.distancia[i,j]
+          S[i,j]<-(matriz.distancia[1,i]+matriz.distancia[1,j]-matriz.distancia[i,j])
         }
       }
     }
@@ -189,34 +216,27 @@ matrixS<-function(matriz.distancia,n){
   return(S)
 }
 
-
-#' Create S matrix
-#'
-#' @param matriz.distancia
-#' @param n
-#' @return Savings matrix
-matrixS_2<-function(matriz.distancia,n, n1, cost){
+matrixS_2<-function(matriz.distancia,n, n1){
   #matrixS: Calcular la matriz de ahorros "usual", donde S_ij=c_0i+c_j0-c_ij
-
+  
   S<-matrix(0,nrow=n,ncol=n) #Matriz ahorros
   rownames(S)<-0:(n-1)
   colnames(S)<-0:(n-1)
-
+  
   for(i in 2:n){
     for(j in 2:n){
       {
         if(i!=j){
-          weight <- 1
-          if (((i > n1 ) && (j <= n1)) || ((i <= n1 ) && (j > n1))) weight <- cost
-          S[i,j]<-(matriz.distancia[1,i]+matriz.distancia[1,j]-matriz.distancia[i,j]) * weight
-
+          if ((i<n1&&j<n1)&&(i>n1&&j>n1)) weight = 10
+          else weight = 1
+          S[i,j]<-(matriz.distancia[1,i]+matriz.distancia[1,j]-matriz.distancia[i,j])*weight
         }
       }
     }
   }
-  #print(S)
   return(S)
 }
+
 
 #' Create Shat matrix
 #'
@@ -267,7 +287,7 @@ matrixShat<-function(matriz.distancia,n, n1){
 #'
 #' @param input Input structure list
 #' @return A list with all information about the route.
-createFinalResult_TTRP<-function(rutas, R, Rhat, matriz.distancia, result_res, vector.demandas){
+createFinalResult_TTRP<-function(rutas, R, Rhat, matriz.distancia, result_res, vector.demandas, input){
   # rutas[which(rutas==0)]<-1
   coste.total<-0
   for(i in 1:(length(rutas)-1)){
@@ -291,17 +311,30 @@ createFinalResult_TTRP<-function(rutas, R, Rhat, matriz.distancia, result_res, v
         if (result_res[[i]]$type == "CVR") cvr <- cvr + 1
       }
 
-      result_res[[i]]$clients <- list() 
+      result_res[[i]]$clients_tc <- list() 
+      result_res[[i]]$clients_vc <- list() 
       
         num_clients <- delete_zeros(unique(result_res[[i]]$route))
         counter <- 1
         for (j in num_clients) {
-          client <- list()
-          client$id <- j
-          client$demands <- vector.demandas[j+1]
-          result_res[[i]]$clients[[counter]] <- client
-          counter <- counter + 1
+          if (j < input$n1) {
+            client_vc <- list()
+            client_vc$id <- j
+            client_vc$demands <- vector.demandas[j+1]
+            result_res[[i]]$clients_vc[[counter]] <- client_vc
+            counter <- counter + 1
+          }
         }    
+        counter <- 1
+        for (j in num_clients) {
+          if (j >= input$n1) {
+            client_tc <- list()
+            client_tc$id <- j
+            client_tc$demands <- vector.demandas[j+1]
+            result_res[[i]]$clients_tc[[counter]] <- client_tc
+            counter <- counter + 1
+          }
+        }  
   }
 
   result = list()
@@ -344,6 +377,10 @@ createCWTTRPStruct<-function(S, Sm, n){
   CWTTRP_struct$parking_list <- list()
   CWTTRP_struct$parking_list <- 0
 
+  CWTTRP_struct$limit_ptr <- 0
+  CWTTRP_struct$limit_pvr <- 0
+  CWTTRP_struct$limit_cvr <- 0
+  
   return(CWTTRP_struct)
 }
 

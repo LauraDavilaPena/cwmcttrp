@@ -572,9 +572,9 @@ SmInS_VcTc<-function(CWTTRP_struct, R, Rhat, S, Shat, input, debug){
         load_truck <- result$load_truck
         CWTTRP_struct <- result$CWTTRP_struct
 
-    if(unfeasibility<=0 && x==0){  #Anhadimos la ruta si es factible
+    if(unfeasibility<=0 && x==0 ){
 
-      merge <- 1
+          merge <- 1
       R[CWTTRP_struct$pos$Positionfilas,3]<-(CWTTRP_struct$pos$Positioncolumnas-1)
       R[CWTTRP_struct$pos$Positioncolumnas,1]<-(CWTTRP_struct$pos$Positionfilas-1)
       string <- paste0("add R")

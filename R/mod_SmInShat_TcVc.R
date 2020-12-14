@@ -466,18 +466,8 @@ SmInShat_TcVc<-function(CWTTRP_struct, R, Rhat, S, Shat, input, debug){
     #print(unfeasibility)
     #print(paste0("xxxload truck ", load_truck, " x ", x))
 
-    if(unfeasibility<=0 && load_truck <= input$capacidad.truck && x==0){
+    if(unfeasibility<=0 && load_truck <= input$capacidad.truck && x==0 ){
 
-      lista <- c(14  ,73 )
-      if ((sum(CWTTRP_struct$pos$Positioncolumnas == lista)>0) ||
-          (sum(CWTTRP_struct$pos$Positionfilas == lista)>0)) {
-
-        print(CWTTRP_struct$pos$Positionfilas)
-        print(CWTTRP_struct$pos$Positioncolumnas)
-        print(paste0("feasible ->", unfeasibility))
-        print(paste0(vc_load_route1," ",tc_load_route1 ))
-        print(paste0(vc_load_route2," ",tc_load_route2))
-      }
 
       feasible_condition1 <- input$matriz.distancia[1,CWTTRP_struct$new$Positionfilas]+
                             input$matriz.distancia[CWTTRP_struct$pos$Positionfilas,1]-

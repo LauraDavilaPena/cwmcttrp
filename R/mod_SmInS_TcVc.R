@@ -607,8 +607,8 @@ SmInS_TcVc<-function(CWTTRP_struct, R, Rhat, S, Shat, input, debug){
     #}
       #print(paste0(vc_load_route1, " ", vc_load_route2, " ", tc_load_route1, " ", tc_load_route2 ))
       #print(paste0("unfeasibility ", unfeasibility, " capacity ",  capacity, "load_truck ", load_truck ))
-    if(unfeasibility<=0 && x==0){  #Anhadimos la ruta si es factible
-
+    if(unfeasibility<=0 && x==0 ){
+        
       merge <- 1
       R[CWTTRP_struct$pos$Positionfilas,3]<-(CWTTRP_struct$pos$Positioncolumnas-1)
       R[CWTTRP_struct$pos$Positioncolumnas,1]<-(CWTTRP_struct$pos$Positionfilas-1)

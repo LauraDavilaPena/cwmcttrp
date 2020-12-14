@@ -3,7 +3,7 @@ library(mcttrpcw)
 options(show.error.locations = TRUE)
 options(error=function()traceback(2))
 options(max.print=3000)
-N <- 21
+N <- 1
 init <- 1
 
 for (i in init:N) {
