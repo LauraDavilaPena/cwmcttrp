@@ -670,7 +670,7 @@ create_result_struct<-function(rutas, input, option) {
 }
 
 
-calc_load_hoppers<-function(Hoppers, num_veh, cap_hoppers_truck, cap_hoppers_trailer) {
+calc_load_hoppers<-function(Hoppers, num_veh) {
   num_hoppers_truck <- 0
   num_hoppers_trailer <- 0
   for (i in 1:length(Hoppers[,1])) {
