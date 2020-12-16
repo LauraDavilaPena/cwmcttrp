@@ -127,11 +127,11 @@ createResultStruct_MCTTRP<-function(rutas, coste.total, R, Rhat, Tolvas, H.camio
       result_res[[i]]$main_tour <- return_main_route(result_res[[i]]$route)
       result_res[[i]]$subtours <- return_subroutes(result_res[[i]]$route, input$n1)
     }
-    result_res[[i]]$trailer_number <- i
+    result_res[[i]]$truck_number <- i
     if (result_res[[i]]$type == "PTR") {
-      result_res[[i]]$truck_number <- 0
+      result_res[[i]]$trailer_number <- 0
     } else {
-      result_res[[i]]$truck_number <- i
+      result_res[[i]]$trailer_number <- i
     }
       
     r_h <- calc_load_hoppers(result$Tolvas, i)
