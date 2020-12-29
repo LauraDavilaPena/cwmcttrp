@@ -355,9 +355,15 @@ calc_load2<-function(local_route, vector.demandas) {
   load <- 0.0
   repeated_index <- list() 
   counter_rep <- 1  
-  route <- unique(local_route)
-  for(i in 1:(length(route))){
-      load<-load + vector.demandas[route[i]+1]
+  for(i in 1:(length(local_route))){
+    if (sum(local_route == local_route[i])>= 2) {
+      repeated_index[counter_rep] <- local_route[i]
+      counter_rep <- counter_rep + 1
+    }    
+    
+    if (!sum(repeated_index==local_route[i])) {
+      load<-load + vector.demandas[local_route[i]+1]
+    }
   }
   return(load)
 }

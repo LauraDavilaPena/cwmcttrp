@@ -414,6 +414,10 @@ createCWTTRPStruct<-function(S, Sm, n){
   CWTTRP_struct$iter <- 0
   CWTTRP_struct$parking_list <- list()
   CWTTRP_struct$parking_list <- 0
+
+  CWTTRP_struct$limit_ptr <- 0
+  CWTTRP_struct$limit_pvr <- 0
+  CWTTRP_struct$limit_cvr <- 0
   
   return(CWTTRP_struct)
 }
