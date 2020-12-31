@@ -201,14 +201,13 @@ rutas_res <- postproc_TTRP(rutas_res, rutas, input, R, Rhat)
 rutas <- convert_in_route(rutas_res)
 rutas <- delete_dupl_zeros_route(rutas)
 
-analyse(rutas, input, rutas_res)
-print(paste0("l  ---> ", length(unique(rutas))))
-print(paste0("n  ---> ", input$n))
-print(paste0("n1 ---> ", input$n1))
-
 
 result <- createFinalResult_TTRP(rutas, R, Rhat, matriz.distancia, rutas_res, vector.demandas, input)
 
+analyse(rutas, input, result$result_res)
+print(paste0("l  ---> ", length(unique(rutas))))
+print(paste0("n  ---> ", input$n))
+print(paste0("n1 ---> ", input$n1))
 
   return(result)
 } #Fin de la funcion

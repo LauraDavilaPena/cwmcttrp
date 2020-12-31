@@ -458,9 +458,82 @@ postproc_add_disconnected_clients_TTRP<-function(rutas_res, rutas, input, R, Rha
 #' @return A list of results ...
 postproc_TTRP<-function(rutas_res, rutas, input, R, Rhat){
   
-  rutas_res <- postproc_add_disconnected_clients_TTRP(rutas_res, rutas, input, R, Rhat)
-  rutas_res <- postproc_add_new_subroutes_TTRP(rutas_res, rutas, input, 0)
+  unfeasibility_fleet <- check_feasibility_fleet(input)
+  # Add new fleet if it is unfeasibility
+  if (unfeasibility_fleet) {
+    
+    # FIRST POSTPROC
+    rutas_res <- postproc_add_disconnected_clients_TTRP(rutas_res, rutas, input, R, Rhat)
+    rutas_res <- postproc_add_new_subroutes_TTRP(rutas_res, rutas, input, 0)
+    
+    # ADJUST THE FLEET
+    result_fleet <- adjusts_n_trailers_and_first_transformations(rutas_res, input)
+    rutas_res <- result_fleet$rutas_res
+    n_ptr <- result_fleet$n_ptr
+    
+    # SELECTED ROUTES
+    selected_pvr_cvr_index <- select_PVRs_CVRs(rutas_res, input$n_trailers)
+    non_selected_pvr_cvr_index <- return_non_selected_pvr_cvr(rutas_res, selected_pvr_cvr_index)
+    selected_ptr_index <- select_PTRs(rutas_res, n_ptr, input)
+    non_selected_ptr_index <- return_non_selected_ptr(rutas_res, selected_ptr_index)
+    
+    ## SPLIT AND INSERT
+    if ((length(non_selected_pvr_cvr_index)!=0)||(length(non_selected_ptr_index)!=0)) {
+      result_split <- split_and_insert(rutas_res, selected_pvr_cvr_index, non_selected_pvr_cvr_index, 
+                                    selected_ptr_index, non_selected_ptr_index, input, 0)
+      rutas_res <- result_split$rutas_res
+      non_selected_ptr_index <- result_split$non_selected_ptr_index
+      non_selected_pvr_cvr_index <- result_split$non_selected_pvr_cvr_index
+    }
+    
+    ## TRANSFORM AND SPLIT AGAIN
+    if ((length(non_selected_pvr_cvr_index)!=0)||(length(non_selected_ptr_index)!=0)) {
+      
+      result_transform_space <- transform_marginal_routes(rutas_res, non_selected_ptr_index, non_selected_pvr_cvr_index, selected_ptr_index, selected_pvr_cvr_index, input)
+      rutas_res <- result_transform_space$rutas_res
+      non_selected_ptr_index <- result_transform_space$non_selected_ptr_index 
+      non_selected_pvr_cvr_index <- result_transform_space$non_selected_pvr_cvr_index 
   
+    }
+    
+    ## SWITCH RESIDUAL ROUTES
+    if ((length(non_selected_pvr_cvr_index)!=0)||(length(non_selected_ptr_index)!=0)) {
+  
+      rutas_res <- switch_routes(rutas_res, append(selected_pvr_cvr_index, selected_ptr_index), 
+                                              append(non_selected_pvr_cvr_index, non_selected_ptr_index), input)
+        
+      result_split <- split_and_insert(rutas_res, selected_pvr_cvr_index, non_selected_pvr_cvr_index, 
+                                         selected_ptr_index, non_selected_ptr_index, input, 1)
+      rutas_res <- result_split$rutas_res
+      non_selected_ptr_index <- result_split$non_selected_ptr_index
+      non_selected_pvr_cvr_index <- result_split$non_selected_pvr_cvr_index
+        
+    }
+     
+    rutas_res <- clean_rutas_res(rutas_res)
+  }
+  
+  return(rutas_res)
+}
+
+
+check_feasibility_fleet<-function(input) {
+  total_capacity_trucks <- input$capacidad.truck * input$n_trucks
+  total_capacity_total  <- total_capacity_trucks + input$capacidad.trailer * input$n_trailers
+  
+  total_demands <- sum(input$vector.demandas)
+  total_demands_trucks <- sum(input$vector.demandas[(input$n1+2):length(input$vector.demandas)])
+  
+  unfeasible_fleet <- 0
+  if (total_capacity_total > total_demands) unfeasible_fleet <- 1
+  if (total_demands_trucks > total_demands_trucks) unfeasible_fleet <- 1
+  
+  return(unfeasible_fleet)
+}
+
+
+adjusts_n_trailers_and_first_transformations<-function(rutas_res, input) {
+
   ptr_index <- return_ptr_index(rutas_res)
   current_n_trailers <- return_VTR_CVR_routes(rutas_res)
   
@@ -488,24 +561,95 @@ postproc_TTRP<-function(rutas_res, rutas, input, R, Rhat){
     
   }
   
-  selected_pvr_cvr_index <- select_PVRs_CVRs(rutas_res, input$n_trailers)
-  non_selected_pvr_cvr_index <- return_non_selected_pvr_cvr(rutas_res, selected_pvr_cvr_index)
-  selected_ptr_index <- select_PTRs(rutas_res,n_ptr)
-  non_selected_ptr_index <- return_non_selected_ptr(rutas_res, selected_ptr_index)
-  
-  print(non_selected_pvr_cvr_index)
-  print(non_selected_ptr_index)
-  #readline()
-  if ((length(non_selected_pvr_cvr_index)!=0)||(length(non_selected_ptr_index)!=0)) {
-    rutas_res <- split_and_insert(rutas_res, selected_pvr_cvr_index, non_selected_pvr_cvr_index, 
-                                  selected_ptr_index, non_selected_ptr_index, input)
-  }
-  
-  return(rutas_res)
+  result_fleet <- list()
+  result_fleet$n_ptr <- n_ptr
+  result_fleet$rutas_res <- rutas_res
+    
+  return(result_fleet)
 }
 
+transform_marginal_routes<-function(rutas_res, non_selected_ptr_index, non_selected_pvr_cvr_index, selected_ptr_index, selected_pvr_cvr_index, input) {
+  result_transform_space <- list()
+  
+  route_tc_to_add <- list()
+  counter_route_tc_to_add <- 1
+  for (i in 1:length(rutas_res)) {
+    if (length(rutas_res[[i]]$route)>3) {
+      if (rutas_res[[i]]$type == "CVR") {
+        rutas_res[[i]]$route <- delete_vc_subroute(  rutas_res[[i]]$route, input )
+      }
+      if (rutas_res[[i]]$type == "PTR") {
+        segment_routes <- split_vc_tc( rutas_res[[i]]$route, input)
+        
+        if ((length(segment_routes$route_tc)>2)) {
+          rutas_res[[i]]$route  <- segment_routes$route_tc
+          rutas_res[[i]]$total_load <- calc_load2(segment_routes$route_tc, input$vector.demandas)
+          rutas_res[[i]]$total_load_tc_clients <- calc_load_only_truck(segment_routes$route_tc, input$vector.demandas, input)
+          rutas_res[[i]]$cost <- local_cost(segment_routes$route_tc, input$matriz.distancia)
+        }
+        if ((length(segment_routes$route_vc)>2)&&(length(segment_routes$route_tc)>2)) {
+          new_route <- list()
+          new_route$type <- "PVR"
+          new_route$route <- segment_routes$route_vc
+          new_route$total_load <- calc_load2(segment_routes$route_vc, input$vector.demandas)
+          new_route$total_load_tc_clients <- calc_load_only_truck(segment_routes$route_vc, input$vector.demandas, input)
+          new_route$cost <- local_cost(segment_routes$route_vc, input$matriz.distancia)
+          route_tc_to_add[[counter_route_tc_to_add]] <- new_route
+          counter_route_tc_to_add <- counter_route_tc_to_add + 1
+        }
+        
+        if ((length(segment_routes$route_vc)>2)&&(length(segment_routes$route_tc)<=2)) {
+          rutas_res[[i]]$route  <- segment_routes$route_vc
+        }
+      }
+    }
+  }
+  
+  if (counter_route_tc_to_add > 1) {
+    for (i in 1:length(route_tc_to_add)) {
+      rutas_res[[(length(rutas_res)+1)]] <- route_tc_to_add[[i]]
+      non_selected_pvr_cvr_index <- append(non_selected_pvr_cvr_index, length(rutas_res))
+    } 
+  }
+  
+  if ((length(non_selected_pvr_cvr_index)!=0)||(length(non_selected_ptr_index)!=0)) {
+    result_split <- split_and_insert(rutas_res, selected_pvr_cvr_index, non_selected_pvr_cvr_index, 
+                                     selected_ptr_index, non_selected_ptr_index, input, 1)
+    rutas_res <- result_split$rutas_res
+    non_selected_ptr_index <- result_split$non_selected_ptr_index
+    non_selected_pvr_cvr_index <- result_split$non_selected_pvr_cvr_index
+  }
+  
+  result_transform_space <- list()
+  result_transform_space$rutas_res <- rutas_res
+  result_transform_space$non_selected_ptr_index <- non_selected_ptr_index
+  result_transform_space$non_selected_pvr_cvr_index <- non_selected_pvr_cvr_index
+  
+  return(result_transform_space)
+}
 
-split_and_insert<-function(rutas_res, selected_pvr_cvr_index, non_selected_pvr_cvr_index, selected_ptr_index, non_selected_ptr_index, input) {
+return_fleet<-function(routes_res) {
+  fleet_stats <- list()
+  fleet_stats$trucks <- 0
+  fleet_stats$trailers <- 0 
+  
+  for (i in 1:(length(routes_res))) {
+    load_total <- fleet_stats$total_load
+    if (routes_res[[i]]$type == "PTR") {
+      fleet_stats$trucks <- fleet_stats$trucks + 1
+    } 
+    else if ((routes_res[[i]]$type == "VTR")&&(load_total <= input$capacidad.truck)){
+      fleet_stats$trucks <- fleet_stats$trucks + 1
+    }
+    else {
+      fleet_stats$trailers <- fleet_stats$trailers + 1
+    }
+  }
+  
+  return(fleet_stats)
+}
+
+split_and_insert<-function(rutas_res, selected_pvr_cvr_index, non_selected_pvr_cvr_index, selected_ptr_index, non_selected_ptr_index, input, enable) {
   
   if (length(non_selected_ptr_index)) {
     res_list <- split_all_vc_tc(rutas_res, non_selected_ptr_index, input)
@@ -527,7 +671,6 @@ split_and_insert<-function(rutas_res, selected_pvr_cvr_index, non_selected_pvr_c
     rutas_res <- res_list$rutas_res
   }
   
-  
   index_trucks <- list()
   counter1 <- 1
   for (i in 1:length(selected_pvr_cvr_index)) {
@@ -536,47 +679,92 @@ split_and_insert<-function(rutas_res, selected_pvr_cvr_index, non_selected_pvr_c
       counter1 <- counter1 + 1
     }
   }
-  index_trucks <- append(index_trucks, selected_ptr_index)
-  index_trailers <- selected_pvr_cvr_index
+  index_trucks <- append(selected_pvr_cvr_index, selected_ptr_index) #append(index_trucks, selected_ptr_index)
+  index_trailers <- append(selected_pvr_cvr_index, selected_ptr_index)
+  
   
   ## "add to trucks"
-  while (length(routes_to_add_only_tc)) {
-    for (i in 1:length(routes_to_add_only_tc)) {
-      route_to_insert <- rutas_res[[routes_to_add_only_tc[[i]]]]
-      best_cost <- Inf
-      index_to_add <- -1
-      for (j in 1:length(index_trucks)) {
-        route_to_check <- rutas_res[[index_trucks[[j]]]]
-        if (sum(selected_pvr_cvr_index==i) || sum(selected_ptr_index==i)) {
+  stop_cond <- 0
+  while ((length(routes_to_add_only_tc))&&(stop_cond != 1)) {
+
+    result_ci <- check_insert_segment_in_route(routes_to_add_only_tc, rutas_res, index_trucks, input, "tc", enable)
+      
+    routes_to_add_only_tc <- result_ci$routes_to_add
+    rutas_res <- result_ci$rutas_res
+    
+    result_up <- update_route_to_add(routes_to_add_only_tc)
+    routes_to_add_only_tc <- result_up$routes_to_add
+    updated_res <- result_up$updated
+    
+    if ((length(routes_to_add_only_tc)>0)&&(updated_res==0)) {
+      res <- split_all_middle(rutas_res, routes_to_add_only_tc, input)
+      rutas_res <- res$rutas_res 
+      routes_to_add_only_tc <- res$group_index
+      non_split_routes <- res$non_split_routes
+      if (length(routes_to_add_only_tc) == non_split_routes) stop_cond <- 1
+    }
+    
+  }
+  
+  ## add to trailers
+  stop_cond <- 0
+  while ((length(routes_to_add_only_vc))&&(stop_cond != 1)) {
+    result_ci <- check_insert_segment_in_route(routes_to_add_only_vc, rutas_res, index_trailers, input, "vc", enable)
+    
+    routes_to_add_only_vc <- result_ci$routes_to_add
+    rutas_res <- result_ci$rutas_res
+    
+    result_up <- update_route_to_add(routes_to_add_only_vc)
+    routes_to_add_only_vc <- result_up$routes_to_add
+    updated_res <- result_up$updated
+    
+    if (length(routes_to_add_only_vc>0)&&(updated_res==0)) {
+      res <- split_all_middle(rutas_res, routes_to_add_only_vc, input)
+      rutas_res <- res$rutas_res 
+      routes_to_add_only_vc <- res$group_index
+      non_split_routes <- res$non_split_routes
+      if (length(routes_to_add_only_vc) == non_split_routes) stop_cond <- 1
+    }
+    
+  }
+    
+  result_split <- list()
+  result_split$rutas_res <- rutas_res
+  result_split$non_selected_ptr_index <- routes_to_add_only_tc
+  result_split$non_selected_pvr_cvr_index <- routes_to_add_only_vc
+
+  return(result_split)
+  
+}
+
+check_insert_segment_in_route<-function(routes_to_add, rutas_res, index, input, option, enable) {
+
+  best_cost <- Inf
+  index_to_add <- -1
+  index_to_del <- -1
+  for (i in 1:length(routes_to_add)) {
+    route_to_insert <- rutas_res[[routes_to_add[[i]]]]
+    for (j in 1:length(index)) {
+      route_to_check <- rutas_res[[index[[j]]]]
+      if (length(route_to_check$route) > 1 ) {
           if (route_to_check$type == "PTR") {
             new_load <- route_to_check$total_load + route_to_insert$total_load
-            print(paste0("ptr load ", new_load, " total ", input$capacidad.truck))
-            print(route_to_insert$route)
-            print(route_to_check$route)
             if (new_load <= input$capacidad.truck) {
               res <- insert_PR_in_PR(route_to_insert$route[2:(length(route_to_insert$route)-1)], 
                                      route_to_check$route, input)
-              print(res$route)
               if (best_cost > res$cost) {
+                best_type <- route_to_check$type
                 best_cost <- res$cost
                 best_route <- res$route
                 best_total_load <- calc_load2(res$route, input$vector.demandas)
                 best_total_load_tc_clients <- calc_load_only_truck(res$route, input$vector.demandas, input)
-                index_to_add <- index_trucks[[j]]
+                index_to_add <- index[[j]]
+                index_to_del <- i
               } 
             }
           }
-          if (route_to_check$type == "CVR") {
+          if ((option == "tc")&&(route_to_check$type == "CVR")) {
             new_load <- route_to_insert$total_load + calc_load2_subroute(route_to_check$route, input$vector.demandas) 
-            print(paste0("cvr load ", new_load, " total ", input$capacidad.truck))
-            print(calc_load2_subroute(c(0 , 6 , 15 , 6,  6, 31, 22, 37, 14, 29,  6 , 0), input$vector.demandas) )
-            print(calc_load2(c(0 , 6 , 15 , 6,  6, 31, 22, 37, 14, 29,  6 , 0), input$vector.demandas) )
-            print(calc_load2(c(15 , 31, 22, 37, 14, 29, 0), input$vector.demandas) )
-            print(calc_load2(c(15 ), input$vector.demandas) )
-            
-            
-            print(route_to_insert$route)
-            print(route_to_check$route)
             if (new_load <= input$capacidad.truck) {
               new_load <- route_to_check$total_load + route_to_insert$total_load
               if (new_load <= input$capacidad.vehiculo) {
@@ -584,162 +772,259 @@ split_and_insert<-function(rutas_res, selected_pvr_cvr_index, non_selected_pvr_c
                 parkings_list <- locate_parkings(route_to_check$route) 
                 res <- insert_PTR_in_CVR(route_to_insert$route[2:(length(route_to_insert$route)-1)], 
                                          route_to_check$route, parkings_list, input)
-                print(res$route)
-                
                 if (best_cost > res$cost) {
+                  best_type <- route_to_check$type
                   best_cost <- res$cost
                   best_route <- res$route
                   best_total_load <- calc_load2(res$route, input$vector.demandas)
                   best_total_load_tc_clients <- calc_load_only_truck(res$route, input$vector.demandas, input)
-                  index_to_add <- index_trucks[[j]]
+                  index_to_add <- index[[j]]
+                  index_to_del <- i
                 } 
               }
             }
           }
-        }
-      }
-      
-      if (best_cost != Inf) {
-        
-        rutas_res[[routes_to_add_only_tc[[i]]]]$route <- c(0)
-        rutas_res[[routes_to_add_only_tc[[i]]]]$total_load <- 0
-        rutas_res[[routes_to_add_only_tc[[i]]]]$total_load_tc_clients <- 0
-        rutas_res[[routes_to_add_only_tc[[i]]]]$cost <- 0
-        
-        new_r <- list()
-        new_r$type <- rutas_res[[index_to_add]]$type
-        new_r$route <- best_route
-        new_r$total_load <- best_total_load
-        new_r$total_load_tc_clients <- best_total_load_tc_clients
-        new_r$cost <- best_cost
-        rutas_res[[index_to_add]] <- new_r
-        
-        routes_to_add_only_tc[[i]] <- -1
-      }
-      
-    }
-    
-    new_routes_to_add_only_tc<-list()
-    counter_n <- 1
-    for (i in 1:length(routes_to_add_only_tc)) {
-      if (routes_to_add_only_tc[[i]]!=-1) {
-        new_routes_to_add_only_tc[counter_n] <- routes_to_add_only_tc[i]
-        counter_n <- counter_n + 1
-      }
-    }
-    routes_to_add_only_tc <- new_routes_to_add_only_tc
-    
-    if (length(routes_to_add_only_tc)) {
-      res <- split_all_middle(rutas_res, routes_to_add_only_tc, input)
-      rutas_res <- res$rutas_res 
-      routes_to_add_only_tc <- res$group_index
-      print(routes_to_add_only_tc)
-      counter_stack <- res$counter_stack
-      #readline()
-      if (counter_stack > 0) {
-        res_list <- split_all_vc_tc(rutas_res, selected_ptr_index, input)
-        routes_to_add_only_vc <- append(routes_to_add_only_vc, res_list$routes_to_add_only_vc)
-        rutas_res <- res_list$rutas_res
-        for (i in 1:length(rutas_res)) {
-          if (rutas_res[[i]] == "CVR") {
-            rutas_res[[i]]$route <- delete_vc_subroute( rutas_res[[i]]$route, input )
-          }          
-        }
-        print("STACK!")
-        print(rutas_res)
-        #readline()
-      }
-    }
-    
-  }
-  
-  print("add to trailers")
-  print(routes_to_add_only_vc)
-  #readline()
-  ## add to trailers
-  while (length(routes_to_add_only_vc)) {
-    for (i in 1:length(routes_to_add_only_vc)) {
-      route_to_insert <- rutas_res[[routes_to_add_only_vc[[i]]]]
-      best_cost <- Inf
-      index_to_add <- -1
-      for (j in 1:length(index_trailers)) {
-        route_to_check <- rutas_res[[index_trailers[[j]]]]
-        if (sum(selected_pvr_cvr_index==i)) {
-          if (route_to_check$type == "PVR") {
+          if ((option == "vc")&&(route_to_check$type == "PVR")) {
             new_load <- route_to_check$total_load + route_to_insert$total_load
-            if (new_load <= input$capacidad.truck) {
+            
+            if (new_load <= input$capacidad.vehiculo) {
               res <- insert_PR_in_PR(route_to_insert$route[2:(length(route_to_insert$route)-1)], 
                                      route_to_check$route, input)
               if (best_cost > res$cost) {
+                best_type <- route_to_check$type
                 best_cost <- res$cost
                 best_route <- res$route
                 best_total_load <- calc_load2(res$route, input$vector.demandas)
                 best_total_load_tc_clients <- calc_load_only_truck(res$route, input$vector.demandas, input)
-                index_to_add <- index_trailers[[j]]
+                index_to_add <- index[[j]]
+                index_to_del <- i
               } 
             }
           }
-          if (route_to_check$type == "CVR") {
+          if ((option == "vc")&&(route_to_check$type == "CVR")) {
             new_load <- route_to_check$total_load + route_to_insert$total_load
             if (new_load <= input$capacidad.vehiculo) {
               parkings_list <- locate_parkings(route_to_check$route) 
               res <- insert_PVR_in_CVR(route_to_insert$route[2:(length(route_to_insert$route)-1)], 
                                        route_to_check$route, parkings_list, input)
               if (best_cost > res$cost) {
+                best_type <- route_to_check$type
                 best_cost <- res$cost
                 best_route <- res$route
                 best_total_load <- calc_load2(res$route, input$vector.demandas)
                 best_total_load_tc_clients <- calc_load_only_truck(res$route, input$vector.demandas, input)
-                index_to_add <- index_trailers[[j]]
+                index_to_add <- index[[j]]
+                index_to_del <- i
               } 
-              
             }
           }
-        }
-      }
-      
-      if (best_cost != Inf) {
-        
-        rutas_res[[routes_to_add_only_vc[[i]]]]$route <- c(0)
-        rutas_res[[routes_to_add_only_vc[[i]]]]$total_load <- 0
-        rutas_res[[routes_to_add_only_vc[[i]]]]$total_load_tc_clients <- 0
-        rutas_res[[routes_to_add_only_vc[[i]]]]$cost <- 0
-        
-        new_r <- list()
-        new_r$type <- rutas_res[[index_to_add]]$type
-        new_r$route <- best_route
-        new_r$total_load <- best_total_load
-        new_r$total_load_tc_clients <- best_total_load_tc_clients
-        new_r$cost <- best_cost
-        rutas_res[[index_to_add]] <- new_r
-        
-        routes_to_add_only_vc[[i]] <- -1
-      }
-      
-    }
-    
-    new_routes_to_add_only_vc<-list()
-    counter_n <- 1
-    for (i in 1:length(routes_to_add_only_vc)) {
-      if (routes_to_add_only_vc[[i]]!=-1) {
-        new_routes_to_add_only_vc[counter_n] <- routes_to_add_only_vc[i]
-        counter_n <- counter_n + 1
+          if ((option == "tc")&&(route_to_check$type == "PVR")&&(enable)) {
+            new_load <- route_to_check$total_load + route_to_insert$total_load
+            new_load_truck <- route_to_insert$total_load
+            
+            if ((new_load <= input$capacidad.vehiculo)&&(new_load_truck <= input$capacidad.truck)) {
+              res <- merge_PVR_PTR(route_to_check$route, route_to_insert$route[2:(length(route_to_insert$route)-1)], input)
+
+              if (best_cost > res$cost) {
+                
+                best_type <- "CVR"
+                best_cost <- res$cost
+                best_route <- res$route
+                best_total_load <- calc_load2(res$route, input$vector.demandas)
+                best_total_load_tc_clients <- calc_load_only_truck(res$route, input$vector.demandas, input)
+                index_to_add <- index[[j]]
+                index_to_del <- i
+              } 
+            }
+          }          
       }
     }
-    routes_to_add_only_vc <- new_routes_to_add_only_vc
-    if (length(routes_to_add_only_vc)) {
-      res <- split_all_middle(rutas_res, routes_to_add_only_vc, input)
-      rutas_res <- res$rutas_res 
-      routes_to_add_only_vc <- res$group_index
-    }
-    
   }
   
-  rutas_res <- clean_rutas_res(rutas_res)
+  
+
+  if (best_cost != Inf) {
+    
+    rutas_res[[routes_to_add[[index_to_del]]]]$route <- c(0)
+    rutas_res[[routes_to_add[[index_to_del]]]]$total_load <- 0
+    rutas_res[[routes_to_add[[index_to_del]]]]$total_load_tc_clients <- 0
+    rutas_res[[routes_to_add[[index_to_del]]]]$cost <- 0
+    
+    new_r <- list()
+    new_r$type <- best_type
+    new_r$route <- best_route
+    new_r$total_load <- best_total_load
+    new_r$total_load_tc_clients <- best_total_load_tc_clients
+    new_r$cost <- best_cost
+    rutas_res[[index_to_add]] <- new_r
+    
+    routes_to_add[[index_to_del]] <- -1 
+    
+  }
+
+  result_ci <- list()
+  result_ci$routes_to_add <- routes_to_add
+  result_ci$rutas_res <- rutas_res
+  
+  return(result_ci)
+  
+}
+
+switch_routes<-function(rutas_res, routes_selected, routes_to_add, input) {
+  
+  res_list <- list()
+  res_list$value <- Inf
+  res_list$index_i_route <- -1
+  res_list$index_j_route <- -1
+  res_list$index_z_route <- -1
+  res_list$load <- Inf
+  
+  for (j in 1:length(routes_to_add)) {
+    flag_exit <- 0
+    prev_value <- Inf
+    while(!flag_exit) {
+      node_to_check <- rutas_res[[routes_to_add[[j]]]]$route[2] 
+      print(paste0("iter ", j ))
+      print(rutas_res[[routes_to_add[[j]]]]$route)
+      print(rutas_res[[routes_to_add[[j]]]]$total_load)
+      
+      res_list <- switch_r(res_list, routes_selected, rutas_res, node_to_check, routes_to_add[[j]], input)
+      
+      print(paste(res_list$load, " < ", prev_value))
+      
+      if (res_list$load<prev_value) {
+        prev_value <- res_list$value
+        node_selected1 <- rutas_res[[res_list$index_i_route]]$route[res_list$index_z_route]
+        node_selected2 <- rutas_res[[res_list$index_j_route]]$route[2]
+        
+        # SELECTED
+        n_route <- rutas_res[[res_list$index_i_route]]$route
+        logic_n_route <- (n_route == node_selected1)
+        for (i in 1:length(logic_n_route)) {
+          if (logic_n_route[i]) {
+            n_route[i] <- node_selected2
+          }
+        }
+        
+        rutas_res[[res_list$index_i_route]]$route <- n_route
+        rutas_res[[res_list$index_i_route]]$total_load <- calc_load2(n_route, input$vector.demandas)
+        rutas_res[[res_list$index_i_route]]$total_load_tc_clients <- calc_load_only_truck(n_route, input$vector.demandas, input)
+        rutas_res[[res_list$index_i_route]]$cost <- local_cost(n_route, input$matriz.distancia)
+        
+        rutas_res[[res_list$index_j_route]]$route[2] <- node_selected1
+        n_route2 <- rutas_res[[res_list$index_j_route]]$route
+        rutas_res[[res_list$index_j_route]]$route <- n_route2
+        rutas_res[[res_list$index_j_route]]$total_load <- calc_load2(n_route2, input$vector.demandas)
+        rutas_res[[res_list$index_j_route]]$total_load_tc_clients <- calc_load_only_truck(n_route2, input$vector.demandas, input)
+        rutas_res[[res_list$index_j_route]]$cost <- local_cost(n_route2, input$matriz.distancia) 
+        
+      }
+      else flag_exit <- 1
+    }
+  }
+  
   
   return(rutas_res)
   
 }
+
+
+switch_r<-function(res_list, routes_selected, rutas_res, node_j, routes_to_add, input) {
+  
+  for (i in 1:length(routes_selected)){
+
+    route_i <- rutas_res[[routes_selected[[i]]]]
+    # for PTR
+    if (route_i$type == "PTR") {
+      for (z in 2:(length(route_i$route)-1)) {
+        res_list <- create_switch_route(res_list, route_i$route, node_j, input,  routes_selected[[i]], routes_to_add, z, input$capacidad.truck)
+      }
+    }
+    # for VTR
+    if ((node_j<=input$n1)&&(route_i$type == "PVR")) {
+      for (z in 2:(length(route_i$route)-1)) {
+        res_list <- create_switch_route(res_list, route_i$route, node_j, input,  routes_selected[[i]], routes_to_add, z, input$capacidad.vehiculo)
+      }
+    }
+    # tc for CVR
+    if (route_i$type == "CVR") {
+      subroute <- return_subroutes_string(route_i$route, input$n1)
+      for (z in 2:(length(route_i$route)-1)) {
+        if (sum(subroute==route_i$route[z])!=0){
+          res_list <- create_switch_route(res_list, route_i$route, node_j, input, routes_selected[[i]], routes_to_add, z, input$capacidad.truck)
+        }
+      }
+    }
+    # vc for CVR
+    if (route_i$type == "CVR") {
+      subroute <- return_subroutes_string(route_i$route, input$n1)
+      for (z in 2:(length(route_i$route)-1)) {
+        if (sum(subroute==route_i$route[z])!=0){
+          res_list <- create_switch_route(res_list, route_i$route, node_j, input, routes_selected[[i]], routes_to_add, z, input$capacidad.truck)
+        } else {
+          res_list <- create_switch_route(res_list, route_i$route, node_j, input, routes_selected[[i]], routes_to_add, z, input$capacidad.vehiculo)
+        }
+      }
+    }
+  }
+  
+  return(res_list)
+}
+  
+  
+create_switch_route<-function(res_list, n_route, selected_node, input, i, j, z, capacity){
+  
+  prev_node <- n_route[z]
+  logic_n_route <- (n_route == n_route[z])
+  for (ii in 1:length(logic_n_route)) {
+    if (logic_n_route[ii]) {
+      n_route[ii] <- selected_node
+    }
+  }
+  new_capacity <- calc_load2(n_route, input$vector.demandas)
+  
+  if (new_capacity <= capacity) {
+    
+    l_load_j <- calc_load2(prev_node, input$vector.demandas)
+    l_load_i <- calc_load2(selected_node, input$vector.demandas)
+    
+    if (l_load_j < l_load_i) {
+      
+      total_cost <- local_cost(n_route, input$matriz.distancia)
+      res_list$load <- calc_load2(n_route, input$vector.demandas)
+      res_list$value <- total_cost
+      res_list$index_i_route <- i
+      res_list$index_j_route <- j
+      res_list$index_z_route <- z
+      
+    }
+  }
+  
+  return(res_list)
+}
+
+
+
+update_route_to_add<-function(routes_to_add) {
+    new_routes_to_add <- list()
+    counter_n <- 1
+    update <- 0
+    for (i in 1:length(routes_to_add)) {
+      if (routes_to_add[[i]] != -1) {
+        new_routes_to_add[counter_n] <- routes_to_add[[i]]
+        counter_n <- counter_n + 1
+      }else {
+        update <- 1
+      }
+    }
+
+    result_u <- list()
+    result_u$routes_to_add <- new_routes_to_add
+    result_u$updated <- update
+    
+    return(result_u)
+}
+
 
 split_all_vc_tc<-function(rutas_res, non_selected_ptr_index, input) {
   routes_to_add_only_tc <- list()
@@ -748,33 +1033,51 @@ split_all_vc_tc<-function(rutas_res, non_selected_ptr_index, input) {
   counter_tc <- 1
   counter_vc <- 1
   for (i in 1:length(non_selected_ptr_index)) {
-    segment_routes <- split_vc_tc(rutas_res[[non_selected_ptr_index[[i]]]]$route, input)
-    
-    if (length(segment_routes$route_tc) > 2 ) {
-      routes_to_add_only_tc[[counter_tc]] <- non_selected_ptr_index[[i]]
-      counter_tc <- counter_tc + 1
+
+    if (( length(rutas_res[[non_selected_ptr_index[[i]]]]$route)>3) && (rutas_res[[non_selected_ptr_index[[i]]]]$type != "PVR")) {
+      segment_routes <- split_vc_tc(rutas_res[[non_selected_ptr_index[[i]]]]$route, input)
+      
+      if (length(segment_routes$route_tc) > 2 ) {
+        pos1 <- non_selected_ptr_index[[i]]
+        
+        rutas_res[[pos1]]$type <-"PTR"
+        rutas_res[[pos1]]$route <- segment_routes$route_tc
+        rutas_res[[pos1]]$total_load <- calc_load2(segment_routes$route_tc, input$vector.demandas)
+        rutas_res[[pos1]]$total_load_tc_clients <- calc_load_only_truck(segment_routes$route_tc, input$vector.demandas, input)
+        rutas_res[[pos1]]$cost <- local_cost(segment_routes$route_tc, input$matriz.distancia)
+        
+        routes_to_add_only_tc[[counter_tc]] <- non_selected_ptr_index[[i]]
+        counter_tc <- counter_tc + 1
+      }
+      
+      if ((length(segment_routes$route_vc) > 2 )&&(length(segment_routes$route_tc) > 2 )) {
+
+        pos2 <- length(rutas_res) + 1
+        routes_to_add_only_vc[[counter_vc]] <- pos2
+        counter_vc <- counter_vc + 1
+        
+        new_vc <- list()
+        new_vc$type <-"PVR"
+        new_vc$route <- segment_routes$route_vc
+        new_vc$total_load <- calc_load2(segment_routes$route_vc, input$vector.demandas)
+        new_vc$total_load_tc_clients <- calc_load_only_truck(segment_routes$route_vc, input$vector.demandas, input)
+        new_vc$cost <- local_cost(segment_routes$route_vc, input$matriz.distancia)
+        rutas_res[[pos2]] <- new_vc
+        
+      }
     }
-    
-    if ((length(segment_routes$route_vc) > 2 )&&(length(segment_routes$route_tc) > 2 )) {
-      pos1 <- non_selected_ptr_index[[i]]
-      pos2 <- length(rutas_res) + 1
-      routes_to_add_only_vc[[counter_vc]] <- pos2
-      counter_vc <- counter_vc + 1
-      
-      rutas_res[[pos1]]$type <-"PTR"
-      rutas_res[[pos1]]$route <- segment_routes$route_tc
-      rutas_res[[pos1]]$total_load <- calc_load2(segment_routes$route_tc, input$vector.demandas)
-      rutas_res[[pos1]]$total_load_tc_clients <- calc_load_only_truck(segment_routes$route_tc, input$vector.demandas, input)
-      rutas_res[[pos1]]$cost <- local_cost(segment_routes$route_tc, input$matriz.distancia)
-      
-      new_vc <- list()
-      new_vc$type <-"PVR"
-      new_vc$route <- segment_routes$route_vc
-      new_vc$total_load <- calc_load2(segment_routes$route_vc, input$vector.demandas)
-      new_vc$total_load_tc_clients <- calc_load_only_truck(segment_routes$route_vc, input$vector.demandas, input)
-      new_vc$cost <- local_cost(segment_routes$route_vc, input$matriz.distancia)
-      rutas_res[[pos2]] <- new_vc
-      
+    else  if ( length(rutas_res[[non_selected_ptr_index[[i]]]]$route)==3) {
+      if (rutas_res[[non_selected_ptr_index[[i]]]]$route[2] > input$n1) {
+        routes_to_add_only_tc[[counter_tc]] <- non_selected_ptr_index[[i]]
+        counter_tc <- counter_tc + 1
+      } else {
+        routes_to_add_only_vc[[counter_vc]] <- non_selected_ptr_index[[i]]
+        counter_vc <- counter_vc + 1
+      }
+    }
+    else  if (rutas_res[[non_selected_ptr_index[[i]]]]$type == "PVR") {
+        routes_to_add_only_vc[[counter_vc]] <- non_selected_ptr_index[[i]]
+        counter_vc <- counter_vc + 1
     }
     
   }
@@ -791,7 +1094,7 @@ split_all_middle<-function(rutas_res, group_index, input) {
   
   new_index <- list()
   counter <- 1
-  counter_stack <- 0
+  non_split_routes <- 0
   for (i in 1:length(group_index)) {
     select_route <- rutas_res[[group_index[[i]]]]$route
     
@@ -821,7 +1124,7 @@ split_all_middle<-function(rutas_res, group_index, input) {
       new_index[[counter]] <- pos2
       counter <- counter + 1
     } else {
-      counter_stack <- counter_stack + 1
+      non_split_routes <- non_split_routes + 1
     }
   }
   
@@ -830,7 +1133,7 @@ split_all_middle<-function(rutas_res, group_index, input) {
   res <- list()
   res$rutas_res <- rutas_res
   res$group_index <- group_index
-  res$counter_stack <- counter_stack
+  res$non_split_routes <- non_split_routes
   return(res)
 }
 
@@ -858,7 +1161,7 @@ split_vc_tc<-function(route, input) {
   return(res)
 }
 
-select_PTRs<-function(rutas_res, n_ptr) {
+select_PTRs<-function(rutas_res, n_ptr, input) {
   
   list_index <- list()
   decrease_list <- NULL
@@ -867,6 +1170,8 @@ select_PTRs<-function(rutas_res, n_ptr) {
   for (i in 1:length(rutas_res)) {
     if (rutas_res[[i]]$type == "PTR") {
       decrease_value <- rutas_res[[i]]$total_load - rutas_res[[i]]$total_load_tc_clients
+      #if (rutas_res[[i]]$total_load < (input$capacidad.truck*3)/4) decrease_value <- Inf
+      #else decrease_value <- rutas_res[[i]]$cost 
       
       if (counter == 1) {
         decrease_list <- c(decrease_value)
@@ -884,7 +1189,8 @@ select_PTRs<-function(rutas_res, n_ptr) {
   if (!is.null(decrease_list)) {
     order_list <- order(decrease_list, decreasing = FALSE)
     counter <- 1
-    for (i in 1:n_ptr) {
+    for (i in 1:length(order_list)) {
+      if (counter > n_ptr) break
       position <- decrease_index[order_list[i]]
       list_index[[counter]] <- position
       counter <- counter + 1
@@ -961,13 +1267,15 @@ return_PTR_routes<-function(rutas_res) {
 return_non_selected_ptr<-function(rutas_res, index_selected) {
   
   list_index <- list()
-  counter <- 1
-  for (i in 1:length(rutas_res)) {
-    if (rutas_res[[i]]$type == "PTR") {
-      is_selected <- sum(index_selected == i)
-      if (!is_selected) {
-        list_index[counter] <- i
-        counter <- counter + 1
+  if (length(index_selected)) {
+    counter <- 1
+    for (i in 1:length(rutas_res)) {
+      if (rutas_res[[i]]$type == "PTR") {
+        is_selected <- sum(index_selected == i)
+        if (!is_selected) {
+          list_index[counter] <- i
+          counter <- counter + 1
+        }
       }
     }
   }
@@ -1113,6 +1421,7 @@ convert_PTR_CVR<-function(rutas_res, non_selected_ptr_index, n_convert_ptr_cvr, 
       pos2 <- index_convert_ptr_cvr[[pos1]]$position
       
       index_convert_ptr_cvr[[pos1]]$route <- delete_vc_subroute( index_convert_ptr_cvr[[pos1]]$route, input )
+      #index_convert_ptr_cvr[[pos1]]$route <-  index_convert_ptr_cvr[[pos1]]$route
       
       rutas_res[[pos2]]$type <- "CVR"
       rutas_res[[pos2]]$route <- index_convert_ptr_cvr[[pos1]]$route
@@ -1182,48 +1491,58 @@ delete_vc_subroute<-function(route, input) {
 
 merge_route_CVR<-function(rutas_res, ptr_pvr_index, pcr_index, n_v_to_delete, input, option){
   
-  result_list <- list()
-  counter <- 1
-  
-  for (i in 1:length(ptr_pvr_index)) {
-    i_pos <- ptr_pvr_index[[i]]
-    i_route <- c(rutas_res[[i_pos]]$route[2:(length(rutas_res[[i_pos]]$route)-1)])
-    for (j in 1:length(pcr_index)) {
-      j_pos <- pcr_index[[j]]
-      control <- 0
-      if (option == "PVR") {
-        new_load <- rutas_res[[i_pos]]$total_load + rutas_res[[j_pos]]$total_load
-        if (new_load <= input$capacidad.vehiculo) control <- 1
-        else control <- 0
-      }
-      
-      if (option == "PTR") {
-        new_load <- rutas_res[[i_pos]]$total_load + calc_load2_subroute(rutas_res[[j_pos]]$route, input$vector.demandas) 
-        
-        if (new_load <= input$capacidad.truck) {
-          new_load <- rutas_res[[i_pos]]$total_load + rutas_res[[j_pos]]$total_load
-          if (new_load <= input$capacidad.vehiculo) control <- 1
-          else control <- 0
-        }
-        else control <- 0
-      }
-      
-      if (control) {
-        parkings_list <- locate_parkings(rutas_res[[j_pos]]$route) 
-        if (option == "PVR") res <- insert_PVR_in_CVR(i_route, rutas_res[[j_pos]]$route, parkings_list, input)
-        if (option == "PTR") res <- insert_PTR_in_CVR(i_route, rutas_res[[j_pos]]$route, parkings_list, input)
-        
-        if (res$cost != Inf) {
-          if (option == "PVR") res$pvr_index <- i_pos
-          if (option == "PTR") res$ptr_index <- i_pos
-          res$cvr_index <- j_pos
+  continue_merg <- 1
+  counter_merg <- 0
+  while (continue_merg == 1) {
+    result_list <- list()
+    counter <- 1
+    for (i in 1:length(ptr_pvr_index)) {
+      i_pos <- ptr_pvr_index[[i]]
+      if (length(rutas_res[[i_pos]]$route)>1) {
+        i_route <- c(rutas_res[[i_pos]]$route[2:(length(rutas_res[[i_pos]]$route)-1)])
+        MAX_value <- Inf
+        for (j in 1:length(pcr_index)) {
+          j_pos <- pcr_index[[j]]
+          control_add <- 0
+          if (option == "PVR") {
+            new_load <- rutas_res[[i_pos]]$total_load + rutas_res[[j_pos]]$total_load
+            if (new_load <= input$capacidad.vehiculo) control_add <- 1
+            else control_add <- 0
+          }
           
-          result_list[[counter]] <- res
+          if (option == "PTR") {
+            new_load <- rutas_res[[i_pos]]$total_load + calc_load2_subroute(rutas_res[[j_pos]]$route, input$vector.demandas) 
+            
+            if (new_load <= input$capacidad.truck) {
+              new_load <- rutas_res[[i_pos]]$total_load + rutas_res[[j_pos]]$total_load
+              if (new_load <= input$capacidad.vehiculo) control_add <- 1
+              else control_add <- 0
+            }
+            else control_add <- 0
+          }
+          
+          if (control_add) {
+            parkings_list <- locate_parkings(rutas_res[[j_pos]]$route) 
+            if (option == "PVR") res <- insert_PVR_in_CVR(i_route, rutas_res[[j_pos]]$route, parkings_list, input)
+            if (option == "PTR") res <- insert_PTR_in_CVR(i_route, rutas_res[[j_pos]]$route, parkings_list, input)
+            
+            if (res$cost < MAX_value) {
+              MAX_value <- res$cost
+              if (option == "PVR") res$pvr_index <- i_pos
+              if (option == "PTR") res$ptr_index <- i_pos
+              res$cvr_index <- j_pos
+              candidate <- res
+            }
+          }
+        }
+        
+        if (MAX_value != Inf) {
+          result_list[[counter]] <- candidate
           
           original_cost <- local_cost(rutas_res[[i_pos]]$route, input$matriz.distancia) + 
             local_cost(rutas_res[[j_pos]]$route, input$matriz.distancia)
           
-          decrease_value <- res$cost - original_cost
+          decrease_value <- result_list[[counter]]$cost - original_cost
           
           if (counter == 1) decrease_list <- c(decrease_value)
           else decrease_list <- c(decrease_list, decrease_value)
@@ -1232,34 +1551,32 @@ merge_route_CVR<-function(rutas_res, ptr_pvr_index, pcr_index, n_v_to_delete, in
       }
     }
     
-  }
-  
-  if (counter > 1) {
-    
-    decrease_list_order <- order(decrease_list)
-    
-    for (i in 1:n_v_to_delete) {
-      if (i > length(decrease_list_order)) break
-      pos_select <- decrease_list_order[[i]] 
+    if (counter > 1) {
+      
+      decrease_list_order <- order(decrease_list)
+      pos_select <- decrease_list_order[[1]] 
       if (option == "PVR") pos1 <- result_list[[pos_select]]$pvr_index
       if (option == "PTR") pos1 <- result_list[[pos_select]]$ptr_index
-      
+        
       rutas_res[[pos1]]$route <- c(0)
       rutas_res[[pos1]]$total_load <- 0
       rutas_res[[pos1]]$total_load_tc_clients <- 0
       rutas_res[[pos1]]$cost <- 0
-      
+        
       pos2 <- result_list[[pos_select]]$cvr_index
-      
+        
       rutas_res[[pos2]]$route <- result_list[[pos_select]]$route
       rutas_res[[pos2]]$total_load <- calc_load2(rutas_res[[pos2]]$route, input$vector.demandas)
       rutas_res[[pos2]]$total_load_tc_clients <- calc_load_only_truck(rutas_res[[pos2]]$route, input$vector.demandas, input)
       rutas_res[[pos2]]$cost <- result_list[[pos_select]]$cost
       
-    }
-    
+      counter_merg <- counter_merg + 1
+      
+      if (counter_merg == n_v_to_delete) continue_merg <- 0
+    } 
+    else continue_merg <- 0
   }
-  
+
   rutas_res <- clean_rutas_res(rutas_res)
   
   return(rutas_res)
@@ -1301,6 +1618,29 @@ insert_PVR_in_CVR<-function(pvr_route,cvr_route, parkings_list, input) {
         result_list$route <- nroute
       } 
     }
+    
+  }
+  
+  
+  return(result_list)
+}
+
+merge_PVR_PTR<-function(pvr_route, ptr_route, input) {
+  result_list <- list()
+  result_list$cost <- Inf
+  result_list$route <- Inf
+  
+  for (i in 1:(length(pvr_route)-1)) {
+
+      nroute <- c(pvr_route[1:i])
+      nroute <- c(nroute, ptr_route)
+      nroute <- c(nroute, pvr_route[i:length(pvr_route)])
+      cost <- local_cost(nroute, input$matriz.distancia) 
+      
+      if (cost < result_list$cost ) {
+        result_list$cost <- cost
+        result_list$route <- nroute
+      } 
     
   }
   
@@ -1406,8 +1746,8 @@ return_best_subroute_in_position<-function(route, vc_list, position, input) {
       if ((route[2]!=route[vc_list[[i]]]) && (route[length(route)-1]!=route[vc_list[[i]]])) {
         
         new_route_both <- c(0, route[vc_list[[i]]])
-        new_route_both <- c(new_route_both, route[2:vc_list[[i]]])
-        new_route_both <- c(new_route_both, route[vc_list[[i]]:(length(route)-1)])
+        new_route_both <- c(new_route_both, route[2:(vc_list[[i]]-1)])
+        new_route_both <- c(new_route_both, route[(vc_list[[i]]+1):(length(route)-1)])
         new_route_both <- c(new_route_both, route[vc_list[[i]]])
         new_route_both <- c(new_route_both, 0)
         cost3 <- local_cost(new_route_both, input$matriz.distancia) 

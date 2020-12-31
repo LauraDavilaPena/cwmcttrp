@@ -476,8 +476,14 @@ analyse<-function(rutas, input, rutas_res) {
           print(paste0("CVR -> max capacity ", input$capacidad.vehiculo))
           c <- calc_load2(subroute, input$vector.demandas)
           cc <- local_cost(subroute, input$matriz.distancia) 
-          print(paste0("current capacity -> ", c))
+          sr <- return_subroutes(subroute, input$n1)
+          sr1 <- sr[[1]]$tour
+          sr1 <- sr1[2:(length(sr1)-1)]
+          ccc <- calc_load2(sr1, input$vector.demandas)
+          print(paste0("current load     -> ", c))
           print(paste0("cost -> ", cc))
+          print(paste0("subroute load    ->" , ccc))
+          print(sr1)
           if (c > input$capacidad.vehiculo) counter_errors <- counter_errors + 1
           cvr <- cvr + 1
        }

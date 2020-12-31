@@ -1,0 +1,24 @@
+MCTTRP_opt_solver<-function(string, option, n_trucks, n_trailers, total_time=3600, total_iterations=1000, vtr=0, verbose=1){
+  
+    init_time <- Sys.time()
+  
+    if (verbose) print("Init constructive algorithm")
+  
+    results_CW <- CW_algorithm(string, option, n_trucks, n_trailers, verbose)
+    
+    initial_solution  <- results_CW$result_res
+    input <- results_CW$input
+    input$max_time <- total_time
+    input$max_iter <- total_iterations
+    input$vtr <- vtr
+    
+    if (verbose) print("Start general opt procesure")
+    
+    result_MCTTRP_opt <- MCTTRP_opt_method(results_CW, initial_solution, input, init_time, option)
+    
+    if (verbose) print("Output solution")
+    
+    
+    return(result_MCTTRP_opt)
+}
+  
