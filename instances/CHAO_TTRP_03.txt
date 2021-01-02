@@ -1,6 +1,6 @@
 # The numbers in the first line are truck capacity, trailer capacity,
 # number of customers, maximum number of trucks and maximum number of trailers.
-150.0 100.0 50 50 50
+100.0 100.0 50 50 50
 # The 2nd line is for the depot (node 0) so the last two numbers in the line can be ignored.
 0 30.0 40.0 0.0 0
 # Customer Number, X-coordinate, Y-coordinate, Demand, Indicator of Truck Customer (1 = TC, 0 = VC) 

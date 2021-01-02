@@ -1,0 +1,207 @@
+De momento tengo aquí:
+
+- calculateTotalDistance: para calcular la distancia total de una ruta. Creo que ya había una función análoga en
+						  Github, pero por si acaso no la hay: muy útil
+						  
+
+
+- two_opt_swap: función para hacer un movimiento 2-opt específico (dada una ruta, y dos clientes i,k)
+- two_opt_all_segments: función para obtener todos los pares (i,k) posibles para aplicar 2-opt a una determinada ruta
+- two_opt: función para aplicar todos los procedimientos 2-opt posibles a una ruta (recorriendo todos los pares de nodos (i,k))
+
+
+
+- three_opt_reverse_segment_if_better: función para hacer un movimiento 3-opt específico (dada una ruta, y los nodos
+										i, j, k)
+- three_opt_all_segments: función para obtener todas las 3-tuplas (i,j,k) posibles para aplicar 3-opt a una determinada ruta
+- three_opt: función para aplicar todos los procedimientos 3-opt posibles a una ruta (recorriendo todas las 3-tuplas (i,j,k)
+		     y quedándonos con la mejor ruta obtenida)
+		
+
+	 
+- four_opt_asterisk_swap: función para hacer un movimiento 4-opt* específico (dada una ruta, y tres clientes i, j, k)
+			  Si ponemos printing=TRUE, nos dice qué tipo de movimiento 4-opt* estamos haciendo 
+- four_opt_asterisk_all_segments: función para obtener todas las 3-tuplas (i,j,k) posibles para aplicar 4-opt*
+				  a una determinada ruta. Nótese que el valor de j se obtiene como j=i+u, donde u es 
+				  un cierto parámetro inicializado como u=1 y va aumentando hasta u=w (siendo w fijado
+				  por nosotros, normalmente un porcentaje, por ej. 20%, de los clientes totales de la ruta)
+- four_opt_asterisk: función para aplicar todos los procedimientos 4-opt* posibles a una ruta (recorriendo todas las 
+		     3-tuplas i,j,k y quedándonos con la mejor ruta obtenida)
+
+
+
+- q_neighborhood: función para hallar los q clientes más próximos a uno dado (v) en una ruta (route)
+
+
+
+- q_neighborhood_for_removal: esta función halla los q clientes más próximos a uno dado (v), que no
+							  necesariamente deben pertenecer a esa ruta. Descarta a los clientes que 
+							  están en subtours y a los que son parking
+							  [inicialmente, en la perturbación, para escoger los Pi clientes más cercanos
+							   a uno dado, yo usaba q_neighborhood, buscaba en su propia ruta; creo que sería
+							   mejor usar esta, ya que así perturbamos mejor, en el sentido de que permitimos 
+							   eliminar clientes de rutas diferentes]
+
+
+- insertion_typeI_swap: función para hacer un movimiento de inserción tipo I según el procedimiento GENI. Dada una ruta (route)
+		   y los clientes v_i, v_j, v_k de dicha ruta, se inserta el cliente v (no perteneciente a ella) entre
+		   los clientes v_i y v_j	   
+- insertion_typeI_all_segments: función para obtener todas las 3-tuplas (i,j,k) posibles para aplicar un movimiento de 
+								inserción tipo I de GENI a una determinada ruta								
+- insertion_typeI_all_segments_neighborhood: función para obtener las 3-tuplas (i,j,k) [teniendo en cuanta las vecindades correspondientes 
+											 que se proponen en Gendreau et al.] para aplicar un movimiento de inserción tipo I de GENI
+											 a una determinada ruta													 
+- insertion_typeI: función para aplicar todos las inserciones GENI tipo I posibles a una ruta (recorriendo todas las 
+				   3-tuplas i,j,k y quedándonos con la mejor ruta obtenida)			   
+- insertion_typeI_neighborhood: función para aplicar todas las inserciones GENI tipo I posibles a una ruta (recorriendo todas las 
+				   3-tuplas (i,j,k) de las correspondientes vecindades y quedándonos con la mejor ruta obtenida)
+				   
+				   
+
+- insertion_typeII_swap: función para hacer un movimiento de inserción tipo II según el procedimiento GENI. Dada una ruta (route)
+		   y los clientes v_i, v_j, v_k, v_l de dicha ruta, se inserta el cliente v (no perteneciente a ella) entre
+		   los clientes v_i y v_j
+- insertion_typeII_all_segments: función para obtener todas las 3-tuplas (i,j,k) posibles para aplicar un movimiento de 
+								 inserción tipo II de GENI a una determinada ruta								
+- insertion_typeII_all_segments_neighborhood: función para obtener las 3-tuplas (i,j,k) [teniendo en cuanta las vecindades correspondientes 
+											  que se proponen en Gendreau et al.] para aplicar un movimiento de inserción tipo II de GENI
+											  a una determinada ruta					
+- insertion_typeII: función para aplicar todas las inserciones GENI tipo II posibles a una ruta (recorriendo todas las 
+				    3-tuplas (i,j,k) y quedándonos con la mejor ruta obtenida)
+- insertion_typeII_neighborhood: función para aplicar todos las inserciones GENI tipo II posibles a una ruta (recorriendo todas las 
+								 3-tuplas (i,j,k) de las correspondientes vecindades y quedándonos con la mejor ruta obtenida)
+
+
+
+- removal_typeI_swap: función para hacer un movimiento de unstringing (eliminación/removal) tipo I según el procedimiento GENI. Dada una ruta (route)
+					  y los clientes v_i, v_j, v_k de dicha ruta, se elimna el cliente v_i de dicha ruta y se reordenan los arcos restantes
+- removal_typeI_all_segments: función para obtener todas las 3-tuplas (i,k,j) posibles para aplicar un movimiento de 
+							  unstringing tipo I de GENI a una determinada ruta y un cliente v_i de dicha ruta								
+- removal_typeI_all_segments_neighborhood: función para obtener las 3-tuplas (i,k,j) [teniendo en cuanta las vecindades correspondientes 
+										   que se proponen en Gendreau et al.] para aplicar un movimiento de unstringing tipo I de GENI
+										   a una determinada ruta para extraerle un cierto cliente v_i				
+- removal_typeI: función para aplicar todos los unstringings GENI tipo I posibles de un cliente v_i a una ruta (recorriendo todas las 
+				 3-tuplas (i,k,j ) y quedándonos con la mejor ruta obtenida)
+- removal_typeI_neighborhood: función para aplicar todos los unstringings GENI tipo I posibles a una ruta para extraerle un cliente v_i
+							  (recorriendo todas las 3-tuplas (i,k,j) de las correspondientes vecindades y quedándonos con la mejor ruta obtenida)
+		
+
+		
+- removal_typeII_swap: función para hacer un movimiento de unstringing tipo II según el procedimiento GENI. Dada una ruta (route)
+						y los clientes v_i, v_j, v_k, v_l de dicha ruta, se elimina el cliente v_i de dicha ruta y se reordenan los arcos restantes
+- removal_typeII_all_segments: función para obtener todas las 4-tuplas (i,j,l,k) posibles para aplicar un movimiento de 
+							   unstringing tipo II de GENI a una determinada ruta y a un cliente v_i de dicha ruta		 						
+- removal_typeII_all_segments_neighborhood: función para obtener las 4-tuplas (i,j,l,k) [teniendo en cuanta las vecindades correspondientes 
+											que se proponen en Gendreau et al.] para aplicar un movimiento de unstringing tipo II de GENI
+											a una determinada ruta para extraerle un cierto cliente v_i				
+- removal_typeII: función para aplicar todos los unstringings GENI tipo II posibles a una ruta para extraerle el cliente v_i (recorriendo todas las 
+				  4-tuplas (i,j,l,k) y quedándonos con la mejor ruta obtenida)
+- removal_typeII_neighborhood: función para aplicar todos los unstringings GENI tipo II posibles de un cliente v_i a una ruta (recorriendo todas las 
+							   4-tuplas (i,j,l,k) de las correspondientes vecindades y quedándonos con la mejor ruta obtenida)
+
+
+
+- GENI: función que aplica una inserción GENI. Elige la mejor ruta entre (inserción tipo I best{ruta,rev(ruta)} + 3-opt) e (inserción tipo II best{ruta,rev(ruta)} + 4-opt*)
+
+
+
+- GENI_US: función que aplica el método de unstringing de Gendrau et al. Elige la mejor ruta entre (removal tipo I best{ruta,rev(ruta)}  + 3-opt) e 
+		   (inserción tipo II best{ruta,rev(ruta)} + 4-opt*)
+
+
+- mod_insertions_movements: script donde he copiado todas las funciones anteriores para cargarlas más rápido 
+
+
+
+- route_of_client: función que, dado un cliente y una solución (del estilo de result$result_res), nos devuelve una lista con su ruta y el índice de ruta en la solución
+
+
+ 
+- client_in_main_tour: función que, dado un cliente y una solución (del estilo de result$result_res), nos dice si pertenece a un main.tour(1) o no (0) 
+					   [entendemos en este caso como main tour las rutas principales
+					   de cualquier tipo de ruta, sin incluir subtours. Es decir, cualquier cliente de PTRs o PVRs tendrá como valor 1, además de los clientes de la 
+					   ruta principal de CVRs]
+
+
+
+- client_is_parking: función que, dado un cliente y una solución (del estilo de result$result_res), nos dice si funciona como parking de algún subtour (1) o no (0)
+
+
+
+- mod_routes_parkings: script donde he copiado las tres funciones anteriores para cargarlas más rápidamente
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+- boolean_available_compartments_destination_route: función que tiene como inputs string, "result", intermediate_solution, inserted_client y destination_route. 
+													Lo que hace es chequear si el cliente inserted_client (que originalmente, en result, se encuentra en una 
+													cierta ruta) se puede insertar en la ruta destination_route. Es decir, mira si hay compartimentos disponibles
+													para mover la carga de dicho cliente de su ruta original a destination_route (hay varias casuísticas, 
+													dependiendo del tipo de cliente que queramos mover, y de si la ruta de destino es de un tipo u otro). 
+													Si esto no puede ser, se devuelve avail=FALSE; y si sí, avail=TRUE.
+
+- check_available_compartments: función que tiene como inputs string, "result", intermediate_solution, inserted_client y destination_route. 
+								Se aplica siempre y cuando la función anterior, boolean_available_compartments_destination_route, ha resultado
+								en avail=TRUE, que es cuando sabemos que efectivamente podremos realizar una inserción. 
+								Lo que hace es modificar intermediate_solution considerando la información acerca del nuevo 
+								cliente (inserted_client) en destination_route. Se cambian solo algunos argumentos(los relativos al propio 
+								cliente. No se modifican aquí "route" ni "cost", ya que esto dependerá del método de inserción que 
+								se lleve a cabo)
+								
+
+
+- create_only_trailer_hoppers_for_vc: función que acopla al cliente VC en destination_route solo en tolvas de trailer (tras haber comprobado con 
+										anterioridad que hay tantas tolvas de trailer disponibles como necesita) 
+
+
+- create_only_truck_hoppers_for_vc: función que acopla al cliente VC en destination_route solo en tolvas de truck (tras haber comprobado con 
+										anterioridad que hay tantas tolvas de truck disponibles como necesita). Ojo, esto solo se hace cuando 
+										previamente se ha visto que destination_route es PTR (es decir, solo hay tolvas de truck) o bien que 
+										destination_route es PVR o CVR y no hay ninguna tolva de tráiler para el cliente a insertar. 
+
+
+- create_only_one_vehicle_type_hoppers_for_vc: esta función suple a las dos anteriores, ya que eran análogas. Solo le hay que pasar los argumentos
+												necesarios en cada caso para que, o bien cree solo truck hoppers, o bien cree solo trailer hoppers.
+
+
+
+- is_there_available_compartments: esta función se aplica cuando al cliente_vc lo vamos a insertar en una ruta PVR o CVR; en particular, cuando en 
+									dicha ruta hay compartimentos de tráiler disponibles, pero no suficientes para acoplar las demandas del cliente. 
+									En tal caso, lo que se hace es chequear si una vez completados los compartimentos de tráiler (a los cuales damos 
+									prioridad), hay en dicha destination_route compartimentos de truck suficientes para las demandas restantes. Nos 
+									devuelve la diponibilidad (TRUE or FALSE) y cuántos compartimentos de truck serían necesarios a mayores de los de trailer.
+
+
+- create_truck_and_trailer_hoppers_for_vc: esta función se aplica si la anterior (is_there_available_compartments) ha resultado en TRUE. 
+										   En tal caso, se llenan los compartimentos de trailer de destination_route con demandas del 
+										   cliente a insertar, y se continúa llenando los que sean 
+										   necesarios de truck hasta que no quede más demanda. 
+
+
+- mod_compartments_creation: script con las funciones anteriores 
+
+
+
+- perturbation: función que, tomando como inputs string, result e initial_solution (que básicamente es result$result_res), nos desvuelve 
+				un result$result_res perturbado, es decir, perturbed_solution. Lo que hace es seleccionar aleatoriamente entre un 5% y un 15%
+				de los clientes del problema susceptibles de ser eliminados de sus rutas (clientes en PVRs, PTRs y main tours de CVRs) mediante
+				el procedimiento de unstringing de Gendreau et al. (GENI_US); para luego reinsertarlos en una ruta diferente (siempre y cuando
+				sea factible: hay diversas funciones para comprobar la factibilidad y efectuar los cambios en la solución, explicadas anteriormente). 
+				Se escoge como "destination_route" de cada uno de estos clientes aquella que da lugar a un menor incremento del coste. 
+
+
+
+- tabu_algorithm: en proceso; comeza creando a perturbación
+
+
+- result_improvement: función que vai percorrendo as rutas da solución (result$result_res) e vendo se se poden mellorar aplicando os movementos 
+					  two-opt, three-opt e four-opt-asterisk (e quedando co mellor para cada ruta)
+					  
+
+
+%%%%%%%%
+Cosas que faltan: en la perturbación contemplar el problema TTRP (chequear carga, en lugar de compartimentos). 
+
+
+
