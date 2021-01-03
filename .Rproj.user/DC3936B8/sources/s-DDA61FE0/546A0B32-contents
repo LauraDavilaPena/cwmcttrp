@@ -473,8 +473,6 @@ analyse<-function(rutas, input, rutas_res) {
             sr1 <- sr[[z]]$tour
             sr1 <- sr1[2:(length(sr1)-1)]
             ccc <- calc_load2(sr1, input$vector.demandas)
-            print(paste0("subroute ", z))
-            print(sr1)
             print(paste0("subroute load ", z ,"   -> " , ccc))
           }
           cvr <- cvr + 1

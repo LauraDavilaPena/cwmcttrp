@@ -477,16 +477,12 @@ return_subroutes<-function(route, n1) {
     }
   }
   
-  print(subtours)
-  readline()
-  
   for (i in 1:length(subtours)) {
     f_vc <- 0
     f_tc <- 0
     counter_length_tour <- 0
     for (j in 2:(length(subtours[[i]]$tour)-1)){
-      print(subtours[[i]]$tour[j])
-      print(n1)
+
       if (subtours[[i]]$tour[j] <= n1) {
         if (f_vc == 0) {
           subtours[[i]]$vc_clients <- c(subtours[[i]]$tour[j])
@@ -505,6 +501,38 @@ return_subroutes<-function(route, n1) {
       subtours[[i]]$length  <- counter_length_tour <- counter_length_tour + 1
     }
     counter_length_tour
+  }
+  
+  return(subtours)
+}
+
+return_subroutes2<-function(route, n1) {
+  subtours <- list()
+  state <- 0
+  counter_list <- 0
+  counter_parking <- 0
+  current_parking <- 0
+  
+  
+  for (i in 2:(length(route)-1)) {
+    if (state == 1) {
+      subtours[[counter_list]]$tour <- c(subtours[[counter_list]]$tour, route[i])
+    }
+    if (sum(route==route[i])>=2) {
+      counter_parking <- counter_parking + 1
+      
+      if ((state==1)&&(counter_parking == sum(route==route[i]))) {
+        state <- 0
+        counter_parking <- 0
+      }
+      else {
+        state <- 1
+        counter_list <- counter_list + 1
+        subtours[[counter_list]] <- list()
+        subtours[[counter_list]]$tour <-  c(route[i])
+        subtours[[counter_list]]$root <- route[i]
+      }
+    }
   }
   
   return(subtours)

@@ -496,18 +496,18 @@ postproc_TTRP<-function(rutas_res, rutas, input, R, Rhat){
     }
     
     ## SWITCH RESIDUAL ROUTES
-    if ((length(non_selected_pvr_cvr_index)!=0)||(length(non_selected_ptr_index)!=0)) {
+    #if ((length(non_selected_pvr_cvr_index)!=0)||(length(non_selected_ptr_index)!=0)) {
   
-      rutas_res <- switch_routes(rutas_res, append(selected_pvr_cvr_index, selected_ptr_index), 
-                                              append(non_selected_pvr_cvr_index, non_selected_ptr_index), input)
+      #rutas_res <- switch_routes(rutas_res, append(selected_pvr_cvr_index, selected_ptr_index), 
+      #                                        append(non_selected_pvr_cvr_index, non_selected_ptr_index), input)
         
-      result_split <- split_and_insert(rutas_res, selected_pvr_cvr_index, non_selected_pvr_cvr_index, 
-                                         selected_ptr_index, non_selected_ptr_index, input, 1)
-      rutas_res <- result_split$rutas_res
-      non_selected_ptr_index <- result_split$non_selected_ptr_index
-      non_selected_pvr_cvr_index <- result_split$non_selected_pvr_cvr_index
+      #result_split <- split_and_insert(rutas_res, selected_pvr_cvr_index, non_selected_pvr_cvr_index, 
+      #                                   selected_ptr_index, non_selected_ptr_index, input, 1)
+      #rutas_res <- result_split$rutas_res
+      #non_selected_ptr_index <- result_split$non_selected_ptr_index
+      #non_selected_pvr_cvr_index <- result_split$non_selected_pvr_cvr_index
         
-    }
+    #}
      
     rutas_res <- clean_rutas_res(rutas_res)
   }
@@ -863,7 +863,7 @@ switch_routes<-function(rutas_res, routes_selected, routes_to_add, input) {
       
       res_list <- switch_r(res_list, routes_selected, rutas_res, node_to_check, routes_to_add[[j]], input)
       
-      print(paste(res_list$load, " < ", prev_value))
+      #print(paste(res_list$load, " < ", prev_value))
       
       if (res_list$load<prev_value) {
         prev_value <- res_list$value

@@ -37,11 +37,11 @@ check_capacity_TTRP_subroute_routes<-function(route_i, route_j, subtours, subrou
   load1 <- calc_load2(route_i, input$vector.demandas)
   load2 <- calc_load2(route_j, input$vector.demandas)
   
-  subroute_i <- subtours[[subroute_index]]$tour[2:length(subtours[[subroute_index]]$tour)]
+  subroute_i <- subtours[[subroute_index]]$tour[2:(length(subtours[[subroute_index]]$tour)-1)]
   load2_subroute_i <- calc_load2(subroute_i, input$vector.demandas)
   
   new_load <- load1 + load2
-  
+
   if (new_load <= input$capacidad.vehiculo) {
     new_load <- load1 + load2_subroute_i
     if (new_load <= input$capacidad.truck) {
@@ -67,12 +67,10 @@ check_capacity_TTRP_merge_subroute_routes<-function(route_i, route_j, input) {
   
   load1 <- calc_load2(route_i, input$vector.demandas)
   load2 <- calc_load2(route_j, input$vector.demandas)
-  load2_subroute <- calc_load2_subroute(route_j, input$vector.demandas) 
   
   new_load <- load1 + load2
-  new_load_truck <- load1 + load2_subroute
-  
-  if ((new_load <= input$capacidad.vehiculo)&&(new_load_truck <= input$capacidad.truck)) {
+
+  if ((new_load <= input$capacidad.vehiculo)&&(load2 <= input$capacidad.truck)) {
     return(1)
   } 
   else {
