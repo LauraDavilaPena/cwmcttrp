@@ -1,0 +1,79 @@
+check_capacity_TTRP_total_routes_res<-function(routes_res_i, routes_res_j, input, total_capacity) {
+  
+  route_i <- routes_res_i$route
+  route_j <- routes_res_j$route
+  
+  return(check_capacity_TTRP_total_routes(route_i, route_j, input, total_capacity))
+}
+
+check_capacity_TTRP_total_routes<-function(route_i, route_j, input, total_capacity) {
+  
+  load1 <- calc_load2(route_i, input$vector.demandas)
+  load2 <- calc_load2(route_j, input$vector.demandas)
+  
+  new_load <- load1 + load2
+  
+  if (new_load <= total_capacity) {
+    
+    return(1)
+    
+  } else {
+    
+    return(0)
+    
+  }
+}
+
+check_capacity_TTRP_subroute_routes_res<-function(routes_res_i, routes_res_j, subtours, subroute_index, input) {
+  
+  route_i <- routes_res_i$route
+  route_j <- routes_res_j$route
+  
+  return(check_capacity_TTRP_subroute_routes(route_i, route_j, subtours, subroute_index, input))
+}
+
+check_capacity_TTRP_subroute_routes<-function(route_i, route_j, subtours, subroute_index, input) {
+  
+  load1 <- calc_load2(route_i, input$vector.demandas)
+  load2 <- calc_load2(route_j, input$vector.demandas)
+  
+  subroute_i <- subtours[[subroute_index]]$tour[2:(length(subtours[[subroute_index]]$tour)-1)]
+  load2_subroute_i <- calc_load2(subroute_i, input$vector.demandas)
+  
+  new_load <- load1 + load2
+
+  if (new_load <= input$capacidad.vehiculo) {
+    new_load <- load1 + load2_subroute_i
+    if (new_load <= input$capacidad.truck) {
+      return(1)
+    } else {
+      return(0)
+    }
+    
+  } else {
+    return(0)
+  }
+}
+
+check_capacity_TTRP_merge_subroute_routes_res<-function(routes_res_i, routes_res_j, input) {
+  
+  route_i <- routes_res_i$route
+  route_j <- routes_res_j$route
+  
+  return(check_capacity_TTRP_merge_subroute_routes(route_i, route_j, input))
+}
+
+check_capacity_TTRP_merge_subroute_routes<-function(route_i, route_j, input) {
+  
+  load1 <- calc_load2(route_i, input$vector.demandas)
+  load2 <- calc_load2(route_j, input$vector.demandas)
+  
+  new_load <- load1 + load2
+
+  if ((new_load <= input$capacidad.vehiculo)&&(load2 <= input$capacidad.truck)) {
+    return(1)
+  } 
+  else {
+    return(0)
+  }
+}
