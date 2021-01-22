@@ -5,13 +5,12 @@
 
 
 
-perturbation <- function(input, result, initial_solution){
+perturbation <- function(input, result, initial_solution, problem_type, seed, tabulist){
   
   perturbation_not_obtained <- FALSE
   
   
-  n <- dim(input$matriz.demandas)[1]-1
-  
+  n <- input$n - 1
   intermediate_solution <- initial_solution
   #set.seed(1234)
 
@@ -80,12 +79,14 @@ perturbation <- function(input, result, initial_solution){
   
   aggregated_list_info_after_removal <- aggregated_list_info
   new_routes_after_removal <- list()
+  
   for(i in 1:length(aggregated_list_info_after_removal$aggregated_routes)){
     for (j in 1:length(aggregated_list_info_after_removal$aggregated_clients[[i]])){
       if(initial_solution[[aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$type == "CVR"){
         # Basicamente aqui lo que hago es: si la ruta es de tipo CVR, entonces el "GENI_US" se lo voy a aplicar solo al main_tour. Pero luego tengo que reconstruir
         # la ruta completa, añadiendo los subtours en el orden en que estaban
-        new_routes_after_removal[[i]] <- GENI_US(initial_solution[[aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$main_tour, aggregated_list_info_after_removal$aggregated_clients[[i]][j])
+        new_routes_after_removal[[i]] <- GENI_US(input, initial_solution[[aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$main_tour, 
+                                                 aggregated_list_info_after_removal$aggregated_clients[[i]][j])
         subtours <- initial_solution[[aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$subtours
         kk <- 1
         for(k in 1:length(subtours)){
@@ -97,16 +98,17 @@ perturbation <- function(input, result, initial_solution){
                                             new_routes_after_removal[[i]][(which(new_routes_after_removal[[i]]==subtours[[k]]$root)[kk]+1): length(new_routes_after_removal[[i]])] ) 
         }
       }else{
-        new_routes_after_removal[[i]] <- GENI_US(aggregated_list_info_after_removal$aggregated_routes[[i]], aggregated_list_info_after_removal$aggregated_clients[[i]][j])
+        new_routes_after_removal[[i]] <- GENI_US(input, aggregated_list_info_after_removal$aggregated_routes[[i]], aggregated_list_info_after_removal$aggregated_clients[[i]][j])
       }
       aggregated_list_info_after_removal$aggregated_routes[[i]] <- new_routes_after_removal[[i]]
     }
   }
   
   # Ahora voy a modificar la intermediate_solution, poniendo las nuevas rutas, su coste, y eliminando a los removed_clients y todo lo relacionado con ellos 
+  print("2")
   for(i in 1:length(aggregated_list_info_after_removal$aggregated_routes_index)){
     intermediate_solution[[ aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$route <- aggregated_list_info_after_removal$aggregated_routes[[i]]
-    intermediate_solution[[ aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$cost <- calculateTotalDistance(intermediate_solution[[ aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$route )
+    intermediate_solution[[ aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$cost <- calculateTotalDistance(input,intermediate_solution[[ aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$route )
     
     for(j in 1:length(aggregated_list_info_after_removal$aggregated_clients[[i]])){
       if(aggregated_list_info_after_removal$aggregated_clients[[i]][j] <= input$n1){ # si el cliente que eliminamos es VC
@@ -134,17 +136,11 @@ perturbation <- function(input, result, initial_solution){
     
   }
   
-  
-  intermediate_solution
-  # Me quede aqui viernes a las 19:13. Comprobado que todo ok
-  
-  
   # Ahora lo que tengo que hacer es, esos clientes que he eliminado de sus rutas originales, insertarlos en una
   # ruta distinta (donde sea factible; la idea es que tengo que intentar insertar todos)
   
   # Basicamente, para cada uno de los clientes que debo insertar (que son los que he eliminado), tengo que crearme 
   # una lista con sus posibles "destination_routes"
-  
   
   for(k in 1:length(aggregated_list_info$aggregated_clients)){
     for(i in 1:length(aggregated_list_info$aggregated_clients[[k]])){
@@ -159,7 +155,11 @@ perturbation <- function(input, result, initial_solution){
           if(inserting_client <= input$n1){ # si el cliente es VC entonces podria insertarse en cualquier ruta que no sea la propia de origen
             candidate_destination_route <- intermediate_solution[[r]]
             # La siguiente funcion nos dice si es (avail=TRUE) o no (avail=FALSE) posible que 
-            avail <- boolean_available_compartments_destination_route(string, result, intermediate_solution, inserting_client, candidate_destination_route)
+            avail <- 1
+            if (problem_type == "MCTTRP") 
+              avail <- boolean_available_compartments_destination_route(input, result, intermediate_solution, 
+                                                                        inserting_client, candidate_destination_route, 
+                                                                        initial_solution)
             
             if(avail){ 
               if(candidate_destination_route$type == "CVR"){
@@ -170,8 +170,8 @@ perturbation <- function(input, result, initial_solution){
                 index_ins[[t]] <- r
               }
               
-              new_route_ins[[t]] <- GENI(route_try[[t]], inserting_client)$best_route
-              delta_ins[[t]] <- GENI(route_try[[t]], inserting_client)$delta_GENI
+              new_route_ins[[t]] <- GENI(input, route_try[[t]], inserting_client)$best_route
+              delta_ins[[t]] <- GENI(input, route_try[[t]], inserting_client)$delta_GENI
               
               t <- t + 1
               
@@ -181,27 +181,20 @@ perturbation <- function(input, result, initial_solution){
             if(intermediate_solution[[r]]$type == "PTR"){
               candidate_destination_route <- intermediate_solution[[r]]
               # La siguiente funcion nos dice si es (avail=TRUE) o no (avail=FALSE) posible que 
-              avail <- boolean_available_compartments_destination_route(string, result, intermediate_solution, inserting_client, candidate_destination_route)
+              avail <- 1
+              if (problem_type == "MCTTRP") avail <- boolean_available_compartments_destination_route(input, result, intermediate_solution, inserting_client, candidate_destination_route, initial_solution)
               if(avail){ 
                 route_try[[t]] <- candidate_destination_route$route
                 index_ins[[t]] <- r
               
-                new_route_ins[[t]] <- GENI(route_try[[t]], inserting_client)$best_route
-                delta_ins[[t]] <- GENI(route_try[[t]], inserting_client)$delta_GENI
+                new_route_ins[[t]] <- GENI(input, route_try[[t]], inserting_client)$best_route
+                delta_ins[[t]] <- GENI(input, route_try[[t]], inserting_client)$delta_GENI
                 
                 t <- t + 1
-                
-                
               }
-              
-              
-              
             }
-         
-            
           }
         }
-        
       }
       
      
@@ -225,11 +218,14 @@ perturbation <- function(input, result, initial_solution){
         
         # Actualizamos la intermediate_solution:
         intermediate_solution[[index_route_insertion]]$route <- best_route_ins
-        intermediate_solution[[index_route_insertion]]$cost <- calculateTotalDistance(best_route_ins)
+        intermediate_solution[[index_route_insertion]]$cost <- calculateTotalDistance(input,best_route_ins)
         
-        destination_route <- check_available_compartments(string, result, intermediate_solution, inserting_client, intermediate_solution[[index_route_insertion]])$destination_route
+        if (problem_type == "MCTTRP") {
+          destination_route <- check_available_compartments(input, result, intermediate_solution, inserting_client, 
+                                                            intermediate_solution[[index_route_insertion]], initial_solution)$destination_route
         
-        intermediate_solution[[index_route_insertion]] <- destination_route
+          intermediate_solution[[index_route_insertion]] <- destination_route
+        }
       }
     }
     

@@ -271,3 +271,277 @@ load_manager_create_subroute<-function(CWTTRP_struct, input, vc_load_route1 ,
 
   return(result)
 }
+
+
+
+insert_hoppers_MCTTRP_CVR<-function(route_i, routes_res, input) {
+  
+  n_hoppers_truck <- length(input$H.camion[1,])
+  n_hoppers_trailer <- length(input$H.trailer[1,])
+  
+  cap_hoppers_truck <- input$H.camion[1,1]
+  cap_hoppers_trailer <- input$H.trailer[1,1]
+  
+  subroute <- return_subroutes_string(route_i, input$n1)
+  main_route <- return_main_route(route_i)
+  
+  clients_tc <- list()
+  clients_vc <- list()
+  counter_clients_tc <- 0
+  counter_clients_vc <- 0
+  counter_hoppers_truck <- 0
+  for (i in 2:(length(subroute)-1)) {
+    i_client <- subroute[i]
+    if (i_client<=input$n1) {
+      counter_clients_vc <- counter_clients_vc + 1
+      clients_vc[[counter_clients_vc]] <- list()
+      clients_vc[[counter_clients_vc]]$id <- i_client
+      clients_vc[[counter_clients_vc]]$demands <- input$matriz.demandas[i_client+1,]
+      clients_vc[[counter_clients_vc]]$hoppers_trucks <- list()
+      clients_vc[[counter_clients_vc]]$hoppers_trailers <- list()
+      i_type <- "vc"
+    } else {
+      counter_clients_tc <- counter_clients_tc + 1
+      clients_tc[[counter_clients_tc]] <- list()
+      clients_tc[[counter_clients_tc]]$demands <- input$matriz.demandas[i_client+1,]
+      clients_tc[[counter_clients_tc]]$id <- i_client
+      clients_tc[[counter_clients_tc]]$hoppers_trucks <- list()
+      clients_tc[[counter_clients_tc]]$hoppers_trailers <- list()
+      i_type <- "tc"
+    }
+    
+    for (j in 1:length(input$matriz.demandas[i_client+1,])){
+      demand <- input$matriz.demandas[i_client+1,j]
+      while (demand > 0) {
+        save_demand <- demand
+        demand <- demand - cap_hoppers_truck
+        if (demand > 0) quantity <- cap_hoppers_truck
+        else quantity <- save_demand
+        if (i_type == "tc") {
+          size_c <- length(clients_tc[[counter_clients_tc]]$hoppers_trucks) + 1
+          clients_tc[[counter_clients_tc]]$hoppers_trucks[[size_c]] <- c(j, quantity, quantity/cap_hoppers_truck)
+        }
+        else {
+          size_c <- length(clients_vc[[counter_clients_vc]]$hoppers_trucks) + 1
+          clients_vc[[counter_clients_vc]]$hoppers_trucks[[size_c]] <- c(j, quantity, quantity/cap_hoppers_truck)
+        }
+        counter_hoppers_truck <- counter_hoppers_truck + 1
+      }
+    }
+  }
+  
+  counter_hoppers_trailer <- 0
+  for (i in 2:(length(main_route)-1)) {
+    i_client <- main_route[i]
+    if (i_client<=input$n1) {
+      counter_clients_vc <- counter_clients_vc + 1
+      clients_vc[[counter_clients_vc]] <- list()
+      clients_vc[[counter_clients_vc]]$id <- i_client
+      clients_vc[[counter_clients_vc]]$demands <- input$matriz.demandas[i_client+1,]
+      clients_vc[[counter_clients_vc]]$hoppers_trucks <- list()
+      clients_vc[[counter_clients_vc]]$hoppers_trailers <- list()
+      i_type <- "vc"
+    } else {
+      counter_clients_tc <- counter_clients_tc + 1
+      clients_tc[[counter_clients_tc]] <- list()
+      clients_tc[[counter_clients_tc]]$id <- i_client
+      clients_tc[[counter_clients_tc]]$demands <- input$matriz.demandas[i_client+1,]
+      clients_tc[[counter_clients_tc]]$hoppers_trucks <- list()
+      clients_tc[[counter_clients_tc]]$hoppers_trailers <- list()
+      i_type <- "tc"
+    }
+    
+    for (j in 1:length(input$matriz.demandas[i_client+1,])){
+      demand <- input$matriz.demandas[i_client+1,j]
+      #trailers
+      while ((demand > 0) && (counter_hoppers_trailer < n_hoppers_trailer)){
+        save_demand <- demand
+        demand <- demand - cap_hoppers_trailer
+        if (demand > 0) quantity <- cap_hoppers_trailer
+        else quantity <- save_demand
+        if (i_type == "tc") {
+          size_c <- length(clients_tc[[counter_clients_tc]]$hoppers_trailers) + 1
+          clients_tc[[counter_clients_tc]]$hoppers_trailers[[size_c]] <- c(j, quantity, quantity/cap_hoppers_trailer)
+        }
+        else {
+          size_c <- length(clients_vc[[counter_clients_vc]]$hoppers_trailers) + 1
+          clients_vc[[counter_clients_vc]]$hoppers_trailers[[size_c]] <- c(j, quantity, quantity/cap_hoppers_trailer)
+        }
+        counter_hoppers_trailer <- counter_hoppers_trailer + 1
+      }
+      # trucks
+      while ((demand > 0)) {
+        save_demand <- demand
+        demand <- demand - cap_hoppers_truck
+        if (demand > 0) quantity <- cap_hoppers_truck
+        else quantity <- save_demand
+        if (i_type == "tc") {
+          size_c <- length(clients_tc[[counter_clients_tc]]$hoppers_trucks) + 1
+          clients_tc[[counter_clients_tc]]$hoppers_trucks[[size_c]] <- c(j, quantity, quantity/cap_hoppers_truck)
+        }
+        else {
+          size_c <- length(clients_vc[[counter_clients_vc]]$hoppers_trucks) + 1
+          clients_vc[[counter_clients_vc]]$hoppers_trucks[[size_c]] <- c(j, quantity, quantity/cap_hoppers_truck)
+        }
+        counter_hoppers_truck <- counter_hoppers_truck + 1
+      }
+    }
+  }
+  
+  result_h <- list()
+  result_h$clients_tc <- clients_tc
+  result_h$clients_vc <- clients_vc
+  result_h$used_hoppers_truck <- counter_hoppers_truck
+  result_h$used_hoppers_trailer <- counter_hoppers_trailer
+  
+  return(result_h)
+  
+}
+
+
+insert_hoppers_MCTTRP_PTR<-function(route_i, routes_res, input) {
+  
+  n_hoppers_truck <- length(input$H.camion[1,])
+
+  cap_hoppers_truck <- input$H.camion[1,1]
+
+  route <- route_i
+  
+  clients_tc <- list()
+  clients_vc <- list()
+  counter_clients_tc <- 0
+  counter_clients_vc <- 0
+  counter_hoppers_truck <- 0
+  for (i in 2:(length(route)-1)) {
+    i_client <- route[i]
+    if (i_client<=input$n1) {
+      counter_clients_vc <- counter_clients_vc + 1
+      clients_vc[[counter_clients_vc]] <- list()
+      clients_vc[[counter_clients_vc]]$id <- i_client
+      clients_vc[[counter_clients_vc]]$demands <- input$matriz.demandas[i_client+1,]
+      clients_vc[[counter_clients_vc]]$hoppers_trucks <- list()
+      clients_vc[[counter_clients_vc]]$hoppers_trailers <- list()
+      i_type <- "vc"
+    } else {
+      counter_clients_tc <- counter_clients_tc + 1
+      clients_tc[[counter_clients_tc]] <- list()
+      clients_tc[[counter_clients_tc]]$id <- i_client
+      clients_tc[[counter_clients_tc]]$demands <- input$matriz.demandas[i_client+1,]
+      clients_tc[[counter_clients_tc]]$hoppers_trucks <- list()
+      clients_tc[[counter_clients_tc]]$hoppers_trailers <- list()
+      i_type <- "tc"
+    }
+    
+    for (j in 1:length(input$matriz.demandas[i_client+1,])){
+      demand <- input$matriz.demandas[i_client+1,j]
+      while (demand > 0) {
+        save_demand <- demand
+        demand <- demand - cap_hoppers_truck
+        if (demand > 0) quantity <- cap_hoppers_truck
+        else quantity <- save_demand
+        if (i_type == "tc") {
+          size_c <- length(clients_tc[[counter_clients_tc]]$hoppers_trucks) + 1
+          clients_tc[[counter_clients_tc]]$hoppers_trucks[[size_c]] <- c(j, quantity, quantity/cap_hoppers_truck)
+        }
+        else {
+          size_c <- length(clients_vc[[counter_clients_vc]]$hoppers_trucks) + 1
+          clients_vc[[counter_clients_vc]]$hoppers_trucks[[size_c]] <- c(j, quantity, quantity/cap_hoppers_truck)
+        }
+        counter_hoppers_truck <- counter_hoppers_truck + 1
+      }
+    }
+  }
+  
+  result_h <- list()
+  result_h$clients_tc <- clients_tc
+  result_h$clients_vc <- clients_vc
+  result_h$used_hoppers_truck <- counter_hoppers_truck
+  result_h$used_hoppers_trailer <- 0
+  
+  return(result_h)
+  
+}
+
+
+insert_hoppers_MCTTRP_PVR<-function(route_i, routes_res, input) {
+  
+  n_hoppers_truck <- length(input$H.camion[1,])
+  n_hoppers_trailer <- length(input$H.trailer[1,])
+  
+  cap_hoppers_truck <- input$H.camion[1,1]
+  cap_hoppers_trailer <- input$H.trailer[1,1]
+  
+  route <- route_i
+  
+  clients_tc <- list()
+  clients_vc <- list()
+  counter_clients_tc <- 0
+  counter_clients_vc <- 0
+  counter_hoppers_truck <- 0
+  counter_hoppers_trailer <- 0
+  for (i in 2:(length(route)-1)) {
+    i_client <- route[i]
+    if (i_client<=input$n1) {
+      counter_clients_vc <- counter_clients_vc + 1
+      clients_vc[[counter_clients_vc]] <- list()
+      clients_vc[[counter_clients_vc]]$id <- i_client
+      clients_vc[[counter_clients_vc]]$demands <- input$matriz.demandas[i_client+1,]
+      clients_vc[[counter_clients_vc]]$hoppers_trucks <- list()
+      clients_vc[[counter_clients_vc]]$hoppers_trailers <- list()
+      i_type <- "vc"
+    } else {
+      counter_clients_tc <- counter_clients_tc + 1
+      clients_tc[[counter_clients_tc]] <- list()
+      clients_tc[[counter_clients_tc]]$id <- i_client
+      clients_tc[[counter_clients_tc]]$demands <- input$matriz.demandas[i_client+1,]
+      clients_tc[[counter_clients_tc]]$hoppers_trucks <- list()
+      clients_tc[[counter_clients_tc]]$hoppers_trailers <- list()
+      i_type <- "tc"
+    }
+    
+    for (j in 1:length(input$matriz.demandas[i_client+1,])){
+      demand <- input$matriz.demandas[i_client+1,j]
+      #trailers
+      while ((demand > 0) && (counter_hoppers_trailer < n_hoppers_trailer)){
+        save_demand <- demand
+        demand <- demand - cap_hoppers_trailer
+        if (demand > 0) quantity <- cap_hoppers_trailer
+        else quantity <- save_demand
+        if (i_type == "tc") {
+          size_c <- length(clients_tc[[counter_clients_tc]]$hoppers_trailers) + 1
+          clients_tc[[counter_clients_tc]]$hoppers_trailers[[size_c]] <- c(j, quantity, quantity/cap_hoppers_trailer)
+        }
+        else {
+          size_c <- length(clients_vc[[counter_clients_vc]]$hoppers_trailers) + 1
+          clients_vc[[counter_clients_vc]]$hoppers_trailers[[size_c]] <- c(j, quantity, quantity/cap_hoppers_trailer)
+        }
+        counter_hoppers_trailer <- counter_hoppers_trailer + 1
+      }
+      # trucks
+      while ((demand > 0)) {
+        save_demand <- demand
+        demand <- demand - cap_hoppers_truck
+        if (demand > 0) quantity <- cap_hoppers_truck
+        else quantity <- save_demand
+        if (i_type == "tc") {
+          size_c <- length(clients_tc[[counter_clients_tc]]$hoppers_trucks) + 1
+          clients_tc[[counter_clients_tc]]$hoppers_trucks[[size_c]] <- c(j, quantity, quantity/cap_hoppers_truck)
+        }
+        else {
+          size_c <- length(clients_vc[[counter_clients_vc]]$hoppers_trucks) + 1
+          clients_vc[[counter_clients_vc]]$hoppers_trucks[[size_c]] <- c(j, quantity, quantity/cap_hoppers_truck)
+        }
+        counter_hoppers_truck <- counter_hoppers_truck + 1
+      }
+    }
+  }
+  
+  result_h <- list()
+  result_h$clients_tc <- clients_tc
+  result_h$clients_vc <- clients_vc
+  result_h$used_hoppers_truck <- counter_hoppers_truck
+  result_h$used_hoppers_trailer <- counter_hoppers_trailer
+  
+  return(result_h)
+  
+}

@@ -365,7 +365,6 @@ calc_load2<-function(local_route, vector.demandas) {
 calc_load2_subroute<-function(local_route, vector.demandas) {
   load <- 0.0
   
-  print(local_route)
   sr <- return_subroutes2(local_route)
   
   route_to_calc <- c(0)
@@ -428,20 +427,15 @@ calc_load_only_truck_MC<-function(local_route, matrix.demands, input) {
   return(load)
 }
 
-analyse<-function(rutas, input, rutas_res) {
-
-#  lista <- sort(unique(rutas))
-#  counter <- 0
-#  for (i in 1:length(input$vector.demandas)) {
-#      if ((i+counter) != (lista[i]+1)) {
-#        print(paste0("no route for ", i, "   ", lista[i]))
-#        counter <- counter + 1
-#      }
-#  }
+analyse<-function(rutas, input, rutas_res, option) {
 
   cvr <- 0
   ptr <- 0
   pvr <- 0
+  
+  cap_truck <- input$capacidad.truck[1]
+  cap_total <- input$capacidad.vehiculo[1]
+  
 
   counter_route <- 1
   for (i in 2:(length(rutas))) {
@@ -454,45 +448,34 @@ analyse<-function(rutas, input, rutas_res) {
        exist_subroute <- 0
        if (sum(duplicated(subroute))) exist_subroute <- 1
        subroute <- c(subroute, 0)
-       print("")
-       print(paste0(counter_route, " ROUTE: "))
-       print(subroute)
        exist_truck <- 0
        counter_route <- counter_route + 1
 
        if (sum(subroute>input$n1)) exist_truck <- 1
        if (exist_subroute == 1) {
-          print(paste0("CVR -> max capacity ", input$capacidad.vehiculo))
-          c <- calc_load2(subroute, input$vector.demandas)
+          if (option == "TTRP") c <- calc_load2(subroute, input$vector.demandas)
+          if (option == "MCTTRP") c <- calc_load2_MC(subroute, input$matriz.demandas)
           cc <- local_cost(subroute, input$matriz.distancia) 
           sr <- return_subroutes(subroute, input$n1)
-          print(paste0("current load     -> ", c))
-          print(paste0("cost -> ", cc))
           for (z in 1:length(sr)) {
             sr1 <- sr[[z]]$tour
             sr1 <- sr1[2:(length(sr1)-1)]
-            ccc <- calc_load2(sr1, input$vector.demandas)
-            print(paste0("subroute ", z))
-            print(sr1)
-            print(paste0("subroute load ", z ,"   -> " , ccc))
+            if (option == "TTRP") ccc <- calc_load2(sr1, input$vector.demandas)
+            if (option == "MCTTRP") ccc <- calc_load2_MC(sr1, input$matriz.demandas)
           }
           cvr <- cvr + 1
        }
        else if ((exist_subroute == 0) && (exist_truck == 1)) {
-         print(paste0("PTR -> max capacity ", input$capacidad.truck))
-         c <- calc_load2(subroute, input$vector.demandas)
+         if (option == "TTRP") c <- calc_load2(subroute, input$vector.demandas)
+         if (option == "MCTTRP") c <- calc_load2_MC(subroute, input$matriz.demandas)
          cc <- local_cost(subroute, input$matriz.distancia) 
-         print(paste0("current capacity -> ", c))
-         print(paste0("cost -> ", cc))
          ptr <- ptr + 1
          
        }
        else {
-         print(paste0("PVR -> max capacity ", input$capacidad.vehiculo))
-         c <- calc_load2(subroute, input$vector.demandas)
+         if (option == "TTRP") c <- calc_load2(subroute, input$vector.demandas)
+         if (option == "MCTTRP") c <- calc_load2_MC(subroute, input$matriz.demandas)
          cc <- local_cost(subroute, input$matriz.distancia) 
-         print(paste0("current capacity -> ", c))
-         print(paste0("cost -> ", cc))
          pvr <- pvr + 1
        }
        
@@ -502,48 +485,87 @@ analyse<-function(rutas, input, rutas_res) {
 
   }
   counter_errors <- 0
-  
+
   for (i in 1:length(rutas_res)) {
-    tload <- calc_load2(rutas_res[[i]]$route, input$vector.demandas)
+    if (option == "TTRP") tload <- calc_load2(rutas_res[[i]]$route, input$vector.demandas)
+    if (option == "MCTTRP") tload <- calc_load2_MC(rutas_res[[i]]$route, input$matriz.demandas)
+    
     tcost <- local_cost(rutas_res[[i]]$route, input$matriz.distancia) 
     
     if (rutas_res[[i]]$type == "CVR") {
       sr <- return_subroutes(rutas_res[[i]]$route, input$n1)
-      if ((tload != rutas_res[[i]]$total_load)&&(tload < input$capacidad.vehiculo)) {
-        print(paste0("ERROR total capacity in CVR, route number ", i))
+      if ((tload != rutas_res[[i]]$total_load)&&(tload < cap_total)) {
+        print(paste0("   ERROR total capacity in CVR, route number ", i))
         counter_errors <- counter_errors +  1
       }
       for (j in 1:length(sr)) {
         sr1 <- sr[[j]]$tour
         sr1 <- sr1[2:(length(sr1)-1)]
-        sload <- calc_load2(sr1, input$vector.demandas)
-        if (sload > input$capacidad.truck) {
-          print(paste0("ERROR subroute capacity in CVR, route number ", i, " subroute ", j))
+        if (option == "TTRP") sload <- calc_load2(sr1, input$vector.demandas)
+        if (option == "MCTTRP") sload <- calc_load2_MC(sr1, input$matriz.demandas)
+        if (sload > cap_truck) {
+          print(paste0("   ERROR subroute capacity in CVR, route number ", i, " subroute ", j))
           counter_errors <- counter_errors +  1
+        }
+      }
+      
+      for (j in 1:length(rutas_res[[i]]$route)) {
+        no_check <- 0
+        for (z in 1:length(sr)) {
+          if (sum(sr[[z]]$tour==rutas_res[[i]]$route[j])>0) {
+            no_check <- 1
+          }
+        }
+        if (!no_check) {
+          if (rutas_res[[i]]$route[j] > input$n1){
+            print(paste0("   ERROR client tc in main root, route number ", i))
+            counter_errors <- counter_errors +  1
+          }
         }
       }
     }
     else if (rutas_res[[i]]$type == "PTR") {
-      if ((tload != rutas_res[[i]]$total_load)&&(tload > input$capacidad.truck)) {
-        print(paste0("ERROR total capacity in PTR, route number ", i))
+      if ((tload != rutas_res[[i]]$total_load)&&(tload > cap_truck)) {
+        print(paste0("   ERROR total capacity in PTR, route number ", i))
         counter_errors <- counter_errors +  1
       }
     }
     else if (rutas_res[[i]]$type == "PVR") {
-      if ((tload != rutas_res[[i]]$total_load)&&(tload > input$capacidad.vehiculo)) {
-        print(paste0("ERROR total capacity in PVR, route number ", i))
+      if ((tload != rutas_res[[i]]$total_load)&&(tload > cap_total)) {
+        print(paste0("   ERROR total capacity in PVR, route number ", i))
         counter_errors <- counter_errors +  1
       }
     }
   }
-
-  print("SUMMARY:")
-  print(paste0("PTR ->", ptr))
-  print(paste0("PVR ->", pvr))
-  print(paste0("CVR ->", cvr))
-
-  print("")
-  print(paste0("NUMBER OF ERRORS -> ", counter_errors))
+  
+  # CHECK HOPPERS
+  if (option == "MCTTRP") {
+    for (i in 1:length(rutas_res)) {
+      if (rutas_res[[i]]$type == "CVR") {
+        if (!check_capacity_hoppers_MCTTRP_CVR(rutas_res[[i]]$route, rutas_res, input)) {
+          print(paste0("   ERROR in hoppers (CVR), route number ", i))
+          counter_errors <- counter_errors +  1
+        } 
+      }
+      else if (rutas_res[[i]]$type == "PTR") {
+        if (!check_capacity_hoppers_MCTTRP_PR(rutas_res[[i]]$route, rutas_res, input, cap_truck)) {
+          print(paste0("   ERROR in hoppers (PTR), route number ", i))
+          counter_errors <- counter_errors +  1
+        } 
+      }
+      else if (rutas_res[[i]]$type == "PVR") {
+        if (!check_capacity_hoppers_MCTTRP_PR(rutas_res[[i]]$route, rutas_res, input, (cap_total))) {
+          print(paste0("   ERROR in hoppers (PVR), route number ", i))
+          counter_errors <- counter_errors +  1
+        } 
+      }
+      
+    }
+  }
+  print(paste0("   total nodes in final route  ---> ", length(unique(rutas))))
+  print(paste0("   n  ---> ", input$n))
+  print(paste0("   n1 ---> ", input$n1))
+  print(paste0("   NUMBER OF ERRORS -> ", counter_errors))
 }
 
 
@@ -640,7 +662,6 @@ update_Hopper_matrix<-function(Hoppers, H.trailer_res, H.truck_res, input, rutas
 }
 
 create_result_struct<-function(rutas, input, option) {
-
   
   rutas_res <- list()
   counter <- 1
@@ -659,11 +680,14 @@ create_result_struct<-function(rutas, input, option) {
 
       if (sum(route>input$n1)) exist_truck <- 1
 
+      if (option == "TTRP") load_check <- calc_load2(route, input$vector.demandas)
+      if (option == "MCTTRP") load_check <- calc_load2_MC(route, input$matriz.demandas)
+      
       if (exist_route == 1) {
         rutas_res[[counter]] <- list()
         rutas_res[[counter]]$type <-  "CVR"
       }
-      else if ((exist_route == 0) && (exist_truck == 1)) {
+      else if ((exist_route == 0) && (exist_truck == 1) && (load_check <= input$capacidad.truck[1])) {
         rutas_res[[counter]] <- list()
         rutas_res[[counter]]$type <-  "PTR"
       }
@@ -688,10 +712,34 @@ create_result_struct<-function(rutas, input, option) {
 
   }
   
-  
-
   return(rutas_res)
 }
+
+add_vehicles_result_res<-function(routes_res, Hoppers ) {
+
+  for (i in 1:length(routes_res)) {
+    for (k in 1:length(Hoppers[,1])) {
+
+      if((sum(Hoppers[k,1]==routes_res[[i]]$route[2])>0) && (routes_res[[i]]$type == "PTR")){ 
+        routes_res[[i]]$truck <- Hoppers[k,4]
+        break
+      }
+      else if((sum(Hoppers[k,1]==routes_res[[i]]$route[2])>0) && (routes_res[[i]]$type == "PVR")){ 
+        routes_res[[i]]$trailer <- Hoppers[k,4]
+        routes_res[[i]]$truck <- Hoppers[k,4]
+        break
+      }
+      else if((sum(Hoppers[k,1]==routes_res[[i]]$route[2])>0) && (routes_res[[i]]$type == "CVR")){ 
+        routes_res[[i]]$trailer <- Hoppers[k,4]
+        routes_res[[i]]$truck <- Hoppers[k,4]
+        break
+      }
+    }
+  }
+  
+  return(routes_res)
+}
+
 
 
 calc_load_hoppers<-function(Hoppers, num_veh) {
@@ -713,6 +761,17 @@ calc_load_hoppers<-function(Hoppers, num_veh) {
   result_load$used_hoppers_truck <- num_hoppers_truck 
   result_load$used_hoppers_trailer <- num_hoppers_trailer 
   return(result_load)
+}
+
+check_truck_hopper<-function(Hoppers, client) {
+  index_h <- -1
+  for (i in 1:length(Hoppers[,1])) {
+    if (Hoppers[i, 1] == client) {
+      index_h <- Hoppers[i, 4]
+    }
+  }
+  
+  return(index_h)
 }
 
 

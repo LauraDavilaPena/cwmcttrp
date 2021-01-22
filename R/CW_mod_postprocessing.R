@@ -3,9 +3,19 @@
 #' @param rutas
 #' @param input
 #' @return A list of results ...
-postproc_add_disconnected_clients<-function(rutas, input, Tolvas, R, Rhat, H.camion_res,
-                                            H.trailer_res, H.camion, H.trailer, demandas_res,
-                                            n1, n, nf, t, num_clientes){ #rev1
+postproc_add_disconnected_clients_MCTTRP<-function(rutas, input, Tolvas, 
+                                                   R, Rhat, CWTTRP_struct, nf){
+  
+  H.camion_res  <- CWTTRP_struct$H.camion_res
+  H.trailer_res <- CWTTRP_struct$H.trailer_res
+  H.camion  <- input$H.camion
+  H.trailer  <- input$H.trailer
+  demandas_res  <- CWTTRP_struct$demandas_res
+  n1 <- input$n1 
+  n <- input$n 
+  t <- CWTTRP_struct$t
+  
+  num_clientes <- 0
   counter<-length(rutas)+1
   for (zz in 2:length(R[,1])){
     if ((R[zz,1]==0)&&(R[zz,3]==0)&&(Rhat[zz,1]==0)&&
@@ -85,7 +95,6 @@ postproc_add_disconnected_clients<-function(rutas, input, Tolvas, R, Rhat, H.cam
     }
   }
   
-  
   results<-list()
   results$rutas<-rutas
   results$Tolvas<-Tolvas
@@ -98,8 +107,6 @@ postproc_add_disconnected_clients<-function(rutas, input, Tolvas, R, Rhat, H.cam
   
   return(results)
 }
-
-
 #' Postproc ...
 #'
 #' @param rutas
@@ -251,50 +258,49 @@ postproc_subroutes_trailer_routes<-function(rutas, matriz.distancia,
   return(results)
 }
 
-
 #' Postproc ...
 #'
 #' @param rutas
 #' @param input
 #' @return A list of results ...
-creation_routes_post <- function(rutas, Tolvas){
+#creation_routes_post <- function(rutas, Tolvas){
   
-  n.rutas <- sum(rutas==0)-1
-  rutas.depot.start <- which(rutas==0)[-length(which(rutas==0))]
-  rutas.depot.end <- which(rutas==0)[-1]
+#  n.rutas <- sum(rutas==0)-1
+#  rutas.depot.start <- which(rutas==0)[-length(which(rutas==0))]
+#  rutas.depot.end <- which(rutas==0)[-1]
   
   #for (i in n.rutas){
   #  rutas.indiv[i,] <- rutas[rutas.depot[i]:rutas.depot[i+1]]
   #}
   
-  rutas.indiv <- mapply(function(x, y) t(rutas[seq(x, y)]), rutas.depot.start, rutas.depot.end)
-  class(rutas.indiv)
-  r.trailer <- numeric(n.rutas)
-  r.truck <- numeric(n.rutas)
+#  rutas.indiv <- mapply(function(x, y) t(rutas[seq(x, y)]), rutas.depot.start, rutas.depot.end)
+#  class(rutas.indiv)
+#  r.trailer <- numeric(n.rutas)
+#  r.truck <- numeric(n.rutas)
   
-  for (i in 1:length(rutas.indiv)){
+#  for (i in 1:length(rutas.indiv)){
     #print(rutas.indiv)
-    for (j in rutas.indiv[[i]][2:(length(rutas.indiv[[i]])-1)]){
-      for(k in which(Tolvas[,1]==j)){
-        if(Tolvas[k,3]=="trailer"){
-          r.trailer[i] <- as.numeric(Tolvas[k,4])
-        }else{
-          r.truck[i] <- as.numeric(Tolvas[k,4])
-        }
-      }
-    }
-  }
+#    for (j in rutas.indiv[[i]][2:(length(rutas.indiv[[i]])-1)]){
+#      for(k in which(Tolvas[,1]==j)){
+#        if(Tolvas[k,3]=="trailer"){
+#          r.trailer[i] <- as.numeric(Tolvas[k,4])
+#        }else{
+#          r.truck[i] <- as.numeric(Tolvas[k,4])
+#        }
+#      }
+#    }
+#  }
   
-  rutas.des=list()
-  for(i in 1:length(rutas.indiv)){
-    ruta.aux=list()
-    ruta.aux=list(rutas=rutas.indiv[[i]],trailer=r.trailer[i],truck=r.truck[i])
-    rutas.des[[i]]<-ruta.aux
-  }
+#  rutas.des=list()
+#  for(i in 1:length(rutas.indiv)){
+#    ruta.aux=list()
+#    ruta.aux=list(rutas=rutas.indiv[[i]],trailer=r.trailer[i],truck=r.truck[i])
+#    rutas.des[[i]]<-ruta.aux
+#  }
   
-  return(rutas.des)
+#  return(rutas.des)
   
-}
+#}
 
 #' Postproc ...
 #'
@@ -449,8 +455,6 @@ postproc_add_disconnected_clients_TTRP<-function(rutas_res, rutas, input, R, Rha
   return(rutas_res)
 }
 
-
-
 #' Postproc ...
 #'
 #' @param rutas
@@ -466,7 +470,7 @@ postproc_TTRP<-function(rutas_res, rutas, input, R, Rhat){
     rutas_res <- postproc_add_disconnected_clients_TTRP(rutas_res, rutas, input, R, Rhat)
 
     # ADJUST THE FLEET
-    result_fleet <- adjusts_n_trailers_and_first_transformations(rutas_res, input)
+    result_fleet <- adjusts_n_trailers_and_first_transformations(rutas_res, input, "TTRP")
     rutas_res <- result_fleet$rutas_res
     n_ptr <- result_fleet$n_ptr
     
@@ -479,22 +483,22 @@ postproc_TTRP<-function(rutas_res, rutas, input, R, Rhat){
     ## SPLIT AND INSERT
     if ((length(non_selected_pvr_cvr_index)!=0)||(length(non_selected_ptr_index)!=0)) {
       result_split <- split_and_insert(rutas_res, selected_pvr_cvr_index, non_selected_pvr_cvr_index, 
-                                    selected_ptr_index, non_selected_ptr_index, input, 0)
+                                    selected_ptr_index, non_selected_ptr_index, input, "TTRP", 0)
       rutas_res <- result_split$rutas_res
       non_selected_ptr_index <- result_split$non_selected_ptr_index
       non_selected_pvr_cvr_index <- result_split$non_selected_pvr_cvr_index
     }
-
+    
     ## TRANSFORM AND SPLIT AGAIN
     if ((length(non_selected_pvr_cvr_index)!=0)||(length(non_selected_ptr_index)!=0)) {
       
-      result_transform_space <- transform_marginal_routes(rutas_res, non_selected_ptr_index, non_selected_pvr_cvr_index, selected_ptr_index, selected_pvr_cvr_index, input)
+      result_transform_space <- transform_marginal_routes(rutas_res, non_selected_ptr_index, non_selected_pvr_cvr_index, selected_ptr_index, selected_pvr_cvr_index, input, "TTRP")
       rutas_res <- result_transform_space$rutas_res
       non_selected_ptr_index <- result_transform_space$non_selected_ptr_index 
       non_selected_pvr_cvr_index <- result_transform_space$non_selected_pvr_cvr_index 
-  
+      
     }
-    
+
     ## SWITCH RESIDUAL ROUTES
     if ((length(non_selected_pvr_cvr_index)!=0)||(length(non_selected_ptr_index)!=0)) {
   
@@ -502,7 +506,8 @@ postproc_TTRP<-function(rutas_res, rutas, input, R, Rhat){
                                             append(non_selected_pvr_cvr_index, non_selected_ptr_index), input)
         
       result_split <- split_and_insert(rutas_res, selected_pvr_cvr_index, non_selected_pvr_cvr_index, 
-                                       selected_ptr_index, non_selected_ptr_index, input, 1)
+                                       selected_ptr_index, non_selected_ptr_index, input, "TTRP", 1)
+        
       rutas_res <- result_split$rutas_res
       non_selected_ptr_index <- result_split$non_selected_ptr_index
       non_selected_pvr_cvr_index <- result_split$non_selected_pvr_cvr_index
@@ -515,7 +520,79 @@ postproc_TTRP<-function(rutas_res, rutas, input, R, Rhat){
   return(rutas_res)
 }
 
+#' Postproc ...
+#'
+#' @param rutas
+#' @param input
+#' @return A list of results ...
+#' 
+postproc_MCTTRP<-function(routes, input, R, Rhat, Hoppers, CWTTRP_struct, nf){
 
+  
+    # ADD DISCONNECTED CLIENTS
+    result_postproc1 <- postproc_add_disconnected_clients_MCTTRP(routes, input, Hoppers, 
+                                                                 R, Rhat, CWTTRP_struct, nf)
+    routes <- delete_dupl_zeros_route(result_postproc1$rutas)
+    Hoppers <- result_postproc1$Tolvas
+    CWTTRP_struct <- result_postproc1$CWTTRP_struct
+    num_clientes <- result_postproc1$num_clientes #rev1
+    
+    rutas_res <-  create_result_struct(routes, input, "MCTTRP")
+    rutas_res <-  extract_info_from_hoppers(rutas_res, Hoppers, input)
+      
+    # ADJUST THE FLEET
+    result_fleet <- adjusts_n_trailers_and_first_transformations(rutas_res, input, "MCTTRP")
+    rutas_res <- result_fleet$rutas_res
+    n_ptr <- result_fleet$n_ptr
+    
+    
+    # SELECTED ROUTES
+    selected_pvr_cvr_index <- select_PVRs_CVRs(rutas_res, input$n_trailers, input)
+    non_selected_pvr_cvr_index <- return_non_selected_pvr_cvr(rutas_res, selected_pvr_cvr_index)
+    selected_ptr_index <- select_PTRs(rutas_res, n_ptr, input)
+    non_selected_ptr_index <- return_non_selected_ptr(rutas_res, selected_ptr_index)
+    
+    ## SPLIT AND INSERT
+    if ((length(non_selected_pvr_cvr_index)!=0)||(length(non_selected_ptr_index)!=0)) {
+      result_split <- split_and_insert(rutas_res, selected_pvr_cvr_index, non_selected_pvr_cvr_index, 
+                                       selected_ptr_index, non_selected_ptr_index, input, "MCTTRP", 0)
+      rutas_res <- result_split$rutas_res
+      non_selected_ptr_index <- result_split$non_selected_ptr_index
+      non_selected_pvr_cvr_index <- result_split$non_selected_pvr_cvr_index
+    }
+    
+    ## TRANSFORM AND SPLIT AGAIN
+    if ((length(non_selected_pvr_cvr_index)!=0)||(length(non_selected_ptr_index)!=0)) {
+      result_transform_space <- transform_marginal_routes(rutas_res, non_selected_ptr_index, non_selected_pvr_cvr_index, 
+                                                          selected_ptr_index, selected_pvr_cvr_index, input, "MCTTRP")
+      rutas_res <- result_transform_space$rutas_res
+      non_selected_ptr_index <- result_transform_space$non_selected_ptr_index 
+      non_selected_pvr_cvr_index <- result_transform_space$non_selected_pvr_cvr_index 
+    }
+    
+    ## SWITCH RESIDUAL ROUTES
+    #if ((length(non_selected_pvr_cvr_index)!=0)||(length(non_selected_ptr_index)!=0)) {
+    #  rutas_res <- switch_routes(rutas_res, append(selected_pvr_cvr_index, selected_ptr_index), 
+    #                             append(non_selected_pvr_cvr_index, non_selected_ptr_index), input)
+      
+    #  result_split <- split_and_insert(rutas_res, selected_pvr_cvr_index, non_selected_pvr_cvr_index, 
+    #                                   selected_ptr_index, non_selected_ptr_index, input, "TTRP", 1)
+      
+    #  rutas_res <- result_split$rutas_res
+    #  non_selected_ptr_index <- result_split$non_selected_ptr_index
+    #  non_selected_pvr_cvr_index <- result_split$non_selected_pvr_cvr_index
+      
+    #}
+    
+    rutas_res <- clean_rutas_res(rutas_res)
+
+    return(rutas_res)
+}
+
+#' Control subroutine: check_feasibility_fleet
+#'
+#' @param input
+#' @return Boolean value
 check_feasibility_fleet<-function(input) {
   total_capacity_trucks <- input$capacidad.truck * input$n_trucks
   total_capacity_total  <- total_capacity_trucks + input$capacidad.trailer * input$n_trailers
@@ -530,16 +607,17 @@ check_feasibility_fleet<-function(input) {
   return(unfeasible_fleet)
 }
 
-
-adjusts_n_trailers_and_first_transformations<-function(rutas_res, input) {
-
+adjusts_n_trailers_and_first_transformations<-function(rutas_res, input, type_problem) {
+  
   ptr_index <- return_ptr_index(rutas_res)
   current_n_trailers <- return_VTR_CVR_routes(rutas_res)
   
   if (length(ptr_index)) {
     if (current_n_trailers < input$n_trailers) {
       n_convert_ptr_cvr <- input$n_trailers - current_n_trailers
-      rutas_res <- convert_PTR_CVR(rutas_res, ptr_index, n_convert_ptr_cvr, input)
+      if (length(ptr_index)) {
+        rutas_res <- convert_PTR_CVR(rutas_res, ptr_index, n_convert_ptr_cvr, input, type_problem)
+      }
     }
   }
   
@@ -547,7 +625,9 @@ adjusts_n_trailers_and_first_transformations<-function(rutas_res, input) {
     n_trailers_to_delete <- current_n_trailers - input$n_trailers
     pvr_index <- return_pvr_index(rutas_res)
     pcr_index <- return_cvr_index(rutas_res)
-    rutas_res <- merge_route_CVR(rutas_res, pvr_index, pcr_index, n_trailers_to_delete, input, "PVR")
+    if (length(pcr_index)&&(length(ptr_index))) {
+      rutas_res <- merge_route_CVR(rutas_res, pvr_index, pcr_index, n_trailers_to_delete, input, "PVR", type_problem)
+    }
   }
   
   n_ptr <- input$n_trucks - input$n_trailers
@@ -556,18 +636,19 @@ adjusts_n_trailers_and_first_transformations<-function(rutas_res, input) {
     n_trucks_to_delete <- current_n_ptr - n_ptr
     ptr_index <- return_ptr_index(rutas_res)
     pcr_index <- return_cvr_index(rutas_res)
-    rutas_res <- merge_route_CVR(rutas_res, ptr_index, pcr_index, n_trucks_to_delete, input, "PTR")
-    
+    if (length(pcr_index)&&(length(ptr_index))) {
+      rutas_res <- merge_route_CVR(rutas_res, ptr_index, pcr_index, n_trucks_to_delete, input, "PTR", type_problem)
+    }
   }
   
   result_fleet <- list()
   result_fleet$n_ptr <- n_ptr
   result_fleet$rutas_res <- rutas_res
-    
+  
   return(result_fleet)
 }
 
-transform_marginal_routes<-function(rutas_res, non_selected_ptr_index, non_selected_pvr_cvr_index, selected_ptr_index, selected_pvr_cvr_index, input) {
+transform_marginal_routes<-function(rutas_res, non_selected_ptr_index, non_selected_pvr_cvr_index, selected_ptr_index, selected_pvr_cvr_index, input, type_problem) {
   result_transform_space <- list()
   
   route_tc_to_add <- list()
@@ -582,9 +663,22 @@ transform_marginal_routes<-function(rutas_res, non_selected_ptr_index, non_selec
         
         if ((length(segment_routes$route_tc)>2)) {
           rutas_res[[i]]$route  <- segment_routes$route_tc
-          rutas_res[[i]]$total_load <- calc_load2(segment_routes$route_tc, input$vector.demandas)
-          rutas_res[[i]]$total_load_tc_clients <- calc_load_only_truck(segment_routes$route_tc, input$vector.demandas, input)
+          if ( type_problem == "TTRP") {
+              rutas_res[[i]]$total_load <- calc_load2(segment_routes$route_tc, input$vector.demandas)
+              rutas_res[[i]]$total_load_tc_clients <- calc_load_only_truck(segment_routes$route_tc, input$vector.demandas, input)
+          }
+          if ( type_problem == "MCTTRP") {
+            rutas_res[[i]]$total_load <- calc_load2_MC(segment_routes$route_tc, input$matriz.distancia)
+            rutas_res[[i]]$total_load_tc_clients <- calc_load_only_truck_MC(segment_routes$route_tc, input$matriz.distancia, input)
+          }
           rutas_res[[i]]$cost <- local_cost(segment_routes$route_tc, input$matriz.distancia)
+          if (type_problem == "MCTTRP") {
+            res_r <- insert_hoppers_MCTTRP_PTR(rutas_res[[i]]$route, rutas_res, input)
+            rutas_res[[i]]$clients_tc <- res_r$clients_tc
+            rutas_res[[i]]$clients_vc <- res_r$clients_vc
+            rutas_res[[i]]$used_hoppers_truck <- res_r$used_hoppers_truck
+            rutas_res[[i]]$used_hoppers_trailer <- res_r$used_hoppers_trailer
+          }
         }
         if ((length(segment_routes$route_vc)>2)&&(length(segment_routes$route_tc)>2)) {
           new_route <- list()
@@ -592,7 +686,22 @@ transform_marginal_routes<-function(rutas_res, non_selected_ptr_index, non_selec
           new_route$route <- segment_routes$route_vc
           new_route$total_load <- calc_load2(segment_routes$route_vc, input$vector.demandas)
           new_route$total_load_tc_clients <- calc_load_only_truck(segment_routes$route_vc, input$vector.demandas, input)
+          if ( type_problem == "TTRP") {
+            new_route$total_load <- calc_load2(segment_routes$route_vc, input$vector.demandas)
+            new_route$total_load_tc_clients <- calc_load_only_truck(segment_routes$route_vc, input$vector.demandas, input)
+          }
+          if ( type_problem == "MCTTRP") {
+            new_route$total_load <- calc_load2_MC(segment_routes$route_vc, input$matriz.distancia)
+            new_route$total_load_tc_clients <- calc_load_only_truck_MC(segment_routes$route_vc, input$matriz.distancia, input)
+          }
           new_route$cost <- local_cost(segment_routes$route_vc, input$matriz.distancia)
+          if (type_problem == "MCTTRP") {
+            res_r <- insert_hoppers_MCTTRP_PVR(new_route$route, rutas_res, input)
+            new_route$clients_tc <- res_r$clients_tc
+            new_route$clients_vc <- res_r$clients_vc
+            new_route$used_hoppers_truck <- res_r$used_hoppers_truck
+            new_route$used_hoppers_trailer <- res_r$used_hoppers_trailer
+          }
           route_tc_to_add[[counter_route_tc_to_add]] <- new_route
           counter_route_tc_to_add <- counter_route_tc_to_add + 1
         }
@@ -612,8 +721,9 @@ transform_marginal_routes<-function(rutas_res, non_selected_ptr_index, non_selec
   }
   
   if ((length(non_selected_pvr_cvr_index)!=0)||(length(non_selected_ptr_index)!=0)) {
+    
     result_split <- split_and_insert(rutas_res, selected_pvr_cvr_index, non_selected_pvr_cvr_index, 
-                                     selected_ptr_index, non_selected_ptr_index, input, 1)
+                                     selected_ptr_index, non_selected_ptr_index, input, type_problem, 1)
     rutas_res <- result_split$rutas_res
     non_selected_ptr_index <- result_split$non_selected_ptr_index
     non_selected_pvr_cvr_index <- result_split$non_selected_pvr_cvr_index
@@ -648,17 +758,17 @@ return_fleet<-function(routes_res) {
   return(fleet_stats)
 }
 
-split_and_insert<-function(rutas_res, selected_pvr_cvr_index, non_selected_pvr_cvr_index, selected_ptr_index, non_selected_ptr_index, input, enable) {
+split_and_insert<-function(rutas_res, selected_pvr_cvr_index, non_selected_pvr_cvr_index, selected_ptr_index, non_selected_ptr_index, input, type_problem, enable) {
   
   if (length(non_selected_ptr_index)) {
-    res_list <- split_all_vc_tc(rutas_res, non_selected_ptr_index, input)
+    res_list <- split_all_vc_tc(rutas_res, non_selected_ptr_index, input, type_problem)
     routes_to_add_only_tc <- res_list$routes_to_add_only_tc 
     routes_to_add_only_vc <- res_list$routes_to_add_only_vc 
     rutas_res <- res_list$rutas_res
   }
   
   if (length(non_selected_pvr_cvr_index)) {
-    res_list <- split_all_vc_tc(rutas_res, non_selected_pvr_cvr_index, input)
+    res_list <- split_all_vc_tc(rutas_res, non_selected_pvr_cvr_index, input, type_problem)
     if (length(non_selected_ptr_index)) {
       routes_to_add_only_tc <- append(routes_to_add_only_tc, res_list$routes_to_add_only_tc )
       routes_to_add_only_vc <- append(routes_to_add_only_vc, res_list$routes_to_add_only_vc )
@@ -681,13 +791,12 @@ split_and_insert<-function(rutas_res, selected_pvr_cvr_index, non_selected_pvr_c
   index_trucks <- append(selected_pvr_cvr_index, selected_ptr_index) #append(index_trucks, selected_ptr_index)
   index_trailers <- append(selected_pvr_cvr_index, selected_ptr_index)
   
-  
   ## "add to trucks"
   stop_cond <- 0
   while ((length(routes_to_add_only_tc))&&(stop_cond != 1)) {
-
-    result_ci <- check_insert_segment_in_route(routes_to_add_only_tc, rutas_res, index_trucks, input, "tc", enable)
-      
+    
+    result_ci <- check_insert_segment_in_route(routes_to_add_only_tc, rutas_res, index_trucks, input, "tc", type_problem, enable)
+    
     routes_to_add_only_tc <- result_ci$routes_to_add
     rutas_res <- result_ci$rutas_res
     
@@ -696,7 +805,7 @@ split_and_insert<-function(rutas_res, selected_pvr_cvr_index, non_selected_pvr_c
     updated_res <- result_up$updated
     
     if ((length(routes_to_add_only_tc)>0)&&(updated_res==0)) {
-      res <- split_all_middle(rutas_res, routes_to_add_only_tc, input)
+      res <- split_all_middle(rutas_res, routes_to_add_only_tc, input, type_problem)
       rutas_res <- res$rutas_res 
       routes_to_add_only_tc <- res$group_index
       non_split_routes <- res$non_split_routes
@@ -708,7 +817,8 @@ split_and_insert<-function(rutas_res, selected_pvr_cvr_index, non_selected_pvr_c
   ## add to trailers
   stop_cond <- 0
   while ((length(routes_to_add_only_vc))&&(stop_cond != 1)) {
-    result_ci <- check_insert_segment_in_route(routes_to_add_only_vc, rutas_res, index_trailers, input, "vc", enable)
+    
+    result_ci <- check_insert_segment_in_route(routes_to_add_only_vc, rutas_res, index_trailers, input, "vc", type_problem, enable)
     
     routes_to_add_only_vc <- result_ci$routes_to_add
     rutas_res <- result_ci$rutas_res
@@ -718,7 +828,7 @@ split_and_insert<-function(rutas_res, selected_pvr_cvr_index, non_selected_pvr_c
     updated_res <- result_up$updated
     
     if (length(routes_to_add_only_vc>0)&&(updated_res==0)) {
-      res <- split_all_middle(rutas_res, routes_to_add_only_vc, input)
+      res <- split_all_middle(rutas_res, routes_to_add_only_vc, input, type_problem)
       rutas_res <- res$rutas_res 
       routes_to_add_only_vc <- res$group_index
       non_split_routes <- res$non_split_routes
@@ -736,7 +846,7 @@ split_and_insert<-function(rutas_res, selected_pvr_cvr_index, non_selected_pvr_c
   
 }
 
-check_insert_segment_in_route<-function(routes_to_add, rutas_res, index, input, option, enable) {
+check_insert_segment_in_route<-function(routes_to_add, rutas_res, index, input, option, type_problem, enable) {
 
   best_cost <- Inf
   index_to_add <- -1
@@ -748,64 +858,95 @@ check_insert_segment_in_route<-function(routes_to_add, rutas_res, index, input, 
       if (length(route_to_check$route) > 1 ) {
           if (route_to_check$type == "PTR") {
               res <- insert_PR_in_PR(route_to_insert$route[2:(length(route_to_insert$route)-1)], 
-                                     route_to_check$route, input, input$capacidad.truck)
+                                     route_to_check$route, input, input$capacidad.truck, type_problem, rutas_res)
               if (best_cost > res$cost) {
                 best_type <- route_to_check$type
                 best_cost <- res$cost
                 best_route <- res$route
-                best_total_load <- calc_load2(res$route, input$vector.demandas)
-                best_total_load_tc_clients <- calc_load_only_truck(res$route, input$vector.demandas, input)
+                if (type_problem == "TTRP") {
+                    best_total_load <- calc_load2(res$route, input$vector.demandas)
+                    best_total_load_tc_clients <- calc_load_only_truck(res$route, input$vector.demandas, input)
+                }
+                if (type_problem == "MCTTRP") {
+                  best_total_load <- calc_load2_MC(res$route, input$matriz.demandas)
+                  best_total_load_tc_clients <- calc_load_only_truck_MC(res$route, input$matriz.demandas, input)
+                }
                 index_to_add <- index[[j]]
                 index_to_del <- i
               } 
           }
           if ((option == "tc")&&(route_to_check$type == "CVR")) {
                 res <- insert_PTR_in_CVR(route_to_insert$route[2:(length(route_to_insert$route)-1)], 
-                                         route_to_check$route, input)
+                                         route_to_check$route, input, type_problem, rutas_res)
                 if (best_cost > res$cost) {
                   best_type <- route_to_check$type
                   best_cost <- res$cost
                   best_route <- res$route
-                  best_total_load <- calc_load2(res$route, input$vector.demandas)
-                  best_total_load_tc_clients <- calc_load_only_truck(res$route, input$vector.demandas, input)
+                  if (type_problem == "TTRP") {
+                      best_total_load <- calc_load2(res$route, input$vector.demandas)
+                      best_total_load_tc_clients <- calc_load_only_truck(res$route, input$vector.demandas, input)
+                  }
+                  if (type_problem == "MCTTRP") {
+                    best_total_load <- calc_load2_MC(res$route, input$matriz.demandas)
+                    best_total_load_tc_clients <- calc_load_only_truck_MC(res$route, input$matriz.demandas, input)
+                  }
                   index_to_add <- index[[j]]
                   index_to_del <- i
                 } 
           }
           if ((option == "vc")&&(route_to_check$type == "PVR")) {
               res <- insert_PR_in_PR(route_to_insert$route[2:(length(route_to_insert$route)-1)], 
-                                     route_to_check$route, input, input$capacidad.vehiculo)
+                                     route_to_check$route, input, input$capacidad.vehiculo, type_problem, rutas_res)
               if (best_cost > res$cost) {
                 best_type <- route_to_check$type
                 best_cost <- res$cost
                 best_route <- res$route
-                best_total_load <- calc_load2(res$route, input$vector.demandas)
-                best_total_load_tc_clients <- calc_load_only_truck(res$route, input$vector.demandas, input)
+                if (type_problem == "TTRP") {
+                    best_total_load <- calc_load2(res$route, input$vector.demandas)
+                    best_total_load_tc_clients <- calc_load_only_truck(res$route, input$vector.demandas, input)
+                }
+                if (type_problem == "MCTTRP") {
+                  best_total_load <- calc_load2_MC(res$route, input$matriz.demandas)
+                  best_total_load_tc_clients <- calc_load_only_truck_MC(res$route, input$matriz.demandas, input)
+                }
                 index_to_add <- index[[j]]
                 index_to_del <- i
               } 
           }
           if ((option == "vc")&&(route_to_check$type == "CVR")) {
               res <- insert_PVR_in_CVR(route_to_insert$route[2:(length(route_to_insert$route)-1)], 
-                                       route_to_check$route, input)
+                                       route_to_check$route, input, type_problem, rutas_res)
               if (best_cost > res$cost) {
                 best_type <- route_to_check$type
                 best_cost <- res$cost
                 best_route <- res$route
-                best_total_load <- calc_load2(res$route, input$vector.demandas)
-                best_total_load_tc_clients <- calc_load_only_truck(res$route, input$vector.demandas, input)
+                if (type_problem == "TTRP") {
+                    best_total_load <- calc_load2(res$route, input$vector.demandas)
+                    best_total_load_tc_clients <- calc_load_only_truck(res$route, input$vector.demandas, input)
+                }
+                if (type_problem == "MCTTRP") {
+                  best_total_load <- calc_load2_MC(res$route, input$matriz.demandas)
+                  best_total_load_tc_clients <- calc_load_only_truck_MC(res$route, input$matriz.demandas, input)
+                }
                 index_to_add <- index[[j]]
                 index_to_del <- i
               } 
           }
           if ((option == "tc")&&(route_to_check$type == "PVR")&&(enable)) {
-              res <- merge_PVR_PTR(route_to_check$route, route_to_insert$route[2:(length(route_to_insert$route)-1)], input)
+              res <- merge_PVR_PTR(route_to_check$route, route_to_insert$route[2:(length(route_to_insert$route)-1)], 
+                                   input, type_problem, rutas_res)
               if (best_cost > res$cost) {
                 best_type <- "CVR"
                 best_cost <- res$cost
                 best_route <- res$route
-                best_total_load <- calc_load2(res$route, input$vector.demandas)
-                best_total_load_tc_clients <- calc_load_only_truck(res$route, input$vector.demandas, input)
+                if (type_problem == "TTRP") {
+                    best_total_load <- calc_load2(res$route, input$vector.demandas)
+                    best_total_load_tc_clients <- calc_load_only_truck(res$route, input$vector.demandas, input)
+                }
+                if (type_problem == "MCTTRP") {
+                  best_total_load <- calc_load2_MC(res$route, input$matriz.demandas)
+                  best_total_load_tc_clients <- calc_load_only_truck_MC(res$route, input$matriz.demandas, input)
+                }
                 index_to_add <- index[[j]]
                 index_to_del <- i
               } 
@@ -829,6 +970,16 @@ check_insert_segment_in_route<-function(routes_to_add, rutas_res, index, input, 
     new_r$total_load <- best_total_load
     new_r$total_load_tc_clients <- best_total_load_tc_clients
     new_r$cost <- best_cost
+    if (type_problem == "MCTTRP") {
+      if (new_r$type == "PTR") res_r <- insert_hoppers_MCTTRP_PTR(new_r$route, rutas_res, input)
+      if (new_r$type == "PVR") res_r <- insert_hoppers_MCTTRP_PVR(new_r$route, rutas_res, input)
+      if (new_r$type == "CVR") res_r <- insert_hoppers_MCTTRP_CVR(new_r$route, rutas_res, input)
+      new_r$clients_tc <- res_r$clients_tc
+      new_r$clients_vc <- res_r$clients_vc
+      new_r$used_hoppers_truck <- res_r$used_hoppers_truck
+      new_r$used_hoppers_trailer <- res_r$used_hoppers_trailer
+    }
+    
     rutas_res[[index_to_add]] <- new_r
     
     routes_to_add[[index_to_del]] <- -1 
@@ -858,15 +1009,10 @@ switch_routes<-function(rutas_res, routes_selected, routes_to_add, input) {
     while(!flag_exit) {
       node_to_check <- rutas_res[[routes_to_add[[j]]]]$route[2] 
       #####3
-      #print(paste0("iter ", j ))
-      #print(rutas_res[[routes_to_add[[j]]]]$route)
-      #print(paste0("load ", rutas_res[[routes_to_add[[j]]]]$total_load))
       
       res_list <- switch_r(res_list, routes_selected, rutas_res, node_to_check, routes_to_add[[j]], input)
       
       ######
-      #print(paste(res_list$load, " < ", prev_value))
-      #readline()
       
       if (res_list$load<prev_value) {
         prev_value <- res_list$load
@@ -904,8 +1050,6 @@ switch_routes<-function(rutas_res, routes_selected, routes_to_add, input) {
   
 }
 
-
-
 switch_r<-function(res_list, routes_selected, rutas_res, node_j, routes_to_add, input) {
   
   for (i in 1:length(routes_selected)){
@@ -914,13 +1058,13 @@ switch_r<-function(res_list, routes_selected, rutas_res, node_j, routes_to_add, 
     # for PTR
     if (route_i$type == "PTR") {
       for (z in 2:(length(route_i$route)-1)) {
-        res_list <- create_switch_route(res_list, route_i$route, node_j, input,  routes_selected[[i]], routes_to_add, z, input$capacidad.truck, 0)
+        res_list <- create_switch_route(res_list, route_i$route, node_j, input,  routes_selected[[i]], routes_to_add, z, input$capacidad.truck, 1)
       }
     }
     # for VTR
     if ((node_j<=input$n1)&&(route_i$type == "PVR")) {
       for (z in 2:(length(route_i$route)-1)) {
-        res_list <- create_switch_route(res_list, route_i$route, node_j, input,  routes_selected[[i]], routes_to_add, z, input$capacidad.vehiculo, 1)
+        res_list <- create_switch_route(res_list, route_i$route, node_j, input,  routes_selected[[i]], routes_to_add, z, input$capacidad.vehiculo, 0)
       }
     }
     # tc for CVR
@@ -928,7 +1072,7 @@ switch_r<-function(res_list, routes_selected, rutas_res, node_j, routes_to_add, 
       subroute <- return_subroutes_string(route_i$route, input$n1)
       for (z in 2:(length(route_i$route)-1)) {
         if (sum(subroute==route_i$route[z])!=0){
-          res_list <- create_switch_route(res_list, route_i$route, node_j, input, routes_selected[[i]], routes_to_add, z, input$capacidad.truck, 2)
+          res_list <- create_switch_route(res_list, route_i$route, node_j, input, routes_selected[[i]], routes_to_add, z, input$capacidad.truck, 1)
         }
       }
     }
@@ -936,6 +1080,7 @@ switch_r<-function(res_list, routes_selected, rutas_res, node_j, routes_to_add, 
     if (route_i$type == "CVR") {
       subroute <- return_subroutes_string(route_i$route, input$n1)
       for (z in 2:(length(route_i$route)-1)) {
+        # in subrroute
         if (sum(subroute==route_i$route[z])!=0){
           sr <- return_subroutes(route_i$route, input$n1)
           subroute_index <- -1
@@ -944,10 +1089,12 @@ switch_r<-function(res_list, routes_selected, rutas_res, node_j, routes_to_add, 
               subroute_index <- t
             }
           }
-          cap_subtour <-  calc_load2(sr[[subroute_index]]$tour[2:length(sr[[subroute_index]]$tour)], input$vector.demandas)
-          res_list <- create_switch_route(res_list, route_i$route, node_j, input, routes_selected[[i]], routes_to_add, z, cap_subtour, 2)
-        } else {
-          res_list <- create_switch_route(res_list, route_i$route, node_j, input, routes_selected[[i]], routes_to_add, z, input$capacidad.vehiculo, 2)
+          cap_subtour <-  calc_load2(sr[[subroute_index]]$tour[2:(length(sr[[subroute_index]]$tour)-1)], input$vector.demandas)
+          res_list <- create_switch_route(res_list, route_i$route, node_j, input, routes_selected[[i]], routes_to_add, z, input$capacidad.vehiculo, 1)
+        } 
+        # in main route
+        else {
+          res_list <- create_switch_route(res_list, route_i$route, node_j, input, routes_selected[[i]], routes_to_add, z, input$capacidad.vehiculo, 0)
         }
       }
     }
@@ -956,14 +1103,23 @@ switch_r<-function(res_list, routes_selected, rutas_res, node_j, routes_to_add, 
   return(res_list)
 }
   
-  
-create_switch_route<-function(res_list, n_route, selected_node, input, i, j, z, capacity, flag_option){
+create_switch_route<-function(res_list, n_route, selected_node, input, i, j, z, capacity, allow_different_type){
   if (selected_node <= input$n1) type_selected_node <- "vc"
   else type_selected_node <- "tc"
   if (n_route[z] <= input$n1) type_node <- "vc"
   else type_node <- "tc"
   
-  if (type_node==type_selected_node) {
+  if (allow_different_type) {
+    check <- 1
+  }
+  else {
+    check <- 0
+    if (type_selected_node == type_node) {
+      check <- 1
+    }
+  }
+  
+  if (check) {
     prev_node <- n_route[z]
     logic_n_route <- (n_route == n_route[z])
     for (ii in 1:length(logic_n_route)) {
@@ -972,26 +1128,38 @@ create_switch_route<-function(res_list, n_route, selected_node, input, i, j, z, 
       }
     }
     new_capacity <-  calc_load2(n_route, input$vector.demandas)
-    
+
     if (new_capacity <= capacity) {
-      old_node_capacity <-  calc_load2(prev_node, input$vector.demandas)
-      node_capacity <- calc_load2(selected_node, input$vector.demandas)
-      if (old_node_capacity < node_capacity) {
-        total_cost <- local_cost(n_route, input$matriz.distancia)
-        res_list$load <-  node_capacity
-        res_list$value <- total_cost
-        res_list$index_i_route <- i
-        res_list$index_j_route <- j
-        res_list$index_z_route <- z
-        
+      subtours <- return_subroutes2(n_route, input$n1)
+      subroute_index <- 0
+      if (length(subtours)) subroute_index <- return_subroute_index(n_route, z, subtours)
+      
+      feasible <- 1
+      if (subroute_index!=0) {
+        feasible <- 0
+        new_truck_cap <- calc_load2(subtours[[subroute_index]]$tour[2:(length(subtours[[subroute_index]]$tour)-1)], input$vector.demandas)
+        if (new_truck_cap <= input$capacidad.truck) {
+          feasible <- 1
+        }
+      }
+      if (feasible){
+        old_node_capacity <-  calc_load2(prev_node, input$vector.demandas)
+        node_capacity <- calc_load2(selected_node, input$vector.demandas)
+        if (old_node_capacity < node_capacity ) {
+          total_cost <- local_cost(n_route, input$matriz.distancia)
+          res_list$load <-  node_capacity
+          res_list$value <- total_cost
+          res_list$index_i_route <- i
+          res_list$index_j_route <- j
+          res_list$index_z_route <- z
+          
+        }
       }
     }
   }
   
   return(res_list)
 }
-
-
 
 update_route_to_add<-function(routes_to_add) {
     new_routes_to_add <- list()
@@ -1013,8 +1181,7 @@ update_route_to_add<-function(routes_to_add) {
     return(result_u)
 }
 
-
-split_all_vc_tc<-function(rutas_res, non_selected_ptr_index, input) {
+split_all_vc_tc<-function(rutas_res, non_selected_ptr_index, input, type_problem) {
   routes_to_add_only_tc <- list()
   routes_to_add_only_vc <- list()
   
@@ -1030,9 +1197,23 @@ split_all_vc_tc<-function(rutas_res, non_selected_ptr_index, input) {
         
         rutas_res[[pos1]]$type <-"PTR"
         rutas_res[[pos1]]$route <- segment_routes$route_tc
-        rutas_res[[pos1]]$total_load <- calc_load2(segment_routes$route_tc, input$vector.demandas)
-        rutas_res[[pos1]]$total_load_tc_clients <- calc_load_only_truck(segment_routes$route_tc, input$vector.demandas, input)
+        if (type_problem == "TTRP") {
+          rutas_res[[pos1]]$total_load <- calc_load2(segment_routes$route_tc, input$vector.demandas)
+          rutas_res[[pos1]]$total_load_tc_clients <- calc_load_only_truck(segment_routes$route_tc, input$vector.demandas, input)
+        }
+        if (type_problem == "MCTTRP") {
+          rutas_res[[pos1]]$total_load <- calc_load2_MC(segment_routes$route_tc, input$matriz.demandas)
+          rutas_res[[pos1]]$total_load_tc_clients <- calc_load_only_truck_MC(segment_routes$route_tc, input$matriz.demandas, input)
+        }
         rutas_res[[pos1]]$cost <- local_cost(segment_routes$route_tc, input$matriz.distancia)
+
+        if (type_problem == "MCTTRP") {
+          res_r <- insert_hoppers_MCTTRP_PTR(rutas_res[[pos1]]$route, rutas_res, input)
+          rutas_res[[pos1]]$clients_tc <- res_r$clients_tc
+          rutas_res[[pos1]]$clients_vc <- res_r$clients_vc
+          rutas_res[[pos1]]$used_hoppers_truck <- res_r$used_hoppers_truck
+          rutas_res[[pos1]]$used_hoppers_trailer <- res_r$used_hoppers_trailer
+        }
         
         routes_to_add_only_tc[[counter_tc]] <- non_selected_ptr_index[[i]]
         counter_tc <- counter_tc + 1
@@ -1047,9 +1228,23 @@ split_all_vc_tc<-function(rutas_res, non_selected_ptr_index, input) {
         new_vc <- list()
         new_vc$type <-"PVR"
         new_vc$route <- segment_routes$route_vc
-        new_vc$total_load <- calc_load2(segment_routes$route_vc, input$vector.demandas)
-        new_vc$total_load_tc_clients <- calc_load_only_truck(segment_routes$route_vc, input$vector.demandas, input)
+        if (type_problem == "TTRP") {
+          new_vc$total_load <- calc_load2(segment_routes$route_vc, input$vector.demandas)
+          new_vc$total_load_tc_clients <- calc_load_only_truck(segment_routes$route_vc, input$vector.demandas, input)
+        }
+        if (type_problem == "MCTTRP") {
+          new_vc$total_load <- calc_load2_MC(segment_routes$route_vc, input$matriz.demandas)
+          new_vc$total_load_tc_clients <- calc_load_only_truck_MC(segment_routes$route_vc, input$matriz.demandas, input)
+        }
         new_vc$cost <- local_cost(segment_routes$route_vc, input$matriz.distancia)
+        if (type_problem == "MCTTRP") {
+          res_r <- insert_hoppers_MCTTRP_PVR(new_vc$route, rutas_res, input)
+          new_vc$clients_tc <- res_r$clients_tc
+          new_vc$clients_vc <- res_r$clients_vc
+          new_vc$used_hoppers_truck <- res_r$used_hoppers_truck
+          new_vc$used_hoppers_trailer <- res_r$used_hoppers_trailer
+        }
+        
         rutas_res[[pos2]] <- new_vc
         
       }
@@ -1078,7 +1273,7 @@ split_all_vc_tc<-function(rutas_res, non_selected_ptr_index, input) {
   return(res_list)
 }
 
-split_all_middle<-function(rutas_res, group_index, input) {
+split_all_middle<-function(rutas_res, group_index, input, type_problem) {
   
   new_index <- list()
   counter <- 1
@@ -1097,16 +1292,42 @@ split_all_middle<-function(rutas_res, group_index, input) {
       
       
       rutas_res[[pos1]]$route <- route1
-      rutas_res[[pos1]]$total_load <- calc_load2(route1, input$vector.demandas)
-      rutas_res[[pos1]]$total_load_tc_clients <- calc_load_only_truck(route1, input$vector.demandas, input)
+      if (type_problem == "TTRP") {
+          rutas_res[[pos1]]$total_load <- calc_load2(route1, input$vector.demandas)
+          rutas_res[[pos1]]$total_load_tc_clients <- calc_load_only_truck(route1, input$vector.demandas, input)
+      }
+      if (type_problem == "MCTTRP") {
+          rutas_res[[pos1]]$total_load <- calc_load2_MC(route1, input$matriz.demandas)
+          rutas_res[[pos1]]$total_load_tc_clients <- calc_load_only_truck_MC(route1, input$matriz.demandas, input)        
+      }
       rutas_res[[pos1]]$cost <- local_cost(route1, input$matriz.distancia)
+      if (type_problem == "MCTTRP") {
+        res_r <- insert_hoppers_MCTTRP_PTR(rutas_res[[pos1]]$route, rutas_res, input)
+        rutas_res[[pos1]]$clients_tc <- res_r$clients_tc
+        rutas_res[[pos1]]$clients_vc <- res_r$clients_vc
+        rutas_res[[pos1]]$used_hoppers_truck <- res_r$used_hoppers_truck
+        rutas_res[[pos1]]$used_hoppers_trailer <- res_r$used_hoppers_trailer
+      }
       
       new_vc <- list()
       new_vc$type <-rutas_res[[pos1]]$type 
       new_vc$route <- route2
-      new_vc$total_load <- calc_load2(route2, input$vector.demandas)
-      new_vc$total_load_tc_clients <- calc_load_only_truck(route2, input$vector.demandas, input)
+      if (type_problem == "TTRP") {
+          new_vc$total_load <- calc_load2(route2, input$vector.demandas)
+          new_vc$total_load_tc_clients <- calc_load_only_truck(route2, input$vector.demandas, input)
+      }
+      if (type_problem == "MCTTRP") {
+          new_vc$total_load <- calc_load2_MC(route2, input$matriz.demandas)
+          new_vc$total_load_tc_clients <- calc_load_only_truck_MC(route2, input$matriz.demandas, input) 
+      }
       new_vc$cost <- local_cost(route2, input$matriz.distancia)
+      if (type_problem == "MCTTRP") {
+        res_r <- insert_hoppers_MCTTRP_PTR(new_vc$route, rutas_res, input)
+        new_vc$clients_tc <- res_r$clients_tc
+        new_vc$clients_vc <- res_r$clients_vc
+        new_vc$used_hoppers_truck <- res_r$used_hoppers_truck
+        new_vc$used_hoppers_trailer <- res_r$used_hoppers_trailer
+      }
       rutas_res[[pos2]] <- new_vc
       
       new_index[[counter]] <- pos2
@@ -1157,9 +1378,9 @@ select_PTRs<-function(rutas_res, n_ptr, input) {
   counter <- 1
   for (i in 1:length(rutas_res)) {
     if (rutas_res[[i]]$type == "PTR") {
-      #decrease_value <- rutas_res[[i]]$total_load - rutas_res[[i]]$total_load_tc_clients
-      if (rutas_res[[i]]$total_load < (input$capacidad.truck*3)/4) decrease_value <- Inf
-      else decrease_value <- rutas_res[[i]]$cost 
+      decrease_value <- rutas_res[[i]]$total_load - rutas_res[[i]]$total_load_tc_clients
+      #if (rutas_res[[i]]$total_load < (input$capacidad.truck*3)/4) decrease_value <- Inf
+      #else decrease_value <- rutas_res[[i]]$cost 
       
       if (counter == 1) {
         decrease_list <- c(decrease_value)
@@ -1199,8 +1420,9 @@ select_PVRs_CVRs<-function(rutas_res, n_pvr_cvr, input) {
     
     if ((rutas_res[[i]]$type == "PVR")||(rutas_res[[i]]$type == "CVR")) {
       
-      if (rutas_res[[i]]$total_load < (input$capacidad.vehiculo*3)/4) decrease_value <- Inf
-      else decrease_value <- rutas_res[[i]]$cost 
+      decrease_value <- rutas_res[[i]]$total_load 
+      #if (rutas_res[[i]]$total_load < (input$capacidad.vehiculo*3)/4) decrease_value <- Inf
+      #else decrease_value <- rutas_res[[i]]$cost 
       
       if (counter == 1) {
         decrease_list <- c(decrease_value)
@@ -1214,12 +1436,12 @@ select_PVRs_CVRs<-function(rutas_res, n_pvr_cvr, input) {
     }
   }
   
-  
   counter <- 1
   if (!is.null(decrease_list)) {
     order_list <- order(decrease_list, decreasing = FALSE)
     counter <- 1
     for (i in 1:n_pvr_cvr) {
+      if (length(decrease_index)<i) break
       position <- decrease_index[order_list[i]]
       list_index[[counter]] <- position
       counter <- counter + 1
@@ -1290,7 +1512,6 @@ return_non_selected_pvr_cvr <-function(rutas_res, index_selected) {
   
   return(list_index)
 }
-
 
 return_ptr_index<-function(rutas_res) {
   
@@ -1382,7 +1603,7 @@ return_intex_vc_clients<-function(route, n1) {
   return(vc_list)
 }
 
-convert_PTR_CVR<-function(rutas_res, non_selected_ptr_index, n_convert_ptr_cvr, input) {
+convert_PTR_CVR<-function(rutas_res, non_selected_ptr_index, n_convert_ptr_cvr, input, type_problem) {
   
   index_convert_ptr_cvr <- list() 
   counter <- 1
@@ -1391,7 +1612,8 @@ convert_PTR_CVR<-function(rutas_res, non_selected_ptr_index, n_convert_ptr_cvr, 
     for (i in 1:length(non_selected_ptr_index)) {
       position <- as.numeric(non_selected_ptr_index[i])
       vc_list <- return_intex_vc_clients(rutas_res[[position]]$route, input$n1)
-      result_list <- return_best_subroute_in_position(rutas_res[[position]]$route, vc_list, position,input)
+
+      result_list <- return_best_subroute_in_position(rutas_res[[position]]$route, vc_list, position,input, type_problem, rutas_res)
       
       if (result_list$best_cost != Inf) {
         decrease_value <- result_list$best_cost - local_cost(rutas_res[[position]]$route, input$matriz.distancia)
@@ -1408,24 +1630,33 @@ convert_PTR_CVR<-function(rutas_res, non_selected_ptr_index, n_convert_ptr_cvr, 
     decrease_list_order <- order(decrease_list)
     
     for (i in 1:n_convert_ptr_cvr) {
-      pos1 <- decrease_list_order[[i]] 
-      pos2 <- index_convert_ptr_cvr[[pos1]]$position
-      
-      #index_convert_ptr_cvr[[pos1]]$route <- delete_vc_subroute( index_convert_ptr_cvr[[pos1]]$route, input )
-      index_convert_ptr_cvr[[pos1]]$route <-  index_convert_ptr_cvr[[pos1]]$route
-      
-      rutas_res[[pos2]]$type <- "CVR"
-      rutas_res[[pos2]]$route <- index_convert_ptr_cvr[[pos1]]$route
-      rutas_res[[pos2]]$total_load <- calc_load2(rutas_res[[pos2]]$route, input$vector.demandas)
-      rutas_res[[pos2]]$total_load_tc_clients <- calc_load_only_truck(rutas_res[[pos2]]$route, input$vector.demandas, input)
-      rutas_res[[pos2]]$cost <- index_convert_ptr_cvr[[pos1]]$best_cost
-      
+          if (length(decrease_list_order)<i) break
+          pos1 <- decrease_list_order[[i]] 
+          pos2 <- index_convert_ptr_cvr[[pos1]]$position
+          rutas_res[[pos2]]$type <- "CVR"
+          rutas_res[[pos2]]$route <- index_convert_ptr_cvr[[pos1]]$route
+          if (type_problem == "TTRP") {
+            rutas_res[[pos2]]$total_load <- calc_load2(rutas_res[[pos2]]$route, input$vector.demandas)
+            rutas_res[[pos2]]$total_load_tc_clients <- calc_load_only_truck(rutas_res[[pos2]]$route, input$vector.demandas, input)
+          } 
+          if (type_problem == "MCTTRP") {
+            rutas_res[[pos2]]$total_load <- calc_load2_MC(rutas_res[[pos2]]$route, input$matriz.demandas)
+            rutas_res[[pos2]]$total_load_tc_clients <- calc_load_only_truck_MC(rutas_res[[pos2]]$route, input$matriz.demandas, input)
+          }
+          rutas_res[[pos2]]$cost <- index_convert_ptr_cvr[[pos1]]$best_cost
+          if (type_problem == "MCTTRP") {
+            res_r <- insert_hoppers_MCTTRP_CVR(rutas_res[[pos2]]$route, rutas_res, input)
+            rutas_res[[pos2]]$clients_tc <- res_r$clients_tc
+            rutas_res[[pos2]]$clients_vc <- res_r$clients_vc
+            rutas_res[[pos2]]$used_hoppers_truck <- res_r$used_hoppers_truck
+            rutas_res[[pos2]]$used_hoppers_trailer <- res_r$used_hoppers_trailer
+          }
     }
+    
   }
   
   return(rutas_res)
 }
-
 
 delete_vc_subroute<-function(route, input) {
   
@@ -1480,7 +1711,7 @@ delete_vc_subroute<-function(route, input) {
   return(end_route)
 }
 
-merge_route_CVR<-function(rutas_res, ptr_pvr_index, pcr_index, n_v_to_delete, input, option){
+merge_route_CVR<-function(rutas_res, ptr_pvr_index, pcr_index, n_v_to_delete, input, option, type_problem){
   
   continue_merg <- 1
   counter_merg <- 0
@@ -1495,8 +1726,8 @@ merge_route_CVR<-function(rutas_res, ptr_pvr_index, pcr_index, n_v_to_delete, in
         for (j in 1:length(pcr_index)) {
           j_pos <- pcr_index[[j]]
 
-          if (option == "PVR") res <- insert_PVR_in_CVR(i_route, rutas_res[[j_pos]]$route, input)
-          if (option == "PTR") res <- insert_PTR_in_CVR(i_route, rutas_res[[j_pos]]$route, input)
+          if (option == "PVR") res <- insert_PVR_in_CVR(i_route, rutas_res[[j_pos]]$route, input, type_problem, rutas_res)
+          if (option == "PTR") res <- insert_PTR_in_CVR(i_route, rutas_res[[j_pos]]$route, input, type_problem, rutas_res)
             
           if (res$cost < MAX_value) {
               MAX_value <- res$cost
@@ -1537,9 +1768,23 @@ merge_route_CVR<-function(rutas_res, ptr_pvr_index, pcr_index, n_v_to_delete, in
       pos2 <- result_list[[pos_select]]$cvr_index
         
       rutas_res[[pos2]]$route <- result_list[[pos_select]]$route
-      rutas_res[[pos2]]$total_load <- calc_load2(rutas_res[[pos2]]$route, input$vector.demandas)
-      rutas_res[[pos2]]$total_load_tc_clients <- calc_load_only_truck(rutas_res[[pos2]]$route, input$vector.demandas, input)
+      if (type_problem == "TTRP") {
+        rutas_res[[pos2]]$total_load <- calc_load2(rutas_res[[pos2]]$route, input$vector.demandas)
+        rutas_res[[pos2]]$total_load_tc_clients <- calc_load_only_truck(rutas_res[[pos2]]$route, input$vector.demandas, input)
+      }
+      if (type_problem == "MCTTRP") {
+        rutas_res[[pos2]]$total_load <- calc_load2_MC(rutas_res[[pos2]]$route, input$matriz.demandas)
+        rutas_res[[pos2]]$total_load_tc_clients <- calc_load_only_truck_MC(rutas_res[[pos2]]$route, input$matriz.demandas, input)
+      }
       rutas_res[[pos2]]$cost <- result_list[[pos_select]]$cost
+
+      if (type_problem == "MCTTRP") {
+        res_r <- insert_hoppers_MCTTRP_CVR(rutas_res[[pos2]]$route, rutas_res, input)
+        rutas_res[[pos2]]$clients_tc <- res_r$clients_tc
+        rutas_res[[pos2]]$clients_vc <- res_r$clients_vc
+        rutas_res[[pos2]]$used_hoppers_truck <- res_r$used_hoppers_truck
+        rutas_res[[pos2]]$used_hoppers_trailer <- res_r$used_hoppers_trailer
+      }
       
       counter_merg <- counter_merg + 1
       
@@ -1566,7 +1811,7 @@ clean_rutas_res<-function(rutas_res) {
   return(new_rutas_res)
 }
 
-insert_PVR_in_CVR<-function(pvr_route, cvr_route, input) {
+insert_PVR_in_CVR<-function(pvr_route, cvr_route, input, type_problem, routes_res) {
   result_list <- list()
   result_list$cost <- Inf
   result_list$route <- Inf
@@ -1574,52 +1819,47 @@ insert_PVR_in_CVR<-function(pvr_route, cvr_route, input) {
   subtours <- return_subroutes2(cvr_route, input$n1)
   
   for (i in 1:(length(cvr_route)-1)) {
+    subroute_index <- return_subroute_index(cvr_route, i, subtours)
+    main_route <- 0
+    if (subroute_index == 0)  main_route <- 1
     # vc client --> add main tour
-    if (cvr_route[i] <= input$n1) {
-      check <- check_capacity_TTRP_total_routes(pvr_route, cvr_route, input, input$capacidad.vehiculo)
-      # check if it is parking
-      if (sum(cvr_route==cvr_route[i])>1) {
-        ocurrences <- which(cvr_route==cvr_route[i])
-        if (i != ocurrences[length(ocurrences)]) {
-          check <- 0
+    if (main_route) {
+      if (is_last_parking(cvr_route, i)) {
+        check <- check_capacity_total_routes(pvr_route, cvr_route, input, input$capacidad.vehiculo, type_problem)
+        # check it it is parking
+        if ((check)&&(!is_parking_i(cvr_route, i))) check <- 0
+        # check if it is in subroute
+        subroute_index <- return_subroute_index(cvr_route, i, subtours)
+        if (subroute_index != 0)  check <- 0
+        # add to main root
+        if (check) {
+          nroute <- c(cvr_route[1:i])
+          nroute <- c(nroute, pvr_route)
+          nroute <- c(nroute, cvr_route[(i+1):length(cvr_route)])
+          
+          cost <- Inf
+          if ((type_problem == "MCTTRP")&&((check_capacity_hoppers_MCTTRP_CVR(nroute, routes_res, input)))) cost <- local_cost(nroute, input$matriz.distancia) 
+          if (type_problem == "TTRP")  cost <- local_cost(nroute, input$matriz.distancia) 
+          
+          if (cost < result_list$cost ) {
+            result_list$cost <- cost
+            result_list$route <- nroute
+          } 
         }
-      }
-      # check if it is in subroute
-      subroute_index <- 0
-      for (j in 1:length(subtours)) {
-        if (sum(subtours[[j]]$tour[2:(length(subtours[[j]]$tour)-1)] == cvr_route[i]) > 0) {
-          subroute_index = j
-          break
-        }
-      }
-      if (subroute_index != 0)  check <- 0
-      # add to main root
-      if (check) {
-        nroute <- c(cvr_route[1:i])
-        nroute <- c(nroute, pvr_route)
-        nroute <- c(nroute, cvr_route[(i+1):length(cvr_route)])
-        cost <- local_cost(nroute, input$matriz.distancia) 
-        
-        if (cost < result_list$cost ) {
-          result_list$cost <- cost
-          result_list$route <- nroute
-        } 
       }
     } 
     # tc client -> add to subroute
     else {
-      for (j in 1:length(subtours)) {
-        if (sum(subtours[[j]]$tour == cvr_route[i]) >0) {
-          subroute_index = j
-          break
-        }
-      }
-      check <- check_capacity_TTRP_subroute_routes(pvr_route, cvr_route, subtours, subroute_index, input) 
+      check <- check_capacity_subroute_routes(pvr_route, cvr_route, subtours, subroute_index, input, type_problem) 
       if (check){
         nroute <- c(cvr_route[1:i])
         nroute <- c(nroute, pvr_route)
         nroute <- c(nroute, cvr_route[(i+1):length(cvr_route)])
-        cost <- local_cost(nroute, input$matriz.distancia) 
+        
+        cost <- Inf
+        if ((type_problem == "MCTTRP")&&((check_capacity_hoppers_MCTTRP_CVR(nroute, routes_res, input)))) cost <- local_cost(nroute, input$matriz.distancia) 
+        if (type_problem == "TTRP") cost <- local_cost(nroute, input$matriz.distancia) 
+        
         if (cost < result_list$cost ) {
           result_list$cost <- cost
           result_list$route <- nroute
@@ -1633,18 +1873,21 @@ insert_PVR_in_CVR<-function(pvr_route, cvr_route, input) {
   return(result_list)
 }
 
-merge_PVR_PTR<-function(pvr_route, ptr_route, input) {
+merge_PVR_PTR<-function(pvr_route, ptr_route, input, type_problem, routes_res) {
   result_list <- list()
   result_list$cost <- Inf
   result_list$route <- Inf
   
-  for (i in 1:(length(pvr_route)-1)) {
-    check <- check_capacity_TTRP_merge_subroute_routes(pvr_route, ptr_route, input)
+  for (i in 2:(length(pvr_route)-1)) {
+    check <- check_capacity_merge_subroute_routes(pvr_route, ptr_route, input, type_problem)
     if (check) {
       nroute <- c(pvr_route[1:i])
       nroute <- c(nroute, ptr_route)
       nroute <- c(nroute, pvr_route[i:length(pvr_route)])
-      cost <- local_cost(nroute, input$matriz.distancia) 
+      
+      cost <- Inf
+      if (type_problem == "TTRP") cost <- local_cost(nroute, input$matriz.distancia) 
+      if ((type_problem == "MCTTRP") && ((check_capacity_hoppers_MCTTRP_CVR(nroute, routes_res, input)))) cost <- local_cost(nroute, input$matriz.distancia) 
       
       if (cost < result_list$cost ) {
         result_list$cost <- cost
@@ -1657,7 +1900,7 @@ merge_PVR_PTR<-function(pvr_route, ptr_route, input) {
   return(result_list)
 }
 
-insert_PR_in_PR<-function(route_to_insert, route_to_check, input, capacity) {
+insert_PR_in_PR<-function(route_to_insert, route_to_check, input, capacity, type_problem, routes_res) {
   
   result_list <- list()
   result_list$cost <- Inf
@@ -1667,12 +1910,15 @@ insert_PR_in_PR<-function(route_to_insert, route_to_check, input, capacity) {
   
   for (i in 1:(length(route_to_check)-1)) {
     
-    cap_condition <- check_capacity_TTRP_total_routes(route_to_insert, route_to_check, input, capacity)
+    cap_condition <- check_capacity_total_routes(route_to_insert, route_to_check, input, capacity, type_problem)
     if (cap_condition) {
         nroute <- c(route_to_check[1:i])
         nroute <- c(nroute, route_to_insert)
         nroute <- c(nroute, route_to_check[(i+1):length(route_to_check)])
-        cost <- local_cost(nroute, input$matriz.distancia) 
+        
+        cost <- Inf
+        if ((type_problem == "MCTTRP")&&((check_capacity_hoppers_MCTTRP_PR(nroute, routes_res, input, capacity)))) cost <- local_cost(nroute, input$matriz.distancia) 
+        if (type_problem == "TTRP") cost <- local_cost(nroute, input$matriz.distancia) 
         
         if (cost < result_list$cost ) {
           result_list$cost <- cost
@@ -1684,8 +1930,7 @@ insert_PR_in_PR<-function(route_to_insert, route_to_check, input, capacity) {
   return(result_list)
 }
 
-
-insert_PTR_in_CVR<-function(ptr_route, cvr_route, input) {
+insert_PTR_in_CVR<-function(ptr_route, cvr_route, input, type_problem, routes_res) {
   result_list <- list()
   result_list$cost <- Inf
   result_list$route <- Inf
@@ -1694,49 +1939,49 @@ insert_PTR_in_CVR<-function(ptr_route, cvr_route, input) {
 
   for (i in 1:(length(cvr_route)-1)) {
     create_subroute <- 0
-    subroute_index <- 0
-    for (j in 1:length(subtours)) {
-      if (sum(subtours[[j]]$tour[2:(length(subtours[[j]]$tour)-1)] == cvr_route[i]) > 0) {
-        subroute_index = j
-        break
-      }
-    }
+    subroute_index <- return_subroute_index(cvr_route, i, subtours)
     if (subroute_index == 0)  create_subroute <- 1
     
     # vc client not in subroute--> create subroute
     if (create_subroute) {
-      check <- check_capacity_TTRP_total_routes(ptr_route, cvr_route, input, input$capacidad.vehiculo)
-      if (sum(cvr_route==cvr_route[i])>1) {
-        ocurrences <- which(cvr_route==cvr_route[i])
-        if (i != ocurrences[length(ocurrences)]) {
-          check <- 0
-        }
-      }
+      check <- check_capacity_total_routes(ptr_route, cvr_route, input, input$capacidad.vehiculo, type_problem)
       if (check) {
-        nroute <- c(cvr_route[1:i])
-        nroute <- c(nroute, ptr_route)
-        nroute <- c(nroute, cvr_route[i:length(cvr_route)])
-        cost <- local_cost(nroute, input$matriz.distancia) 
-        
-        if (cost < result_list$cost ) {
-          result_list$cost <- cost
-          result_list$route <- nroute
-        } 
+        if (is_last_parking(cvr_route, i)) {
+          
+          nroute <- c(cvr_route[1:i])
+          nroute <- c(nroute, ptr_route)
+          nroute <- c(nroute, cvr_route[i:length(cvr_route)])
+          
+          cost <- Inf
+          if ((type_problem == "MCTTRP")&&((check_capacity_hoppers_MCTTRP_CVR(nroute, routes_res, input)))) cost <- local_cost(nroute, input$matriz.distancia) 
+          if (type_problem == "TTRP") cost <- local_cost(nroute, input$matriz.distancia) 
+          
+          if (cost < result_list$cost ) {
+            result_list$cost <- cost
+            result_list$route <- nroute
+          } 
+          
+        }
       }
     } 
     # tc client -> add to subroute
     else {
-      check <- check_capacity_TTRP_subroute_routes(ptr_route, cvr_route, subtours, subroute_index, input) 
+      check <- check_capacity_subroute_routes(ptr_route, cvr_route, subtours, subroute_index, input, type_problem) 
       if (check){
+        
         nroute <- c(cvr_route[1:i])
         nroute <- c(nroute, ptr_route)
         nroute <- c(nroute, cvr_route[(i+1):length(cvr_route)])
-        cost <- local_cost(nroute, input$matriz.distancia) 
+        
+        cost <- Inf
+        if ((type_problem == "MCTTRP")&&((check_capacity_hoppers_MCTTRP_CVR(nroute, routes_res, input)))) cost <- local_cost(nroute, input$matriz.distancia) 
+        if (type_problem == "TTRP") cost <- local_cost(nroute, input$matriz.distancia) 
         
         if (cost < result_list$cost ) {
           result_list$cost <- cost
           result_list$route <- nroute
         } 
+        
       }
     }
     
@@ -1759,7 +2004,7 @@ locate_parkings<-function(route) {
   return (index_park)
 }
 
-return_best_subroute_in_position<-function(route, vc_list, position, input) {
+return_best_subroute_in_position<-function(route, vc_list, position, input, type_problem, routes_res) {
   
   result_list <- list()
   result_list$best_cost <- Inf
@@ -1777,14 +2022,16 @@ return_best_subroute_in_position<-function(route, vc_list, position, input) {
       if ((route[2]!=route[vc_list[[i]]]) && ( ! sum(route[vc_list[[i]]:(length(route))] > input$n1) )) {
         new_route_left <- c(0, route[vc_list[[i]]]) 
         new_route_left <- c(new_route_left, route[2:(length(route))])
-        cost1 <- local_cost(new_route_left, input$matriz.distancia) 
+        if ((type_problem == "MCTTRP")&&(check_capacity_hoppers_MCTTRP_CVR(new_route_left, routes_res, input))) cost1 <- local_cost(new_route_left, input$matriz.distancia)
+        if (type_problem == "TTRP") cost1 <- local_cost(new_route_left, input$matriz.distancia)
       }
       # right
       if ((route[length(route)-1]!=route[vc_list[[i]]])  && ( ! sum(route[1:vc_list[[i]]] > input$n1) )) {
         new_route_right <- route[1:(length(route)-1)]
         new_route_right <- c(new_route_right, route[vc_list[[i]]])
         new_route_right <- c(new_route_right, 0)
-        cost2 <- local_cost(new_route_right, input$matriz.distancia) 
+        if ((type_problem == "MCTTRP")&&(check_capacity_hoppers_MCTTRP_CVR(new_route_right, routes_res, input))) cost2 <- local_cost(new_route_right, input$matriz.distancia) 
+        else cost2 <- local_cost(new_route_right, input$matriz.distancia) 
       }
       # both
       if ((route[2]!=route[vc_list[[i]]]) && (route[length(route)-1]!=route[vc_list[[i]]])) {
@@ -1794,7 +2041,8 @@ return_best_subroute_in_position<-function(route, vc_list, position, input) {
         new_route_both <- c(new_route_both, route[(vc_list[[i]]+1):(length(route)-1)])
         new_route_both <- c(new_route_both, route[vc_list[[i]]])
         new_route_both <- c(new_route_both, 0)
-        cost3 <- local_cost(new_route_both, input$matriz.distancia) 
+        if ((type_problem == "MCTTRP")&&(check_capacity_hoppers_MCTTRP_CVR(new_route_both, routes_res, input))) cost3 <- local_cost(new_route_both, input$matriz.distancia) 
+        if (type_problem == "TTRP")  cost3 <- local_cost(new_route_both, input$matriz.distancia) 
       }
       
       
@@ -1825,7 +2073,6 @@ return_best_subroute_in_position<-function(route, vc_list, position, input) {
   
   return(result_list)
 }
-
 
 count_vc_clients<-function(route, n1) {
   counter <- 0
@@ -1903,7 +2150,6 @@ postproc_add_new_subroutes_TTRP<-function(rutas_res, rutas, input, opt){
   return(new_rutas_res)
 }
 
-
 convert_in_route<-function(route_res) {
   route <- list()
   route <- 0
@@ -1966,7 +2212,6 @@ select_route_TTRP<-function(counter_routes,routes,type_routes,input, dis_client)
   
   return(result)
 }
-
 
 select_subroute_to_add_TTRP<-function(counter_routes,routes,type_routes,input, dis_client){
   min_value = Inf
@@ -2031,7 +2276,6 @@ select_subroute_to_add_TTRP<-function(counter_routes,routes,type_routes,input, d
   
   return(result)
 }
-
 
 add_to_route_TTRP<-function(R, rutas, ruta_origin, position, newclient) {
   

@@ -13,11 +13,11 @@
 #' @param verbose Verbosity variable.
 #' @return A list of results, with the route, cost, hoppers state, truck and trailers used.
 CW_MCTTRPcore<-function(matriz.demandas, matriz.distancia, capacidad.truck, capacidad.trailer,
-                        capacidad.vehiculo, H.camion, H.trailer, n1, nf, verbose){
+                        capacidad.vehiculo, H.camion, H.trailer, n1, nf, n_trucks, n_trailers, verbose){
 
-  input<-createInputStruct(matriz.demandas, matriz.distancia, capacidad.truck,
-                           capacidad.trailer, capacidad.vehiculo, H.camion, H.trailer, n1)
-
+  input<-createInputStruct_MCTTRP(matriz.demandas, matriz.distancia, capacidad.truck,
+                           capacidad.trailer, capacidad.vehiculo, H.camion, H.trailer, 
+                           n1, n_trucks, n_trailers)
 
   #numero de clientes mas deposito
   n<-dim(input$matriz.distancia)[1]
@@ -45,6 +45,8 @@ CW_MCTTRPcore<-function(matriz.demandas, matriz.distancia, capacidad.truck, capa
   colnames(Tolvas) <- c("Cliente","Pienso","Tipo_vehiculo","numero vehiculo",
                         "Cantidad","Proporcion")
 
+  
+  
   ############Paso 2: calcular las matrices de ahorros
   S<-matrixS(input$matriz.distancia,n)
   Shat<-matrixShat(input$matriz.distancia,n,n1)
@@ -230,86 +232,35 @@ CW_MCTTRPcore<-function(matriz.demandas, matriz.distancia, capacidad.truck, capa
     }
 
   }  #Fin del while
-  
-  rutas <- return_route_MCTTRP(CWTTRP_struct, Tolvas, R, Rhat, n, n1, verbose)
-  
-  rutas <- delete_dupl_zeros_route(rutas)
 
+  rutas <- return_route_MCTTRP(CWTTRP_struct, Tolvas, R, Rhat, n, n1, verbose)
+  rutas <- delete_dupl_zeros_route(rutas)
   
   ##################################################################################
   # POSTPROCESSING
-  num_clientes <- 0 #rev1
-
-  result_postproc1 <- postproc_add_disconnected_clients(rutas, input, Tolvas, R, Rhat,
-                                                        CWTTRP_struct$H.camion_res,
-                                                        CWTTRP_struct$H.trailer_res,
-                                                        input$H.camion,
-                                                        input$H.trailer,
-                                                        CWTTRP_struct$demandas_res,
-                                                        n1, n, nf,
-                                                        CWTTRP_struct$t, num_clientes)
-  rutas <- delete_dupl_zeros_route(result_postproc1$rutas)
-  Tolvas <- result_postproc1$Tolvas
-  CWTTRP_struct$H.trailer_res <- result_postproc1$H.trailer_res
-  CWTTRP_struct$H.camion_res <- result_postproc1$H.camion_res
-  CWTTRP_struct$demandas_res <- result_postproc1$demandas_res
-  CWTTRP_struct$t <- result_postproc1$t
-  num_clientes <- result_postproc1$num_clientes #rev1
-
   
-  result_postproc2 <- postproc_subroutes_trailer_routes(rutas, matriz.distancia,
-                                                        Tolvas, R, Rhat, 
-                                                        CWTTRP_struct$H.camion_res,
-                                                        CWTTRP_struct$H.trailer_res,
-                                                        input,0)
-  rutas <- delete_dupl_zeros_route(result_postproc2$rutas)
-  R <- result_postproc2$R
-  Rhat <- result_postproc2$Rhat
-  rutas.des <- result_postproc2$rutas.des
-  Tolvas <- result_postproc2$Hoppers
-  CWTTRP_struct$H.camion_res <- result_postproc2$H.truck_res
-  CWTTRP_struct$H.trailer_res <- result_postproc2$H.trailer_res
+  rutas_res <- postproc_MCTTRP(rutas, input, R, Rhat, Tolvas, CWTTRP_struct, nf)
   
+  rutas <- convert_in_route(rutas_res)
+  rutas <- delete_dupl_zeros_route(rutas)
   
-  result_postproc2 <- postproc_subroutes_trailer_routes(rutas, matriz.distancia,
-                                                        Tolvas, R, Rhat, 
-                                                        CWTTRP_struct$H.camion_res,
-                                                        CWTTRP_struct$H.trailer_res,
-                                                        input, 1)
-  rutas <- delete_dupl_zeros_route(result_postproc2$rutas)
-  R <- result_postproc2$R
-  Rhat <- result_postproc2$Rhat
-  rutas.des <- result_postproc2$rutas.des
-  Tolvas <- result_postproc2$Hoppers
-  CWTTRP_struct$H.camion_res <- result_postproc2$H.truck_res
-  CWTTRP_struct$H.trailer_res <- result_postproc2$H.trailer_res
-
-  
-  # result_postproc3 <- postproc_add_disconnected_trailer_routes(rutas, Tolvas, R, Rhat, rutas.des)
-  # rutas <- result_postproc3$rutas
-  # R <- result_postproc3$R
-  # Rhat <- result_postproc3$Rhat
-  # rutas.des <- result_postproc3$rutas.des
-
-  # rutas[which(rutas==0)]<-1
+  # extract data
   coste.total<-0
   for(i in 1:(length(rutas)-1)){
     coste.total<-coste.total+input$matriz.distancia[rutas[i]+1,rutas[i+1]+1]
   }
-  # rutas<-rutas-1
-  # Output
+  result <- createResultStruct_MCTTRP(rutas, coste.total,
+                                            CWTTRP_struct$H.camion_res,
+                                            CWTTRP_struct$H.trailer_res,
+                                            input$matriz.demandas, rutas_res, input)
 
-
-
-  final_result <- createResultStruct_MCTTRP(rutas, coste.total, R, Rhat, Tolvas,
-                                     CWTTRP_struct$H.camion_res,
-                                     CWTTRP_struct$H.trailer_res,
-                                     input$matriz.demandas, rutas.des, input)
-
-  #print("end")
-  #print(rutas)
-  #print(update_Tolvas(Tolvas, rutas))
-  return(final_result)
+  #rutas <- convert_in_route(rutas_res)
+  #analyse(rutas, input, result$result_res, "MCTTRP")
+  #print(paste0("l  ---> ", length(unique(rutas))))
+  #print(paste0("n  ---> ", input$n))
+  #print(paste0("n1 ---> ", input$n1))
+  
+  return(result)
 } #Fin de la funcion
 
 

@@ -24,7 +24,6 @@ c<-numeric(input$n) #vector costes de rutas
 R<-matrix(0,nrow=input$n,ncol=3) #matriz de rutas
 Rhat<-matrix(0,nrow=input$n,ncol=3) #matriz de subtours
 
-# execution parameter list
 CWTTRP_struct<-createCWTTRPStruct()
 
 ##########Paso 1: calcular los ciclos iniciales (rutas ir y volver).
@@ -190,7 +189,6 @@ while(Sm>0){ #Mientras existan ahorros mayores que cero buscamos rutas factibles
 
 }  #Fin del while
 
-
 rutas <- return_route_TTRP(CWTTRP_struct, R, Rhat, input$n, input$n1, verbose)
 rutas <- delete_dupl_zeros_route(rutas)
 
@@ -201,13 +199,16 @@ rutas_res <- postproc_TTRP(rutas_res, rutas, input, R, Rhat)
 rutas <- convert_in_route(rutas_res)
 rutas <- delete_dupl_zeros_route(rutas)
 
+coste.total<-0
+for(i in 1:(length(rutas)-1)){
+  coste.total<-coste.total+matriz.distancia[rutas[i]+1,rutas[i+1]+1]
+}
+result <- createFinalResult_TTRP(rutas,  coste.total, matriz.distancia, rutas_res, vector.demandas, input)
 
-result <- createFinalResult_TTRP(rutas, R, Rhat, matriz.distancia, rutas_res, vector.demandas, input)
-
-analyse(rutas, input, result$result_res)
-print(paste0("l  ---> ", length(unique(rutas))))
-print(paste0("n  ---> ", input$n))
-print(paste0("n1 ---> ", input$n1))
+#analyse(rutas, input, result$result_res, "TTRP")
+#print(paste0("l  ---> ", length(unique(rutas))))
+#print(paste0("n  ---> ", input$n))
+#print(paste0("n1 ---> ", input$n1))
 
   return(result)
 } #Fin de la funcion

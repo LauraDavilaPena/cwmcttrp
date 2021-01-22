@@ -40,6 +40,33 @@ createCWMCTTRPStruct<-function(input){
   return(CWTTRP_struct)
 }
 
+#' Create final output data in TTRP
+#'
+#' @param input Input structure list
+#' @return A list with all information about the route.
+createCWTTRPStruct<-function(){
+  new = list()
+  new$Positionfilas <- 0
+  new$Positioncolumnas <- 0
+  new$Positionfilas2 <- 0
+  new$Positioncolumnas2 <- 0
+  
+  pos = list()
+  pos$Positionfilas <- 0
+  pos$Positioncolumnas <- 0
+  
+  CWTTRP_struct = list()
+  CWTTRP_struct$new <- new
+  CWTTRP_struct$pos <- pos
+  CWTTRP_struct$CargaT <- 0
+  CWTTRP_struct$current_type <- -1
+  
+  CWTTRP_struct$iter <- 0
+  CWTTRP_struct$parking_list <- list()
+  CWTTRP_struct$parking_list <- 0
+  
+  return(CWTTRP_struct)
+}
 
 #' Create input structure for MC-TTRP problem
 #'
@@ -51,8 +78,9 @@ createCWMCTTRPStruct<-function(input){
 #' @param H.camion
 #' @param H.trailer
 #' @return A input list with all input data.
-createInputStruct<-function(matriz.demandas, matriz.distancia, capacidad.truck,
-                            capacidad.trailer, capacidad.vehiculo, H.camion, H.trailer, n1){
+createInputStruct_MCTTRP<-function(matriz.demandas, matriz.distancia, capacidad.truck,
+                                   capacidad.trailer, capacidad.vehiculo, H.camion, H.trailer,
+                                   n1, n_trucks, n_trailers){
   input <- list()
   input$matriz.demandas    <- matriz.demandas
   input$matriz.distancia   <- matriz.distancia
@@ -62,7 +90,10 @@ createInputStruct<-function(matriz.demandas, matriz.distancia, capacidad.truck,
   input$H.camion  <- H.camion
   input$H.trailer <- H.trailer
   input$n1 <- n1
-
+  input$n <-  dim(input$matriz.distancia)[1]
+  input$n_trucks <- n_trucks
+  input$n_trailers <- n_trailers
+  
   return(input)
 }
 
@@ -95,59 +126,52 @@ createInputStruct_TTRP<-function(vector.demandas, matriz.distancia, capacidad.tr
 #' @param input Input structure list
 #' @return The CWTTRPstruct list, where the global variables of the solver are
 #' managed.
-createResultStruct_MCTTRP<-function(rutas, coste.total, R, Rhat, Tolvas, H.camion_res,
-                                    H.trailer_res, demandas_res, rutas.des, input){
-  # result$res <<- repasar
+createResultStruct_MCTTRP<-function(rutas, coste.total, H.camion_res,
+                                    H.trailer_res, demandas_res, rutas_res, input){
+  
   result<-list()
+  result$input <- input
   result$routes <- rutas
   result$cost <- coste.total
-  result$R <- R
-  result$Rhat <- Rhat
-  result$Tolvas <- Tolvas
   result$H.camion_res <- H.camion_res
   result$H.trailer_res <- H.trailer_res
   result$demandas_res <- demandas_res
-  result$rutas.des <- rutas.des
-  n_trailers <- 0
-  n_trucks <- 0
-  ptr <- 0
-  pvr <- 0
-  cvr <- 0
+  
+  res_r <- extract_info_from_result_res(rutas_res, input, "MCTTRP")
+    
+  result$n_trucks <- res_r$n_trucks
+  result$n_trailers <- res_r$n_trailers
+  result$PTR <- res_r$PTR
+  result$PVR <- res_r$PVR
+  result$CVR <- res_r$CVR
+  result$result_res <- res_r$result_res
+  
+  
+  return(result)
+}
 
-  
-  #print(rutas)
-  #print(update_Tolvas(Tolvas, rutas))
-  
-  
-  result_res <- create_result_struct(rutas, input, "MCTTRP")
 
+extract_info_from_hoppers<-function(result_res, Hoppers, input) {
   
   for (i in 1:length(result_res)) {
     if (result_res[[i]]$type == "CVR") {
       result_res[[i]]$main_tour <- return_main_route(result_res[[i]]$route)
       result_res[[i]]$subtours <- return_subroutes(result_res[[i]]$route, input$n1)
     }
+    id_truck <- check_truck_hopper(Hoppers, result_res[[i]]$route[2])
+    r_h <- calc_load_hoppers(Hoppers, id_truck)
+
     result_res[[i]]$truck_number <- i
     if (result_res[[i]]$type == "PTR") {
       result_res[[i]]$trailer_number <- 0
-    } else {
+    } 
+    else {
       result_res[[i]]$trailer_number <- i
     }
-      
-    r_h <- calc_load_hoppers(result$Tolvas, i)
-    result_res[[i]]$used_hoppers_truck <- r_h$used_hoppers_truck[1]
-    result_res[[i]]$used_hoppers_trailer <- r_h$used_hoppers_trailer[1]
-
     
-    if (result_res[[i]]$type == "PTR") {
-      n_trucks <- n_trucks + 1
-      ptr <- ptr + 1
-    } else {
-      n_trucks <- n_trucks + 1
-      n_trailers <- n_trailers + 1
-      if (result_res[[i]]$type == "PVR") pvr <- pvr + 1
-      if (result_res[[i]]$type == "CVR") cvr <- cvr + 1
-    }
+    result_res[[i]]$used_hoppers_truck <- r_h$used_hoppers_truck
+    result_res[[i]]$used_hoppers_trailer <- r_h$used_hoppers_trailer
+    
     result_res[[i]]$clients_tc <- list() 
     result_res[[i]]$clients_vc <- list() 
     
@@ -158,18 +182,18 @@ createResultStruct_MCTTRP<-function(rutas, coste.total, R, Rhat, Tolvas, H.camio
       if (j <= input$n1) {
         client_vc <- list()
         client_vc$id <- j
-        client_vc$demands <- result$demandas_res[j+1,]
+        client_vc$demands <-  input$matriz.demandas[j+1,]
         client_vc$hoppers_trailers <- list()
         client_vc$hoppers_trucks <- list()
         counter2 <- 1
         counter3 <- 1
-        for (z in 1:length(result$Tolvas[,1])) {
-          if ((result$Tolvas[z,1] == j) && (result$Tolvas[z,3] == "trailer")) {
-            client_vc$hoppers_trailers[[counter2]] <- result$Tolvas[z,c(2,5,6)]
+        for (z in 1:length(Hoppers[,1])) {
+          if ((Hoppers[z,1] == j) && (Hoppers[z,3] == "trailer")) {
+            client_vc$hoppers_trailers[[counter2]] <- Hoppers[z,c(2,5,6)]
             counter2 <- counter2 + 1
           }
-          if ((result$Tolvas[z,1] == j) && (result$Tolvas[z,3] == "truck")) {
-            client_vc$hoppers_trucks[[counter3]] <- result$Tolvas[z,c(2,5,6)]
+          if ((Hoppers[z,1] == j) && (Hoppers[z,3] == "truck")) {
+            client_vc$hoppers_trucks[[counter3]] <- Hoppers[z,c(2,5,6)]
             counter3 <- counter3 + 1
           }
         }
@@ -183,12 +207,12 @@ createResultStruct_MCTTRP<-function(rutas, coste.total, R, Rhat, Tolvas, H.camio
       if (j > input$n1) {
         client_tc <- list()
         client_tc$id <- j
-        client_tc$demands <- result$demandas_res[j+1,]
+        client_tc$demands <-input$matriz.demandas[j+1,]
         client_tc$hoppers_trucks <- list()
         counter2 <- 1
-        for (z in 1:length(result$Tolvas[,1])) {
-          if (result$Tolvas[z,1] == j) {
-            client_tc$hoppers_trucks[[counter2]] <- result$Tolvas[z,c(2,5,6)]
+        for (z in 1:length(Hoppers[,1])) {
+          if (Hoppers[z,1] == j) {
+            client_tc$hoppers_trucks[[counter2]] <- Hoppers[z,c(2,5,6)]
             counter2 <- counter2 + 1
           }
         }
@@ -196,23 +220,159 @@ createResultStruct_MCTTRP<-function(rutas, coste.total, R, Rhat, Tolvas, H.camio
         counter <- counter + 1
       }
     }
-    
+
     result_tc_vc <- return_tc_vc(result_res[[i]]$route, input)
     result_res[[i]]$TCs <-result_tc_vc$TCs
     result_res[[i]]$VCs <-result_tc_vc$VCs
-    
-    
   }
 
+  return(result_res)
+}
+
+
+extract_info_from_result_res<-function(result_res, input, option) {
+  result <- list()
+  n_trucks <- 0
+  n_trailers <- 0
+  ptr <- 0
+  pvr <- 0
+  cvr <- 0
+
+  for (i in 1:length(result_res)) {
+    
+    if (option == "TTRP") {
+      result_res[[i]]$total_load <-  calc_load2(result_res[[i]]$route, input$vector.demandas)
+      result_res[[i]]$total_load_tc_clients <- calc_load_only_truck(result_res[[i]]$route, input$vector.demandas, input)
+    } 
+    else if (option == "MCTTRP")  {
+      result_res[[i]]$total_load <-  calc_load2_MC(result_res[[i]]$route, input$matriz.demandas)
+      result_res[[i]]$total_load_tc_clients <- calc_load_only_truck_MC(result_res[[i]]$route, input$matriz.demandas, input)        
+    }
+    result_res[[i]]$cost <- local_cost(result_res[[i]]$route, input$matriz.distancia)
+    
+    if (result_res[[i]]$type == "CVR") {
+      result_res[[i]]$main_tour <- return_main_route(result_res[[i]]$route)
+      result_res[[i]]$subtours <- return_subroutes(result_res[[i]]$route, input$n1)
+    }
+    result_res[[i]]$truck_number <- i
+    if (result_res[[i]]$type == "PTR") {
+      result_res[[i]]$trailer_number <- 0
+    } 
+    else {
+      result_res[[i]]$trailer_number <- i
+    }
+    
+    if (result_res[[i]]$type == "PTR") {
+      n_trucks <- n_trucks + 1
+      ptr <- ptr + 1
+    } else {
+      n_trucks <- n_trucks + 1
+      n_trailers <- n_trailers + 1
+      if (result_res[[i]]$type == "PVR") pvr <- pvr + 1
+      if (result_res[[i]]$type == "CVR") cvr <- cvr + 1
+    }
+    
+    num_clients <- delete_zeros(unique(result_res[[i]]$route))
+
+    result_tc_vc <- return_tc_vc(result_res[[i]]$route, input)
+    result_res[[i]]$TCs <-result_tc_vc$TCs
+    result_res[[i]]$VCs <-result_tc_vc$VCs
+  }
+  
+  
+  result <- list()
   result$n_trucks <- n_trucks
   result$n_trailers <- n_trailers
   result$PTR <- ptr
   result$PVR <- pvr
   result$CVR <- cvr
   result$result_res <- result_res
-
+  
   return(result)
 }
+
+
+#' Create final output data in MC-TTRP
+#'
+#' @param input Input structure list
+#' @return A list with all information about the route.
+createFinalResult_TTRP<-function(rutas, coste.total, matriz.distancia, result_res, vector.demandas, input){
+
+  # rutas<-rutas-1
+  # Output
+  n_trucks <- 0
+  n_trailers <- 0
+  ptr <- 0
+  pvr <- 0
+  cvr <- 0
+  
+  for (i in 1:length(result_res)) {
+    if (result_res[[i]]$type == "CVR") {
+      print(result_res[[i]]$route)
+      result_res[[i]]$main_tour <- return_main_route(result_res[[i]]$route)
+      result_res[[i]]$subtours <- return_subroutes(result_res[[i]]$route, input$n1)
+    }
+    result_res[[i]]$truck_number <- i
+    if (result_res[[i]]$type == "PTR") {
+      result_res[[i]]$trailer_number <- 0
+    } else {
+      result_res[[i]]$trailer_number <- i
+    }
+    
+    if (result_res[[i]]$type == "PTR") {
+      n_trucks <- n_trucks + 1
+      ptr <- ptr + 1
+    } else {
+      n_trucks <- n_trucks + 1
+      n_trailers <- n_trailers + 1
+      if (result_res[[i]]$type == "PVR") pvr <- pvr + 1
+      if (result_res[[i]]$type == "CVR") cvr <- cvr + 1
+    }
+    
+    result_res[[i]]$clients_tc <- list() 
+    result_res[[i]]$clients_vc <- list() 
+    
+    num_clients <- delete_zeros(unique(result_res[[i]]$route))
+    counter <- 1
+    for (j in num_clients) {
+      if (j <= input$n1) {
+        client_vc <- list()
+        client_vc$id <- j
+        client_vc$demands <- vector.demandas[j+1]
+        result_res[[i]]$clients_vc[[counter]] <- client_vc
+        counter <- counter + 1
+      }
+    }    
+    counter <- 1
+    for (j in num_clients) {
+      if (j > input$n1) {
+        client_tc <- list()
+        client_tc$id <- j
+        client_tc$demands <- vector.demandas[j+1]
+        result_res[[i]]$clients_tc[[counter]] <- client_tc
+        counter <- counter + 1
+      }
+    }  
+    
+    result_tc_vc <- return_tc_vc(result_res[[i]]$route, input)
+    result_res[[i]]$TCs <-result_tc_vc$TCs
+    result_res[[i]]$VCs <-result_tc_vc$VCs
+  }
+  
+  result = list()
+  result$routes = rutas
+  result$cost = coste.total
+  result$n_trucks = n_trucks
+  result$n_trailers = n_trailers
+  result$PVR <- pvr
+  result$PTR <- ptr
+  result$CVR <- cvr
+  result$result_res <- result_res
+  result$input <- input
+  
+  return(result)
+}
+
 
 #' Create S matrix
 #'
@@ -305,133 +465,32 @@ matrixShat<-function(matriz.distancia,n, n1){
   return(Shat)
 }
 
-#' Create final output data in MC-TTRP
-#'
-#' @param input Input structure list
-#' @return A list with all information about the route.
-createFinalResult_TTRP<-function(rutas, R, Rhat, matriz.distancia, result_res, vector.demandas, input){
-  # rutas[which(rutas==0)]<-1
-  coste.total<-0
-  for(i in 1:(length(rutas)-1)){
-    coste.total<-coste.total+matriz.distancia[rutas[i]+1,rutas[i+1]+1]
-  }
-  # rutas<-rutas-1
-  # Output
-  n_trucks <- 0
-  n_trailers <- 0
-  ptr <- 0
-  pvr <- 0
-  cvr <- 0
-  
-  for (i in 1:length(result_res)) {
-      if (result_res[[i]]$type == "CVR") {
-        result_res[[i]]$main_tour <- return_main_route(result_res[[i]]$route)
-        result_res[[i]]$subtours <- return_subroutes(result_res[[i]]$route, input$n1)
-      }
-      result_res[[i]]$truck_number <- i
-      if (result_res[[i]]$type == "PTR") {
-        result_res[[i]]$trailer_number <- 0
-      } else {
-        result_res[[i]]$trailer_number <- i
-      }
-    
-      if (result_res[[i]]$type == "PTR") {
-        n_trucks <- n_trucks + 1
-        ptr <- ptr + 1
-      } else {
-        n_trucks <- n_trucks + 1
-        n_trailers <- n_trailers + 1
-        if (result_res[[i]]$type == "PVR") pvr <- pvr + 1
-        if (result_res[[i]]$type == "CVR") cvr <- cvr + 1
-      }
-
-      result_res[[i]]$clients_tc <- list() 
-      result_res[[i]]$clients_vc <- list() 
-      
-        num_clients <- delete_zeros(unique(result_res[[i]]$route))
-        counter <- 1
-        for (j in num_clients) {
-          if (j <= input$n1) {
-            client_vc <- list()
-            client_vc$id <- j
-            client_vc$demands <- vector.demandas[j+1]
-            result_res[[i]]$clients_vc[[counter]] <- client_vc
-            counter <- counter + 1
-          }
-        }    
-        counter <- 1
-        for (j in num_clients) {
-          if (j > input$n1) {
-            client_tc <- list()
-            client_tc$id <- j
-            client_tc$demands <- vector.demandas[j+1]
-            result_res[[i]]$clients_tc[[counter]] <- client_tc
-            counter <- counter + 1
-          }
-        }  
-        
-        result_tc_vc <- return_tc_vc(result_res[[i]]$route, input)
-        result_res[[i]]$TCs <-result_tc_vc$TCs
-        result_res[[i]]$VCs <-result_tc_vc$VCs
-  }
-
-  result = list()
-  result$routes = rutas
-  result$cost = coste.total
-  result$R = R
-  result$Rhat = Rhat
-  result$n_trucks = n_trucks
-  result$n_trailers = n_trailers
-  result$PVR <- pvr
-  result$PTR <- ptr
-  result$CVR <- cvr
-  result$result_res <- result_res
-
-  return(result)
-}
-
-#' Create final output data in TTRP
-#'
-#' @param input Input structure list
-#' @return A list with all information about the route.
-createCWTTRPStruct<-function(S, Sm, n){
-  new = list()
-  new$Positionfilas <- 0
-  new$Positioncolumnas <- 0
-  new$Positionfilas2 <- 0
-  new$Positioncolumnas2 <- 0
-
-  pos = list()
-  pos$Positionfilas <- 0
-  pos$Positioncolumnas <- 0
-
-  CWTTRP_struct = list()
-  CWTTRP_struct$new <- new
-  CWTTRP_struct$pos <- pos
-  CWTTRP_struct$CargaT <- 0
-  CWTTRP_struct$current_type <- -1
-
-  CWTTRP_struct$iter <- 0
-  CWTTRP_struct$parking_list <- list()
-  CWTTRP_struct$parking_list <- 0
-  
-  return(CWTTRP_struct)
-}
-
 return_main_route<-function(route) {
   main_route <- c(0)
-  state <- 0
+  state <- 1
+  counter_list <- 0
+  counter_parking <- 0
+  current_parking <- 0
+  
+  
   for (i in 2:(length(route)-1)) {
-    if (state == 0) {
+    if (state == 1) {
       main_route <- c(main_route, route[i])
     }
     if (sum(route==route[i])>=2) {
-      if (state==1) state <- 0
-      else state <- 1
+      counter_parking <- counter_parking + 1
+      
+      if ((state==0)&&(counter_parking == sum(route==route[i]))) {
+        state <- 1
+        counter_parking <- 0
+      }
+      else {
+        state <- 0
+      }
     }
   }
-  main_route <- c(main_route, 0)
   
+  main_route <- c(main_route, 0)
   return(main_route)
 }
 
@@ -538,6 +597,40 @@ return_subroutes2<-function(route, n1) {
   return(subtours)
 }
 
+is_parking_i<-function(cvr_route, i) {
+  
+  check <- 0
+  if (sum(cvr_route==cvr_route[i])>1) {
+    check <- 1
+  }
+  
+  return(check)
+}
+
+return_subroute_index<-function(cvr_route, i, subtours) {
+  
+  subroute_index <- 0
+  for (j in 1:length(subtours)) {
+    if (sum(subtours[[j]]$tour[2:(length(subtours[[j]]$tour)-1)] == cvr_route[i]) > 0) {
+      subroute_index = j
+      break
+    }
+  }
+  
+  return(subroute_index)
+}
+
+is_last_parking<-function(cvr_route, i) {
+  check <- 1
+  if (sum(cvr_route==cvr_route[i])>1) {
+    ocurrences <- which(cvr_route==cvr_route[i])
+    if (i != ocurrences[length(ocurrences)]) {
+      check <- 0
+    }
+  }
+  return(check)
+}
+
 return_tc_vc<-function(routes, input) {
   routes_unique <- unique(routes)
   
@@ -565,5 +658,20 @@ return_tc_vc<-function(routes, input) {
   }
   
   return(result_tc_vc)
+}
+
+create_route_from_main_route_and_subroutes<-function(subtours, main_tour) {
+ new_route <- c(0)
+ 
+ for (i in 2:(length(main_tour))) {
+   new_route <- c(new_route, main_tour[i])
+   for (j in 1:length(subtours)){
+     if (subtours[[j]]$root == main_tour[[i]]) {
+       new_route <- c(new_route, subtours[[j]]$tour[2:(length(subtours[[j]]$tour))])
+     }
+   }
+ }
+ 
+ return(new_route)
 }
 

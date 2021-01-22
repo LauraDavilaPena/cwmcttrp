@@ -107,7 +107,6 @@ check_limit_PVR<-function(CWTTRP_struct, R, Rhat, input, option){
   return(result)
 }
 
-
 check_limit_cVR<-function(CWTTRP_struct, R, Rhat, input, option){
   
   if ((CWTTRP_struct$limit_pvr)) {
@@ -157,3 +156,4 @@ control_CVR<-function(CWTTRP_struct, R, Rhat, input, n, verbose){
     return(1)
   }
 }
+

@@ -250,10 +250,6 @@ SmInS_VcVc_manage_hoppers_trailer<-function(CWTTRP_struct, Tolvas, R,
      sum(CWTTRP_struct$H.trailer_res[n.trailer_i,]==-1)+
      sum(CWTTRP_struct$H.trailer_res[n.trailer_j,]==-1)>dim(input$H.trailer)[2]){
     
-                  if ((R[pos$Positionfilas,2]==19)&&(R[pos$Positioncolumnas,2]==15)) {
-                    print("666666")
-                    print(parada)
-                  }
     
     parada <- 1
     

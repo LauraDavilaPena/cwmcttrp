@@ -1,5 +1,6 @@
 
 route_of_client <- function(i, resultado){
+
   for(r in 1:length(resultado)){
     if(sum(resultado[[r]]$route==i)>=1){
       route.of.client <- resultado[[r]]$route

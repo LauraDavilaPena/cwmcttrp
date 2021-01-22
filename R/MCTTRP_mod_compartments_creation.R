@@ -1,16 +1,16 @@
 
-boolean_available_compartments_destination_route <- function(string, result, intermediate_solution, inserted_client, destination_route){
+boolean_available_compartments_destination_route <- function(input, result, intermediate_solution, inserted_client, destination_route, initial_solution){
   
   #resultado <- intermediate_solution
   
   total_truck_hoppers <- dim(result$H.camion_res)[2]
   total_trailer_hoppers <- dim(result$H.trailer_res)[2]
   
-  capacity_trailer_hoppers <- input_MCTTRP(string)$h.trailer[1]
-  capacity_truck_hoppers <- input_MCTTRP(string)$h.camion[1]
+  capacity_trailer_hoppers <- input$h.trailer[1]
+  capacity_truck_hoppers <- input$h.camion[1]
   
   
-  n1 <- input_MCTTRP(string)$n1
+  n1 <- input$n1
   
   
   avail <- FALSE
@@ -114,10 +114,11 @@ boolean_available_compartments_destination_route <- function(string, result, int
 
 
 
-create_only_one_vehicle_type_hoppers_for_vc <- function(inserted_client, destination_route, client_hoppers_the_other_vehicles_type, client_hoppers_vehicles_type, capacity_vehicle_type_hoppers,
-                                                        client_vc_info, client_hoppers_demands, needed_vehicle_type_hoppers_per_product, used_hoppers_vehicle_type,
+create_only_one_vehicle_type_hoppers_for_vc <- function(inserted_client, destination_route, client_hoppers_the_other_vehicles_type, 
+                                                        client_hoppers_vehicles_type, capacity_vehicle_type_hoppers,
+                                                        client_vc_info, client_hoppers_demands, 
+                                                        needed_vehicle_type_hoppers_per_product, used_hoppers_vehicle_type,
                                                         hoppers_the_other_vehicles_type, hoppers_vehicles_type){
-  
   
   new_clients_vc <- list()
   new_clients_vc <- destination_route$clients_vc
@@ -270,23 +271,18 @@ create_truck_and_trailer_hoppers_for_vc <- function(inserted_client, needed_trai
 
 
 
-check_available_compartments <- function(string, result, intermediate_solution, inserted_client, destination_route){
+check_available_compartments <- function(input, result, intermediate_solution, inserted_client, destination_route, initial_solution){
   
   #resultado <- intermediate_solution
   
   total_truck_hoppers <- dim(result$H.camion_res)[2]
   total_trailer_hoppers <- dim(result$H.trailer_res)[2]
   
-  capacity_trailer_hoppers <- input_MCTTRP(string)$h.trailer[1]
-  capacity_truck_hoppers <- input_MCTTRP(string)$h.camion[1]
+  capacity_trailer_hoppers <- input$h.trailer[1]
+  capacity_truck_hoppers <- input$h.camion[1]
   
-  
-  n1 <- input_MCTTRP(string)$n1
-  
-  
+  n1 <- input$n1
   avail <- FALSE
-  
-  
   
   client_origin_route_index <- route_of_client(inserted_client, initial_solution)$index
   client_origin_route_info <- initial_solution[[client_origin_route_index]]
@@ -311,7 +307,7 @@ check_available_compartments <- function(string, result, intermediate_solution, 
         destination_route <- create_only_one_vehicle_type_hoppers_for_vc(inserted_client, destination_route, client_hoppers_trailers, client_hoppers_trucks, capacity_truck_hoppers,
                                                                          client_vc_info, client_hoppers_demands, needed_truck_hoppers_per_product, "used_hoppers_truck",
                                                                          "hoppers_trailers", "hoppers_trucks")
-        
+          
         avail <- TRUE
         #client_origin_route_info$clients_vc <- client_origin_route_info$clients_vc[-client_vc_index]  
         #client_origin_route_info$clients_vc <- client_origin_route_info$clients_vc[-client_vc_index]  
@@ -330,6 +326,7 @@ check_available_compartments <- function(string, result, intermediate_solution, 
           destination_route <- create_only_one_vehicle_type_hoppers_for_vc(inserted_client, destination_route, client_hoppers_trailers, client_hoppers_trucks, capacity_truck_hoppers,
                                                                            client_vc_info, client_hoppers_demands, needed_truck_hoppers_per_product, "used_hoppers_truck",
                                                                            "hoppers_trailers", "hoppers_trucks")
+          
           
           avail <- TRUE 
           
@@ -361,6 +358,7 @@ check_available_compartments <- function(string, result, intermediate_solution, 
             
             destination_route <- create_truck_and_trailer_hoppers_for_vc(inserted_client, needed_trailer_hoppers_total, total_truck_hoppers, total_trailer_hoppers, destination_route, client_hoppers_trailers, client_hoppers_trucks,
                                                                          client_vc_info, client_hoppers_demands, needed_trailer_hoppers_per_product, capacity_truck_hoppers, capacity_trailer_hoppers, needed_truck_hoppers_per_product)
+            
             
             avail <- TRUE 
             

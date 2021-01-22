@@ -1,7 +1,7 @@
-calculateTotalDistance <- function(route){
+calculateTotalDistance <- function(input, route){
   cost <- 0
   for (i in 1:(length(route)-1)){
-    cost <- cost + matriz.distancia[route[i]+1, route[i+1]+1]
+    cost <- cost + input$matriz.distancia[route[i]+1, route[i+1]+1]
   }
   return(cost)
 }
@@ -10,9 +10,9 @@ calculateTotalDistance <- function(route){
 
 
 
-two_opt_Swap <- function(route, i, k) {
+two_opt_Swap <- function(input, route, i, k) {
   new_route <- c(route[1:i-1], rev(route[i:k]), route[(k+1):length(route)])
-  delta <- calculateTotalDistance(new_route)- calculateTotalDistance(route)
+  delta <- calculateTotalDistance(input, new_route)- calculateTotalDistance(input, route)
   return(list(new_route=new_route, delta=delta))
 }
 
@@ -38,7 +38,9 @@ two_opt_all_segments <- function(route){
 
 
 
-two_opt <- function(route){
+two_opt <- function(input, route){
+  print("entrando")
+  readline()
   delta = list()
   segm = list()
   new_route = list()
@@ -46,8 +48,45 @@ two_opt <- function(route){
   if(length(two_opt_all_segments(route))>=1){
     for (kk in 1:length(two_opt_all_segments(route))){
       segm[[kk]] = two_opt_all_segments(route)[[kk]]
-      delta[[kk]] = two_opt_Swap(route, segm[[kk]][1], segm[[kk]][2])$delta
-      new_route[[kk]] = two_opt_Swap(route, segm[[kk]][1], segm[[kk]][2])$new_route
+      delta[[kk]] = two_opt_Swap(input, route, segm[[kk]][1], segm[[kk]][2])$delta
+      new_route[[kk]] = two_opt_Swap(input, route, segm[[kk]][1], segm[[kk]][2])$new_route
+    }
+    print(delta)
+    readline()
+    if (all(delta >=0)){
+      best_route <- route
+    }else{
+      
+      delta_min_positions <- which(delta == min(unlist(delta)))
+      if(length(delta_min_positions) == 1){
+        delta_chosen_position <- delta_min_positions
+      }else{
+        delta_chosen_position <- sample(delta_min_positions,1)
+      }
+      best_route <- new_route[[delta_chosen_position]]
+    }
+  }
+  else{
+    best_route <- route
+  }
+  return(best_route)
+}
+
+
+
+
+
+
+two_opt <- function(input, route){
+  delta = list()
+  segm = list()
+  new_route = list()
+  
+  if(length(two_opt_all_segments(route))>=1){
+    for (kk in 1:length(two_opt_all_segments(route))){
+      segm[[kk]] = two_opt_all_segments(route)[[kk]]
+      delta[[kk]] = two_opt_Swap(input, route, segm[[kk]][1], segm[[kk]][2])$delta
+      new_route[[kk]] = two_opt_Swap(input, route, segm[[kk]][1], segm[[kk]][2])$new_route
     }
     if (all(delta >=0)){
       best_route <- route
@@ -71,86 +110,52 @@ two_opt <- function(route){
 
 
 
-
-two_opt <- function(route){
-  delta = list()
-  segm = list()
-  new_route = list()
-  
-  if(length(two_opt_all_segments(route))>=1){
-    for (kk in 1:length(two_opt_all_segments(route))){
-      segm[[kk]] = two_opt_all_segments(route)[[kk]]
-      delta[[kk]] = two_opt_Swap(route, segm[[kk]][1], segm[[kk]][2])$delta
-      new_route[[kk]] = two_opt_Swap(route, segm[[kk]][1], segm[[kk]][2])$new_route
-    }
-    if (all(delta >=0)){
-      best_route <- route
-    }else{
-      
-      delta_min_positions <- which(delta == min(unlist(delta)))
-      if(length(delta_min_positions) == 1){
-        delta_chosen_position <- delta_min_positions
-      }else{
-        delta_chosen_position <- sample(delta_min_positions,1)
-      }
-      best_route <- new_route[[delta_chosen_position]]
-    }
-  }else{
-    best_route <- route
-  }
-  return(best_route)
-}
-
-
-
-
-
-three_opt_reverse_segment_if_better <- function(route, i, j, k) {
-  d0 = matriz.distancia[route[i-1]+1,route[i]+1] + matriz.distancia[route[j-1]+1,route[j]+1] + matriz.distancia[route[k-1]+1,route[k]+1]
-  d1 = matriz.distancia[route[i-1]+1,route[j-1]+1] + matriz.distancia[route[i]+1,route[j]+1] + matriz.distancia[route[k-1]+1,route[k]+1] 
-  d2 = matriz.distancia[route[i-1]+1,route[i]+1] + matriz.distancia[route[j-1]+1,route[k-1]+1] + matriz.distancia[route[j]+1,route[k]+1]
-  d3 = matriz.distancia[route[i-1]+1,route[j-1]+1] + matriz.distancia[route[i]+1,route[k-1]+1] + matriz.distancia[route[j]+1,route[k]+1]
-  d4 = matriz.distancia[route[i-1]+1,route[j]+1] + matriz.distancia[route[k-1]+1,route[i]+1] + matriz.distancia[route[j-1]+1,route[k]+1]
-  d5 = matriz.distancia[route[i-1]+1,route[j]+1] + matriz.distancia[route[k-1]+1,route[j-1]+1] + matriz.distancia[route[i]+1,route[k]+1]
-  d6 = matriz.distancia[route[i-1]+1,route[k-1]+1] + matriz.distancia[route[j]+1,route[j-1]+1] + matriz.distancia[route[i]+1,route[k]+1]
-  d7 = matriz.distancia[route[i-1]+1,route[k-1]+1] + matriz.distancia[route[j]+1,route[i]+1] + matriz.distancia[route[j-1]+1,route[k]+1]
+three_opt_reverse_segment_if_better <- function(input, route, i, j, k) {
+  d0 = input$matriz.distancia[route[i-1]+1,route[i]+1] + input$matriz.distancia[route[j-1]+1,route[j]+1] + input$matriz.distancia[route[k-1]+1,route[k]+1]
+  d1 = input$matriz.distancia[route[i-1]+1,route[j-1]+1] + input$matriz.distancia[route[i]+1,route[j]+1] + input$matriz.distancia[route[k-1]+1,route[k]+1] 
+  d2 = input$matriz.distancia[route[i-1]+1,route[i]+1] + input$matriz.distancia[route[j-1]+1,route[k-1]+1] + input$matriz.distancia[route[j]+1,route[k]+1]
+  d3 = input$matriz.distancia[route[i-1]+1,route[j-1]+1] + input$matriz.distancia[route[i]+1,route[k-1]+1] + input$matriz.distancia[route[j]+1,route[k]+1]
+  d4 = input$matriz.distancia[route[i-1]+1,route[j]+1] + input$matriz.distancia[route[k-1]+1,route[i]+1] + input$matriz.distancia[route[j-1]+1,route[k]+1]
+  d5 = input$matriz.distancia[route[i-1]+1,route[j]+1] + input$matriz.distancia[route[k-1]+1,route[j-1]+1] + input$matriz.distancia[route[i]+1,route[k]+1]
+  d6 = input$matriz.distancia[route[i-1]+1,route[k-1]+1] + input$matriz.distancia[route[j]+1,route[j-1]+1] + input$matriz.distancia[route[i]+1,route[k]+1]
+  d7 = input$matriz.distancia[route[i-1]+1,route[k-1]+1] + input$matriz.distancia[route[j]+1,route[i]+1] + input$matriz.distancia[route[j-1]+1,route[k]+1]
   
   new_route = route
   d.min = min(d1,d2,d3,d4,d5,d6)
   
   if(d0 > d1 && d.min == d1){
     new_route[i:(j-1)] = rev(route[i:(j-1)])
-    new_cost = calculateTotalDistance(new_route)
+    new_cost = calculateTotalDistance(input, new_route)
     delta = d1 - d0
   }else if(d0 > d2 && d.min == d2){
     new_route[j:(k-1)] = rev(route[j:(k-1)])
-    new_cost = calculateTotalDistance(new_route)
+    new_cost = calculateTotalDistance(input, new_route)
     delta = d2 - d0
   }else if(d0 > d3 && d.min == d3){
     new_route[i:(j-1)] = rev(route[i:(j-1)])
     new_route[j:(k-1)] = rev(route[j:(k-1)])
-    new_cost = calculateTotalDistance(new_route)
+    new_cost = calculateTotalDistance(input, new_route)
     delta = d3 - d0
   }else if(d0 > d4 && d.min == d4){
     new_route = c(route[1:(i-1)], route[j:(k-1)], route[i:(j-1)], route[k:length(route)])
-    new_cost = calculateTotalDistance(new_route)
+    new_cost = calculateTotalDistance(input, new_route)
     delta = d4 - d0
   }else if(d0 > d5 && d.min == d5){
     new_route = c(route[1:(i-1)], route[j:(k-1)], rev(route[i:(j-1)]), route[k:length(route)])
-    new_cost = calculateTotalDistance(new_route)
+    new_cost = calculateTotalDistance(input, new_route)
     delta = d5 - d0
   }else if(d0 > d6 && d.min == d6){
     new_route = c(route[1:(i-1)],rev(route[j:(k-1)]),rev(route[i:(j-1)]),route[k:length(route)])
-    new_cost = calculateTotalDistance(new_route)
+    new_cost = calculateTotalDistance(input, new_route)
     delta = d6 - d0
   }else if(d0 > d7 && d.min == d7){
     new_route = c(route[1:(i-1)], rev(route[j:(k-1)]), route[i:(j-1)], route[k:length(route)])
-    new_cost = calculateTotalDistance(new_route)
+    new_cost = calculateTotalDistance(input, new_route)
     delta = d7 - d0
     
   }else{
     new_route = route
-    new_cost = calculateTotalDistance(new_route)
+    new_cost = calculateTotalDistance(input, new_route)
     delta = 0
   }
   
@@ -183,7 +188,7 @@ three_opt_all_segments <- function(route){
 
 
 
-three_opt <- function(route){
+three_opt <- function(input, route){
   delta = list()
   segm = list()
   new_route = list()
@@ -191,8 +196,8 @@ three_opt <- function(route){
   if(length(three_opt_all_segments(route))>=1){
     for (kk in 1:length(three_opt_all_segments(route))){
       segm[[kk]] = three_opt_all_segments(route)[[kk]]
-      delta[[kk]] = three_opt_reverse_segment_if_better(route, segm[[kk]][1], segm[[kk]][2], segm[[kk]][3])$delta
-      new_route[[kk]] = three_opt_reverse_segment_if_better(route, segm[[kk]][1], segm[[kk]][2], segm[[kk]][3])$new_route
+      delta[[kk]] = three_opt_reverse_segment_if_better(input, route, segm[[kk]][1], segm[[kk]][2], segm[[kk]][3])$delta
+      new_route[[kk]] = three_opt_reverse_segment_if_better(input, route, segm[[kk]][1], segm[[kk]][2], segm[[kk]][3])$new_route
     }
     if (all(delta >=0)){
       best_route <- route
@@ -216,19 +221,19 @@ three_opt <- function(route){
 
 
 
-four_opt_asterisk_swap <- function(route,i,j,k, printing = FALSE){
+four_opt_asterisk_swap <- function(input, route,i,j,k, printing = FALSE){
   
-  delLen_1 = matriz.distancia[route[i]+1,route[i+1]+1] 
-  delLen_2 = matriz.distancia[route[j]+1,route[j+1]+1] 
-  delLen_3 = matriz.distancia[route[k]+1,route[k+1]+1]
-  delLen_4 = matriz.distancia[route[k+1]+1,route[k+2]+1]
+  delLen_1 = input$matriz.distancia[route[i]+1,route[i+1]+1] 
+  delLen_2 = input$matriz.distancia[route[j]+1,route[j+1]+1] 
+  delLen_3 = input$matriz.distancia[route[k]+1,route[k+1]+1]
+  delLen_4 = input$matriz.distancia[route[k+1]+1,route[k+2]+1]
   
   delLen = delLen_1 + delLen_2 + delLen_3 + delLen_4
   
   delLenMax = max(delLen_1, delLen_2, delLen_3, delLen_4)
   
-  addLen_A = matriz.distancia[route[i+1]+1,route[k+1]+1]
-  addLen_B = matriz.distancia[route[j]+1,route[k+1]+1]
+  addLen_A = input$matriz.distancia[route[i+1]+1,route[k+1]+1]
+  addLen_B = input$matriz.distancia[route[j]+1,route[k+1]+1]
   
   addLenMin = min(addLen_A, addLen_B)
   
@@ -236,127 +241,127 @@ four_opt_asterisk_swap <- function(route,i,j,k, printing = FALSE){
   
   if (addLenMin < delLenMax){
     if (addLenMin == addLen_A){ # Clase A
-      dA2opt  = addLen_A + matriz.distancia[route[i]+1,route[k]+1] + matriz.distancia[route[j]+1,route[j+1]+1] + matriz.distancia[route[k+1]+1,route[k+2]+1]
-      dA3opt1 = addLen_A + matriz.distancia[route[i]+1,route[j]+1] + matriz.distancia[route[j+1]+1,route[k+2]+1] + matriz.distancia[route[k]+1,route[k+1]+1]
-      dA3opt2 = addLen_A + matriz.distancia[route[i]+1,route[j+1]+1] + matriz.distancia[route[j]+1,route[k]+1] + matriz.distancia[route[k+1]+1,route[k+2]+1]
-      dA3opt3 = addLen_A + matriz.distancia[route[i]+1,route[j+1]+1] + matriz.distancia[route[j]+1,route[k+2]+1] + matriz.distancia[route[k]+1,route[k+1]+1]
-      dA3opt4 = addLen_A + matriz.distancia[route[j]+1,route[j+1]+1] + matriz.distancia[route[i]+1,route[k+1]+1] + matriz.distancia[route[k]+1,route[k+2]+1]
-      dA4opt1 = addLen_A + matriz.distancia[route[i]+1,route[k+1]+1] + matriz.distancia[route[j]+1,route[k]+1] + matriz.distancia[route[j+1]+1,route[k+2]+1]
-      dA4opt2 = addLen_A + matriz.distancia[route[i]+1,route[j]+1] + matriz.distancia[route[j+1]+1,route[k+1]+1] + matriz.distancia[route[k]+1,route[k+2]+1]
-      dA4opt3 = addLen_A + matriz.distancia[route[i]+1,route[k]+1] + matriz.distancia[route[j+1]+1,route[k+1]+1] + matriz.distancia[route[j]+1,route[k+2]+1]
+      dA2opt  = addLen_A + input$matriz.distancia[route[i]+1,route[k]+1] + input$matriz.distancia[route[j]+1,route[j+1]+1] + input$matriz.distancia[route[k+1]+1,route[k+2]+1]
+      dA3opt1 = addLen_A + input$matriz.distancia[route[i]+1,route[j]+1] + input$matriz.distancia[route[j+1]+1,route[k+2]+1] + input$matriz.distancia[route[k]+1,route[k+1]+1]
+      dA3opt2 = addLen_A + input$matriz.distancia[route[i]+1,route[j+1]+1] + input$matriz.distancia[route[j]+1,route[k]+1] + input$matriz.distancia[route[k+1]+1,route[k+2]+1]
+      dA3opt3 = addLen_A + input$matriz.distancia[route[i]+1,route[j+1]+1] + input$matriz.distancia[route[j]+1,route[k+2]+1] + input$matriz.distancia[route[k]+1,route[k+1]+1]
+      dA3opt4 = addLen_A + input$matriz.distancia[route[j]+1,route[j+1]+1] + input$matriz.distancia[route[i]+1,route[k+1]+1] + input$matriz.distancia[route[k]+1,route[k+2]+1]
+      dA4opt1 = addLen_A + input$matriz.distancia[route[i]+1,route[k+1]+1] + input$matriz.distancia[route[j]+1,route[k]+1] + input$matriz.distancia[route[j+1]+1,route[k+2]+1]
+      dA4opt2 = addLen_A + input$matriz.distancia[route[i]+1,route[j]+1] + input$matriz.distancia[route[j+1]+1,route[k+1]+1] + input$matriz.distancia[route[k]+1,route[k+2]+1]
+      dA4opt3 = addLen_A + input$matriz.distancia[route[i]+1,route[k]+1] + input$matriz.distancia[route[j+1]+1,route[k+1]+1] + input$matriz.distancia[route[j]+1,route[k+2]+1]
       
       dAmin = min(dA2opt, dA3opt1, dA3opt2, dA3opt3, dA3opt4, dA4opt1, dA4opt2, dA4opt3)
       
       if (dA2opt < delLen && dAmin == dA2opt){
         new_route = c(route[1:i], rev(route[(i+1):k]), route[(k+1):length(route)])
-        new_cost = calculateTotalDistance(new_route)
+        new_cost = calculateTotalDistance(input, new_route)
         delta = dA2opt - delLen
         if (printing) cat("Movimiento clase A, 2opt\n\n")
       }else if(dA3opt1 < delLen && dAmin == dA3opt1){
         new_route = c(route[1:i], rev(route[(i+1):j]), rev(route[(j+1):(k+1)]), route[(k+2):length(route)])
-        new_cost = calculateTotalDistance(new_route)
+        new_cost = calculateTotalDistance(input, new_route)
         delta = dA3opt1 - delLen
         if (printing)cat("Movimiento clase A, 3opt1\n\n")
       }else if(dA3opt2 < delLen && dAmin == dA3opt2){
         new_route = c(route[1:i], route[(j+1):k], rev(route[(i+1):j]), route[(k+1):length(route)])
-        new_cost = calculateTotalDistance(new_route)
+        new_cost = calculateTotalDistance(input, new_route)
         delta = dA3opt2 - delLen
         if (printing) cat("Movimiento clase A, 3opt2\n\n")
       }else if(dA3opt3 < delLen && dAmin == dA3opt3){
         new_route = c(route[1:i], route[(j+1):(k+1)], route[(i+1):j], route[(k+2):length(route)])
-        new_cost = calculateTotalDistance(new_route)
+        new_cost = calculateTotalDistance(input, new_route)
         delta = dA3opt3 - delLen
         if (printing) cat("Movimiento clase A, 3opt3\n\n")
       }else if(dA3opt4 < delLen && dAmin == dA3opt4){
         new_route = c(route[1:i], route[k+1], route[(i+1):k], route[(k+2):length(route)])
-        new_cost = calculateTotalDistance(new_route)
+        new_cost = calculateTotalDistance(input, new_route)
         delta = dA3opt4 - delLen
         if (printing) cat("Movimiento clase A, 3opt4\n\n")
       }else if(dA4opt1 < delLen && dAmin == dA4opt1){
         new_route = c(route[1:i], route[k+1], route[(i+1):j], rev(route[(j+1):k]), route[(k+2):length(route)])
-        new_cost = calculateTotalDistance(new_route)
+        new_cost = calculateTotalDistance(input, new_route)
         delta = dA4opt1 - delLen
         if (printing) cat("Movimiento clase A, 4opt1\n\n")
       }else if(dA4opt2 < delLen && dAmin == dA4opt2){
         new_route = c(route[1:i], rev(route[(i+1):j]), route[k+1], route[(j+1):k], route[(k+2):length(route)])
-        new_cost = calculateTotalDistance(new_route)
+        new_cost = calculateTotalDistance(input, new_route)
         delta = dA4opt2 - delLen
         if (printing) cat("Movimiento clase A, 4opt2\n\n")
       }else if(dA4opt3 < delLen && dAmin == dA4opt3){
         new_route = c(route[1:i], rev(route[(j+1):k]), route[k+1], route[(i+1):j], route[(k+2):length(route)])
-        new_cost = calculateTotalDistance(new_route)
+        new_cost = calculateTotalDistance(input, new_route)
         delta = dA4opt3 - delLen
         if (printing) cat("Movimiento clase A, 4opt3\n\n")
       }else{
         if (printing)  cat("No improvement found \n\n")
         new_route = route
-        new_cost = calculateTotalDistance(route)
+        new_cost = calculateTotalDistance(input, route)
       }
       
       
     }else if(addLenMin == addLen_B){ # Clase B
-      dB2opt  = addLen_B + matriz.distancia[route[i]+1,route[i+1]+1] + matriz.distancia[route[k]+1,route[k+1]+1] + matriz.distancia[route[j+1]+1,route[k+2]+1]
-      dB3opt1 = addLen_B + matriz.distancia[route[i]+1,route[k]+1] + matriz.distancia[route[i+1]+1,route[j+1]+1] + matriz.distancia[route[k+1]+1,route[k+2]+1]
-      dB3opt2 = addLen_B + matriz.distancia[route[i]+1,route[j+1]+1] + matriz.distancia[route[k]+1,route[k+1]+1] + matriz.distancia[route[i+1]+1,route[k+2]+1]
-      dB3opt3 = addLen_B + matriz.distancia[route[i]+1,route[j+1]+1] + matriz.distancia[route[i+1]+1,route[k]+1] + matriz.distancia[route[k+1]+1,route[k+2]+1]
-      dB3opt4 = addLen_B + matriz.distancia[route[i]+1,route[i+1]+1] + matriz.distancia[route[j+1]+1,route[k+1]+1] + matriz.distancia[route[k]+1,route[k+2]+1]
-      dB4opt1 = addLen_B + matriz.distancia[route[i]+1,route[k]+1] + matriz.distancia[route[j+1]+1,route[k+1]+1] + matriz.distancia[route[i+1]+1,route[k+2]+1]
-      dB4opt2 = addLen_B + matriz.distancia[route[i]+1,route[k+1]+1] + matriz.distancia[route[i+1]+1,route[j+1]+1] + matriz.distancia[route[k]+1,route[k+2]+1]
-      dB4opt3 = addLen_B + matriz.distancia[route[i]+1,route[k+1]+1] + matriz.distancia[route[i+1]+1,route[k]+1] + matriz.distancia[route[j+1]+1,route[k+2]+1]
+      dB2opt  = addLen_B + input$matriz.distancia[route[i]+1,route[i+1]+1] + input$matriz.distancia[route[k]+1,route[k+1]+1] + input$matriz.distancia[route[j+1]+1,route[k+2]+1]
+      dB3opt1 = addLen_B + input$matriz.distancia[route[i]+1,route[k]+1] + input$matriz.distancia[route[i+1]+1,route[j+1]+1] + input$matriz.distancia[route[k+1]+1,route[k+2]+1]
+      dB3opt2 = addLen_B + input$matriz.distancia[route[i]+1,route[j+1]+1] + input$matriz.distancia[route[k]+1,route[k+1]+1] + input$matriz.distancia[route[i+1]+1,route[k+2]+1]
+      dB3opt3 = addLen_B + input$matriz.distancia[route[i]+1,route[j+1]+1] + input$matriz.distancia[route[i+1]+1,route[k]+1] + input$matriz.distancia[route[k+1]+1,route[k+2]+1]
+      dB3opt4 = addLen_B + input$matriz.distancia[route[i]+1,route[i+1]+1] + input$matriz.distancia[route[j+1]+1,route[k+1]+1] + input$matriz.distancia[route[k]+1,route[k+2]+1]
+      dB4opt1 = addLen_B + input$matriz.distancia[route[i]+1,route[k]+1] + input$matriz.distancia[route[j+1]+1,route[k+1]+1] + input$matriz.distancia[route[i+1]+1,route[k+2]+1]
+      dB4opt2 = addLen_B + input$matriz.distancia[route[i]+1,route[k+1]+1] + input$matriz.distancia[route[i+1]+1,route[j+1]+1] + input$matriz.distancia[route[k]+1,route[k+2]+1]
+      dB4opt3 = addLen_B + input$matriz.distancia[route[i]+1,route[k+1]+1] + input$matriz.distancia[route[i+1]+1,route[k]+1] + input$matriz.distancia[route[j+1]+1,route[k+2]+1]
       
       dBmin = min(dB2opt, dB3opt1, dB3opt2, dB3opt3, dB3opt4, dB4opt1, dB4opt2, dB4opt3)
       
       if (dB2opt < delLen && dBmin == dB2opt){
         new_route = c(route[1:j], rev(route[(j+1):(k+1)]), route[(k+2):length(route)])
-        new_cost = calculateTotalDistance(new_route)
+        new_cost = calculateTotalDistance(input, new_route)
         delta = dB2opt - delLen
         if (printing) cat("Movimiento clase B, 2opt\n\n")
       }else if(dB3opt1 < delLen && dBmin == dB3opt1){
         new_route = c(route[1:i], rev(route[(j+1):k]), route[(i+1):j], route[(k+1):length(route)])
-        new_cost = calculateTotalDistance(new_route)
+        new_cost = calculateTotalDistance(input, new_route)
         delta = dB3opt1 - delLen
         if (printing) cat("Movimiento clase B, 3opt1\n\n")
       }else if(dB3opt2 < delLen && dBmin == dB3opt2){
         new_route = c(route[1:i], route[(j+1):(k+1)], rev(route[(i+1):j]), route[(k+2):length(route)])
-        new_cost = calculateTotalDistance(new_route)
+        new_cost = calculateTotalDistance(input, new_route)
         delta = dB3opt2 - delLen
         if (printing) cat("Movimiento clase B, 3opt2\n\n")
       }else if(dB3opt3 < delLen && dBmin == dB3opt3){
         new_route = c(route[1:i], route[(j+1):k], route[(i+1):j], route[(k+1):length(route)])
-        new_cost = calculateTotalDistance(new_route)
+        new_cost = calculateTotalDistance(input, new_route)
         delta = dB3opt3 - delLen
         if (printing) cat("Movimiento clase B, 3opt3\n\n")
       }else if(dB3opt4 < delLen && dBmin == dB3opt4){
         new_route = c(route[1:j], route[k+1], route[(j+1):k], route[(k+2):length(route)])
-        new_cost = calculateTotalDistance(new_route)
+        new_cost = calculateTotalDistance(input, new_route)
         delta = dB3opt4 - delLen
         if (printing) cat("Movimiento clase B, 3opt4\n\n")
       }else if(dB4opt1 < delLen && dBmin == dB4opt1){
         new_route = c(route[1:i], rev(route[(j+1):k]), route[k+1], rev(route[(i+1):j]), route[(k+2):length(route)])
-        new_cost = calculateTotalDistance(new_route)
+        new_cost = calculateTotalDistance(input, new_route)
         delta = dB4opt1 - delLen
         if (printing) cat("Movimiento clase B, 4opt1\n\n")
       }else if(dB4opt2 < delLen && dBmin == dB4opt2){
         new_route = c(route[1:i], route[k+1], rev(route[(i+1):j]), route[(j+1):k], route[(k+2):length(route)])
-        new_cost = calculateTotalDistance(new_route)
+        new_cost = calculateTotalDistance(input, new_route)
         delta = dB4opt2 - delLen
         if (printing) cat("Movimiento clase B, 4opt2\n\n")
       }else if(dB4opt3 < delLen && dBmin == dB4opt3){
         new_route = c(route[1:i], route[k+1], rev(route[(i+1):j]), rev(route[(j+1):k]), route[(k+2):length(route)])
-        new_cost = calculateTotalDistance(new_route)
+        new_cost = calculateTotalDistance(input, new_route)
         delta = dB4opt3 - delLen
         if (printing) cat("Movimiento clase B, 4opt3\n\n")
       }else{
         if (printing) cat("No improvement found \n\n")
         new_route = route
-        new_cost = calculateTotalDistance(route)
+        new_cost = calculateTotalDistance(input, route)
       }
       
     } 
   }else{
     if (printing) cat("No improvement found \n\n")
     new_route = route
-    new_cost = calculateTotalDistance(route)
+    new_cost = calculateTotalDistance(input, route)
   }
   
   return(list(best_route4opt=new_route, best_cost4opt = new_cost, delta = delta))
@@ -388,7 +393,7 @@ four_opt_asterisk_all_segments <- function(route){
 
 
 
-four_opt_asterisk <- function(route){
+four_opt_asterisk <- function(input, route){
   delta = list()
   segm = list()
   new_route = list()
@@ -396,8 +401,8 @@ four_opt_asterisk <- function(route){
   if(length(four_opt_asterisk_all_segments(route))>=1){
     for (kk in 1:length(four_opt_asterisk_all_segments(route))){
       segm[[kk]] = four_opt_asterisk_all_segments(route)[[kk]]
-      delta[[kk]] = four_opt_asterisk_swap(route, segm[[kk]][1], segm[[kk]][2], segm[[kk]][3])$delta
-      new_route[[kk]] = four_opt_asterisk_swap(route, segm[[kk]][1], segm[[kk]][2], segm[[kk]][3])$best_route4opt
+      delta[[kk]] = four_opt_asterisk_swap(input, route, segm[[kk]][1], segm[[kk]][2], segm[[kk]][3])$delta
+      new_route[[kk]] = four_opt_asterisk_swap(input, route, segm[[kk]][1], segm[[kk]][2], segm[[kk]][3])$best_route4opt
     }
     
     if (all(delta >=0)){
@@ -430,7 +435,7 @@ four_opt_asterisk <- function(route){
 # v: v?rtice a insertar
 # v_i, v_j, v_k: clientes de esta ruta
 
-insertion_typeI_swap <- function(route, v, v_i, v_j, v_k){ 
+insertion_typeI_swap <- function(input, route, v, v_i, v_j, v_k){ 
   
   i <- which(route==v_i) #posici?n del cliente v_i en la ruta
   j <- which(route==v_j)
@@ -439,9 +444,9 @@ insertion_typeI_swap <- function(route, v, v_i, v_j, v_k){
   new_route = c(route[1:i], v, rev(route[(i+1):j]), rev(route[(j+1):k]), 
                 route[(k+1):length(route)])
   
-  new_cost = calculateTotalDistance(new_route)
+  new_cost = calculateTotalDistance(input, new_route)
   
-  delta = new_cost - calculateTotalDistance(route)
+  delta = new_cost - calculateTotalDistance(input, route)
   
   
   return(list(new_route = new_route, delta = delta))
@@ -473,7 +478,7 @@ insertion_typeI_all_segments <- function(route){
 
 
 
-insertion_typeI <- function(route, v){
+insertion_typeI <- function(input, route, v){
   delta = list()
   segm = list()
   new_route = list()
@@ -481,8 +486,8 @@ insertion_typeI <- function(route, v){
   if(length(insertion_typeI_all_segments(route))>=1){
     for (kk in 1:length(insertion_typeI_all_segments(route))){
       segm[[kk]] = insertion_typeI_all_segments(route)[[kk]]
-      delta[[kk]] = insertion_typeI_swap(route, v, route[segm[[kk]][1]], route[segm[[kk]][2]], route[segm[[kk]][3]])$delta
-      new_route[[kk]] = insertion_typeI_swap(route, v, route[segm[[kk]][1]], route[segm[[kk]][2]], route[segm[[kk]][3]])$new_route
+      delta[[kk]] = insertion_typeI_swap(input, route, v, route[segm[[kk]][1]], route[segm[[kk]][2]], route[segm[[kk]][3]])$delta
+      new_route[[kk]] = insertion_typeI_swap(input, route, v, route[segm[[kk]][1]], route[segm[[kk]][2]], route[segm[[kk]][3]])$new_route
     }
     
     
@@ -496,8 +501,8 @@ insertion_typeI <- function(route, v){
     delta <- delta[[delta_chosen_position]]
   }else{
     new_route_compulsory <- c(route[1:ceiling(length(route)/2)], v, route[(ceiling(length(route)/2)+1): length(route)])
-    best_route = three_opt(new_route_compulsory)
-    delta <- calculateTotalDistance(best_route) - calculateTotalDistance(route)
+    best_route = three_opt(input, new_route_compulsory)
+    delta <- calculateTotalDistance(input, best_route) - calculateTotalDistance(input, route)
   }
   return(list(best_route_I = best_route, delta_I = delta))
 }
@@ -511,7 +516,7 @@ insertion_typeI <- function(route, v){
 # v_i, v_j, v_k: clientes de esta ruta
 
 
-insertion_typeII_swap <- function(route, v, v_i, v_l, v_j, v_k){ 
+insertion_typeII_swap <- function(input, route, v, v_i, v_l, v_j, v_k){ 
   
   i <- which(route==v_i) #posici?n del cliente v_i en la ruta
   j <- which(route==v_j)
@@ -521,9 +526,9 @@ insertion_typeII_swap <- function(route, v, v_i, v_l, v_j, v_k){
   new_route = c(route[1:i], v, rev(route[l:j]), route[(j+1):(k-1)], 
                 rev(route[(i+1):(l-1)]), route[k:length(route)])
   
-  new_cost = calculateTotalDistance(new_route)
+  new_cost = calculateTotalDistance(input, new_route)
   
-  delta = new_cost - calculateTotalDistance(route)
+  delta = new_cost - calculateTotalDistance(input, route)
   
   
   return(list(new_route = new_route, delta = delta))
@@ -560,7 +565,7 @@ insertion_typeII_all_segments <- function(route){
 
 
 
-insertion_typeII <- function(route, v){
+insertion_typeII <- function(input, route, v){
   delta = list()
   segm = list()
   new_route = list()
@@ -568,8 +573,8 @@ insertion_typeII <- function(route, v){
   if(length(insertion_typeII_all_segments(route))>=1){
     for (kk in 1:length(insertion_typeII_all_segments(route))){
       segm[[kk]] = insertion_typeII_all_segments(route)[[kk]]
-      delta[[kk]] = insertion_typeII_swap(route, v, route[segm[[kk]][1]], route[segm[[kk]][2]], route[segm[[kk]][3]], route[segm[[kk]][4]])$delta
-      new_route[[kk]] = insertion_typeII_swap(route, v, route[segm[[kk]][1]], route[segm[[kk]][2]], route[segm[[kk]][3]], route[segm[[kk]][4]])$new_route
+      delta[[kk]] = insertion_typeII_swap(input, route, v, route[segm[[kk]][1]], route[segm[[kk]][2]], route[segm[[kk]][3]], route[segm[[kk]][4]])$delta
+      new_route[[kk]] = insertion_typeII_swap(input, route, v, route[segm[[kk]][1]], route[segm[[kk]][2]], route[segm[[kk]][3]], route[segm[[kk]][4]])$new_route
     }
     
     
@@ -584,8 +589,8 @@ insertion_typeII <- function(route, v){
     
   }else{
     new_route_compulsory <- c(route[1:ceiling(length(route)/2)], v, route[(ceiling(length(route)/2)+1): length(route)])
-    best_route = four_opt_asterisk(new_route_compulsory)
-    delta <- calculateTotalDistance(best_route) - calculateTotalDistance(route)
+    best_route = four_opt_asterisk(input, new_route_compulsory)
+    delta <- calculateTotalDistance(input, best_route) - calculateTotalDistance(input, route)
   }
   
   return(list(best_route_II = best_route, delta_II = delta))
@@ -595,54 +600,54 @@ insertion_typeII <- function(route, v){
 
 
 
-GENI <- function(route, v){
+GENI <- function(input, route, v){
   
   #Elegimos el mejor orden para insercion tipo I
-  delta_ins_I = insertion_typeI(route, v)$delta_I
-  delta_ins_I_rev = insertion_typeI(rev(route), v)$delta_I
+  delta_ins_I = insertion_typeI(input, route, v)$delta_I
+  delta_ins_I_rev = insertion_typeI(input, rev(route), v)$delta_I
   
   if(delta_ins_I < delta_ins_I_rev){
     delta_I <- delta_ins_I
-    new_route_I =  insertion_typeI(route, v)$best_route_I
+    new_route_I =  insertion_typeI(input,route, v)$best_route_I
   }else if(delta_ins_I > delta_ins_I_rev){
     delta_I <- delta_ins_I_rev
-    new_route_I =  insertion_typeI(rev(route), v)$best_route_I
+    new_route_I =  insertion_typeI(input,rev(route), v)$best_route_I
   }else{
     rand = sample(c("I","I_rev"),1)
     if(rand == "I"){
       delta_I <- delta_ins_I
-      new_route_I =  insertion_typeI(route, v)$best_route_I
+      new_route_I =  insertion_typeI(input,route, v)$best_route_I
     }else{
       delta_I <- delta_ins_I_rev
-      new_route_I =  insertion_typeI(rev(route), v)$best_route_I
+      new_route_I =  insertion_typeI(input,rev(route), v)$best_route_I
     }
   }
   
-  best_route_I = three_opt(new_route_I)
+  best_route_I = three_opt(input, new_route_I)
   
   
   #Elegimos el mejor orden para insercion tipo II
-  delta_ins_II = insertion_typeII(route, v)$delta_II
-  delta_ins_II_rev = insertion_typeII(rev(route), v)$delta_II
+  delta_ins_II = insertion_typeII(input, route, v)$delta_II
+  delta_ins_II_rev = insertion_typeII(input,rev(route), v)$delta_II
   
   if(delta_ins_II < delta_ins_II_rev){
     delta_II <- delta_ins_II
-    new_route_II =  insertion_typeII(route, v)$best_route_II
+    new_route_II =  insertion_typeII(input,route, v)$best_route_II
   }else if(delta_ins_II > delta_ins_II_rev){
     delta_II <- delta_ins_II_rev
-    new_route_II =  insertion_typeII(rev(route), v)$best_route_II
+    new_route_II =  insertion_typeII(input,rev(route), v)$best_route_II
   }else{
     rand = sample(c("II","II_rev"),1)
     if(rand == "II"){
       delta_II <- delta_ins_II
-      new_route_II =  insertion_typeII(route, v)$best_route_II
+      new_route_II =  insertion_typeII(input,route, v)$best_route_II
     }else{
       delta_II <- delta_ins_II_rev
-      new_route_II =  insertion_typeII(rev(route), v)$best_route_II
+      new_route_II =  insertion_typeII(input,rev(route), v)$best_route_II
     }
   }
   
-  best_route_II = four_opt_asterisk(new_route_II)
+  best_route_II = four_opt_asterisk(input, new_route_II)
   
   
   
@@ -677,7 +682,7 @@ GENI <- function(route, v){
 # v: v?rtice a eliminar
 # v_i, v_j, v_k: clientes de esta ruta
 
-removal_typeI_swap <- function(route, v_i, v_k, v_j){ 
+removal_typeI_swap <- function(input, route, v_i, v_k, v_j){ 
   
   i <- which(route==v_i) #posici?n del cliente v_i en la ruta
   j <- which(route==v_j)
@@ -686,9 +691,9 @@ removal_typeI_swap <- function(route, v_i, v_k, v_j){
   new_route = c(route[1:(i-1)], rev(route[(i+1):k]), rev(route[(k+1):j]), 
                 route[(j+1):length(route)])
   
-  new_cost = calculateTotalDistance(new_route)
+  new_cost = calculateTotalDistance(input, new_route)
   
-  delta = new_cost - calculateTotalDistance(route)
+  delta = new_cost - calculateTotalDistance(input, route)
   
   
   return(list(new_route = new_route, delta = delta))
@@ -719,7 +724,7 @@ removal_typeI_all_segments <- function(route, v_i){
 
 
 
-removal_typeI <- function(route, v_i){
+removal_typeI <- function(input, route, v_i){
   delta = list()
   segm = list()
   new_route = list()
@@ -727,8 +732,8 @@ removal_typeI <- function(route, v_i){
   if(length(removal_typeI_all_segments(route, v_i))>=1){
     for (kk in 1:length(removal_typeI_all_segments(route, v_i))){
       segm[[kk]] = removal_typeI_all_segments(route, v_i)[[kk]]
-      delta[[kk]] = removal_typeI_swap(route, v_i, route[segm[[kk]][2]], route[segm[[kk]][3]])$delta
-      new_route[[kk]] = removal_typeI_swap(route, v_i, route[segm[[kk]][2]], route[segm[[kk]][3]])$new_route
+      delta[[kk]] = removal_typeI_swap(input, route, v_i, route[segm[[kk]][2]], route[segm[[kk]][3]])$delta
+      new_route[[kk]] = removal_typeI_swap(input, route, v_i, route[segm[[kk]][2]], route[segm[[kk]][3]])$new_route
     }
     
     
@@ -742,8 +747,8 @@ removal_typeI <- function(route, v_i){
     delta <- delta[[delta_chosen_position]]
     
   }else{
-    best_route = two_opt(route[-which(route==v_i)])
-    delta <- calculateTotalDistance(best_route) - calculateTotalDistance(route)
+    best_route = two_opt( input,route[-which(route==v_i)])
+    delta <- calculateTotalDistance(input, best_route) - calculateTotalDistance(input, route)
   }
   return(list(best_route_remI = best_route, delta_remI = delta))
 }
@@ -757,7 +762,7 @@ removal_typeI <- function(route, v_i){
 # v_i, v_j, v_k: clientes de esta ruta
 
 
-removal_typeII_swap <- function(route, v_i, v_j, v_l, v_k){ 
+removal_typeII_swap <- function(input, route, v_i, v_j, v_l, v_k){ 
   
   i <- which(route==v_i) #posici?n del cliente v_i en la ruta
   j <- which(route==v_j)
@@ -767,9 +772,9 @@ removal_typeII_swap <- function(route, v_i, v_j, v_l, v_k){
   new_route = c(route[1:(i-1)], rev(route[(l+1):k]), rev(route[(i+1):(j-1)]), 
                 route[j:l], route[(k+1):length(route)])
   
-  new_cost = calculateTotalDistance(new_route)
+  new_cost = calculateTotalDistance(input, new_route)
   
-  delta = new_cost - calculateTotalDistance(route)
+  delta = new_cost - calculateTotalDistance(input, route)
   
   
   return(list(new_route = new_route, delta = delta))
@@ -803,7 +808,7 @@ removal_typeII_all_segments <- function(route, v_i){
 
 
 
-removal_typeII <- function(route, v_i){
+removal_typeII <- function(input, route, v_i){
   delta = list()
   segm = list()
   new_route = list()
@@ -811,8 +816,8 @@ removal_typeII <- function(route, v_i){
   if(length(removal_typeII_all_segments(route, v_i))>=1){
     for (kk in 1:length(removal_typeII_all_segments(route, v_i))){
       segm[[kk]] = removal_typeII_all_segments(route, v_i)[[kk]]
-      delta[[kk]] = removal_typeII_swap(route, v_i, route[segm[[kk]][2]], route[segm[[kk]][3]], route[segm[[kk]][4]])$delta
-      new_route[[kk]] = removal_typeII_swap(route, v_i, route[segm[[kk]][2]], route[segm[[kk]][3]], route[segm[[kk]][4]])$new_route
+      delta[[kk]] = removal_typeII_swap(input, route, v_i, route[segm[[kk]][2]], route[segm[[kk]][3]], route[segm[[kk]][4]])$delta
+      new_route[[kk]] = removal_typeII_swap(input, route, v_i, route[segm[[kk]][2]], route[segm[[kk]][3]], route[segm[[kk]][4]])$new_route
     }
     
     
@@ -826,8 +831,8 @@ removal_typeII <- function(route, v_i){
     delta <- delta[[delta_chosen_position]]
     
   }else{
-    best_route = two_opt(route[-which(route==v_i)])
-    delta <- calculateTotalDistance(best_route) - calculateTotalDistance(route)
+    best_route = two_opt( input,route[-which(route==v_i)])
+    delta <- calculateTotalDistance(input, best_route) - calculateTotalDistance(input, route)
   }
   return(list(best_route_remII = best_route, delta_remII = delta))
   
@@ -835,57 +840,55 @@ removal_typeII <- function(route, v_i){
 
 
 
-
-
-GENI_US <- function(route, v_i){
+GENI_US <- function(input, route, v_i){
   
   
   #Elegimos el mejor orden para removal tipo I
-  delta_rem_I = removal_typeI(route, v_i)$delta_remI
-  delta_rem_I_rev = removal_typeI(rev(route), v_i)$delta_remI
+  delta_rem_I = removal_typeI(input, route, v_i)$delta_remI
+  delta_rem_I_rev = removal_typeI(input, rev(route), v_i)$delta_remI
   
   if(delta_rem_I < delta_rem_I_rev){
     delta_I <- delta_rem_I
-    new_route_I =  removal_typeI(route, v_i)$best_route_remI
+    new_route_I =  removal_typeI( input,route, v_i)$best_route_remI
   }else if(delta_rem_I > delta_rem_I_rev){
     delta_I <- delta_rem_I_rev
-    new_route_I =  removal_typeI(rev(route), v_i)$best_route_remI
+    new_route_I =  removal_typeI( input,rev(route), v_i)$best_route_remI
   }else{
     rand = sample(c("I","I_rev"),1)
     if(rand == "I"){
       delta_I <- delta_rem_I
-      new_route_I =  removal_typeI(route, v_i)$best_route_remI
+      new_route_I =  removal_typeI( input,route, v_i)$best_route_remI
     }else{
       delta_I <- delta_rem_I_rev
-      new_route_I =  removal_typeI(rev(route), v_i)$best_route_remI
+      new_route_I =  removal_typeI( input,rev(route), v_i)$best_route_remI
     }
   }
   
-  best_route_I = three_opt(new_route_I)
+  best_route_I = three_opt(input, new_route_I)
   
   
   #Elegimos el mejor orden para removal tipo II
-  delta_rem_II = removal_typeII(route, v_i)$delta_remII
-  delta_rem_II_rev = removal_typeII(rev(route), v_i)$delta_remII
+  delta_rem_II = removal_typeII( input,route, v_i)$delta_remII
+  delta_rem_II_rev = removal_typeII( input,rev(route), v_i)$delta_remII
   
   if(delta_rem_II < delta_rem_II_rev){
     delta_II <- delta_rem_II
-    new_route_II =  removal_typeII(route, v_i)$best_route_remII
+    new_route_II =  removal_typeII( input,route, v_i)$best_route_remII
   }else if(delta_rem_II > delta_rem_II_rev){
     delta_II <- delta_rem_II_rev
-    new_route_II =  removal_typeII(rev(route), v_i)$best_route_remII
+    new_route_II =  removal_typeII( input,rev(route), v_i)$best_route_remII
   }else{
     rand = sample(c("II","II_rev"),1)
     if(rand == "II"){
       delta_II <- delta_rem_II
-      new_route_II =  removal_typeII(route, v_i)$best_route_remII
+      new_route_II =  removal_typeII( input,route, v_i)$best_route_remII
     }else{
       delta_II <- delta_rem_II_rev
-      new_route_II =  removal_typeII(rev(route), v_i)$best_route_remII
+      new_route_II =  removal_typeII( input,rev(route), v_i)$best_route_remII
     }
   }
   
-  best_route_II = four_opt_asterisk(new_route_II)
+  best_route_II = four_opt_asterisk(input, new_route_II)
   
   
   

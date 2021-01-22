@@ -45,6 +45,7 @@ CW_algorithm<-function(string, option, n_trucks, n_trailers, verbose){
 
     totaltime <- difftime(Sys.time(), start_time, units = "secs")
 
+    print("END CW Algorithm")
     print(paste0("Result: ", string))
     print(paste0("    Cost ", result$cost))
     print(paste0("    Time ", totaltime," seconds"))
@@ -85,13 +86,14 @@ CW_algorithm<-function(string, option, n_trucks, n_trailers, verbose){
     if (verbose) {
       print("Call to CW_MCTTRP")
     }
-    result<- CW_MCTTRPcore(matriz.demandas,matriz.distancia,capacidad.truck,capacidad.trailer,capacidad.vehiculo,H.camion,H.trailer,n1,nf, verbose)
+    result<- CW_MCTTRPcore(matriz.demandas,matriz.distancia,capacidad.truck,capacidad.trailer,
+                           capacidad.vehiculo,H.camion,H.trailer,n1,nf, n_trucks, n_trailers, verbose)
     if (verbose) {
       print("Solver finished with success")
     }
 
     totaltime <- difftime(Sys.time(), start_time, units = "secs")
-    print(paste0("Result: ", string))
+    print(paste0("CW Result: ", string))
     print(paste0("    Cost ", result$cost))
     print(paste0("    Time ", totaltime," seconds"))
     print(paste0("    N trucks ", result$n_trucks))
