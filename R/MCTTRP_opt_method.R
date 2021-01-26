@@ -9,16 +9,16 @@ MCTTRP_opt_method<-function(result, initial_solution, input, init_time, type_pro
     
     while (!stopping_conditions) {
       # improvement
-      #current_solution <- result_improvement(input, result, current_solution)
+      current_solution <- result_improvement(input, result, current_solution)
         
       # perturbation
-      #perturbation_not_obtained <- TRUE
-      #while(perturbation_not_obtained){
-      #  perturbed_solution <-  perturbation(input, result, current_solution, problem_type, seed, tabulist)
-      #  current_solution <- perturbed_solution[["perturbed_solution"]]
-      #  perturbation_not_obtained <- perturbed_solution$perturbation_not_obtained
-      #  print(perturbation_not_obtained)
-      #}
+      perturbation_not_obtained <- TRUE
+      while(perturbation_not_obtained){
+        perturbed_solution <-  perturbation(input, result, current_solution, problem_type, seed, tabulist)
+        current_solution <- perturbed_solution[["perturbed_solution"]]
+        perturbation_not_obtained <- perturbed_solution$perturbation_not_obtained
+        print(perturbation_not_obtained)
+      }
       
       # tabu movements
       current_solution <- tabu_movements_core(input, current_solution, tabulist, max_size_tabu_list, n_movs, type_problem)

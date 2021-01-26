@@ -239,6 +239,9 @@ CW_MCTTRPcore<-function(matriz.demandas, matriz.distancia, capacidad.truck, capa
   ##################################################################################
   # POSTPROCESSING
   
+  print(rutas)
+  readline()
+  
   rutas_res <- postproc_MCTTRP(rutas, input, R, Rhat, Tolvas, CWTTRP_struct, nf)
   
   rutas <- convert_in_route(rutas_res)

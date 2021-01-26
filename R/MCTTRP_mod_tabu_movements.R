@@ -70,7 +70,9 @@ tabu_movements_core <- function(input, current_solution, tabulist, max_size_tabu
   
   print(mov_list[[index_order[1]]])
   
-  pos <- mov_list[[index_order[1]]]$indexr1
+  +
+    
+    pos <- mov_list[[index_order[1]]]$indexr1
     
   print(current_solution[[pos]]$route)
   
