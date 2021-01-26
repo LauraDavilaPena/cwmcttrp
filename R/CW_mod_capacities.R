@@ -1,21 +1,18 @@
 check_feasibility<-function(routes_res, route, input, type_root, type_problem) {
-  
-  no_all_vc <- 1
-  no_all_tc <- 1
+  all_vc <- 1
   subroutes <- 0
+
   for (i in 2:(length(route)-1)) {
-    if (route[i] >  input$n1) no_all_vc <- 0
-    if (route[i] <= input$n1) no_all_tc <- 0
+    if (route[i] >  input$n1) all_vc <- 0
     if (sum(route==route[i])>1) subroutes <- 1
   }
-  
+
   # determine new type
-  if ((no_all_tc)&&(!subroutes)) type_root <- "PTR"
-  if ((no_all_vc)&&(!subroutes)&&(type_root == "PTR")) type_root <- "PTR"
-  if ((no_all_vc)&&(!subroutes)&&(type_root == "PVR")) type_root <- "PVR"
-  if ((no_all_vc)&&(!subroutes)&&(type_root == "CVR")) type_root <- "PVR"
-  if (subroutes) type_root <- "CVR"
+  if ((all_vc)&&(!subroutes)&&(type_root == "CVR")) type_root <- "PVR"
+  if ((!all_vc)&&(!subroutes)&&(type_root == "CVR")) type_root <- "PTR"
+  else if (subroutes) type_root <- "CVR"
   
+    
   if (type_problem == "TTRP") {
     load1 <- calc_load2(route, input$vector.demandas)
     if (type_root == "PTR") total_capacity <- input$capacidad.truck
@@ -36,17 +33,23 @@ check_feasibility<-function(routes_res, route, input, type_root, type_problem) {
   
   # check subroute capacity
   if ((type_root == "CVR") && (feasible)) {
-    subroutes <- return_subroutes_string(route, input$n1)
+    #subroutes <- return_subroutes_string(route, input$n1)
+    #print("XXXXXroute")
+    #print(route)
+    subroutes <- return_subroutes(route, input$n1)
     unfeasible <- 0
-    for (i in 2:(length(subroutes)-1)) {
-      if (type_problem == "TTRP") load_subroute <- calc_load2(subroutes[[i]], input$vector.demandas)
-      if (type_problem == "MCTTRP") load_subroute <- calc_load2_MC(subroutes[[i]], input$matriz.demandas)
+    for (i in 1:length(subroutes)) {
+      subroute_i <- subroutes[[i]]$tour[2:(length(subroutes[[i]]$tour)-1)]
+      #print("xxxx")
+      #print(subroutes[[i]]$tour)
+      if (type_problem == "TTRP") load_subroute <- calc_load2(subroute_i, input$vector.demandas)
+      if (type_problem == "MCTTRP") load_subroute <- calc_load2_MC(subroute_i, input$matriz.demandas)
       if (load_subroute > subroute_total_capacity) {
         unfeasible <- 1
         break
       }
     }
-    
+
     if (unfeasible) feasible <- 0
   }
   

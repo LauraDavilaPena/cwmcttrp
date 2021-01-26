@@ -428,15 +428,12 @@ calc_load_only_truck_MC<-function(local_route, matrix.demands, input) {
 }
 
 analyse<-function(rutas, input, rutas_res, option) {
-
   cvr <- 0
   ptr <- 0
   pvr <- 0
-  
   cap_truck <- input$capacidad.truck[1]
   cap_total <- input$capacidad.vehiculo[1]
   
-
   counter_route <- 1
   for (i in 2:(length(rutas))) {
 
@@ -494,10 +491,13 @@ analyse<-function(rutas, input, rutas_res, option) {
     
     if (rutas_res[[i]]$type == "CVR") {
       sr <- return_subroutes(rutas_res[[i]]$route, input$n1)
+      main_route <- return_main_route(rutas_res[[i]]$route)
+      
       if ((tload != rutas_res[[i]]$total_load)&&(tload < cap_total)) {
         print(paste0("   ERROR total capacity in CVR, route number ", i))
         counter_errors <- counter_errors +  1
       }
+      
       for (j in 1:length(sr)) {
         sr1 <- sr[[j]]$tour
         sr1 <- sr1[2:(length(sr1)-1)]
@@ -509,19 +509,11 @@ analyse<-function(rutas, input, rutas_res, option) {
         }
       }
       
-      for (j in 1:length(rutas_res[[i]]$route)) {
-        no_check <- 0
-        for (z in 1:length(sr)) {
-          if (sum(sr[[z]]$tour==rutas_res[[i]]$route[j])>0) {
-            no_check <- 1
-          }
-        }
-        if (!no_check) {
-          if (rutas_res[[i]]$route[j] > input$n1){
+      for (j in 1:length(main_route)) {
+          if (main_route[j] > input$n1){
             print(paste0("   ERROR client tc in main root, route number ", i))
             counter_errors <- counter_errors +  1
           }
-        }
       }
     }
     else if (rutas_res[[i]]$type == "PTR") {

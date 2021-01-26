@@ -308,7 +308,6 @@ createFinalResult_TTRP<-function(rutas, coste.total, matriz.distancia, result_re
   
   for (i in 1:length(result_res)) {
     if (result_res[[i]]$type == "CVR") {
-      print(result_res[[i]]$route)
       result_res[[i]]$main_tour <- return_main_route(result_res[[i]]$route)
       result_res[[i]]$subtours <- return_subroutes(result_res[[i]]$route, input$n1)
     }
@@ -509,29 +508,23 @@ return_subroutes_string<-function(route, n1) {
 
 return_subroutes<-function(route, n1) {
   subtours <- list()
-  state <- 0
-  counter_list <- 0
-  counter_parking <- 0
-  current_parking <- 0
-  
-  
-  for (i in 2:(length(route)-1)) {
-    if (state == 1) {
-      subtours[[counter_list]]$tour <- c(subtours[[counter_list]]$tour, route[i])
-    }
-    if (sum(route==route[i])>=2) {
-      counter_parking <- counter_parking + 1
-      
-      if ((state==1)&&(counter_parking == sum(route==route[i]))) {
-        state <- 0
-        counter_parking <- 0
+  counter_list <- 1
+  for (current_pointer in 2:(length(route)-1)) {
+    if (sum(route==route[current_pointer])>1) {
+      par1 <- route[current_pointer]
+      tour <- c(par1)
+      for (i in (current_pointer+1):length(route)) {
+        tour <- c(tour, route[i])
+        if (sum(route==route[i])>1) {
+          par2 <-  route[i]
+          break
+        }
       }
-      else {
-        state <- 1
-        counter_list <- counter_list + 1
+      if (par1 == par2) {
         subtours[[counter_list]] <- list()
-        subtours[[counter_list]]$tour <-  c(route[i])
-        subtours[[counter_list]]$root <- route[i]
+        subtours[[counter_list]]$tour <-  tour
+        subtours[[counter_list]]$root <- par1
+        counter_list <- counter_list + 1
       }
     }
   }
@@ -567,29 +560,24 @@ return_subroutes<-function(route, n1) {
 
 return_subroutes2<-function(route, n1) {
   subtours <- list()
-  state <- 0
-  counter_list <- 0
-  counter_parking <- 0
-  current_parking <- 0
+  counter_list <- 1
   
-  
-  for (i in 2:(length(route)-1)) {
-    if (state == 1) {
-      subtours[[counter_list]]$tour <- c(subtours[[counter_list]]$tour, route[i])
-    }
-    if (sum(route==route[i])>=2) {
-      counter_parking <- counter_parking + 1
-      
-      if ((state==1)&&(counter_parking == sum(route==route[i]))) {
-        state <- 0
-        counter_parking <- 0
+  for (current_pointer in 2:(length(route)-1)) {
+    if (sum(route==route[current_pointer])>1) {
+      par1 <- route[current_pointer]
+      tour <- c(par1)
+      for (i in (current_pointer+1):length(route)) {
+        tour <- c(tour, route[i])
+        if (sum(route==route[i])>1) {
+          par2 <-  route[i]
+          break
+        }
       }
-      else {
-        state <- 1
-        counter_list <- counter_list + 1
+      if (par1 == par2) {
         subtours[[counter_list]] <- list()
-        subtours[[counter_list]]$tour <-  c(route[i])
-        subtours[[counter_list]]$root <- route[i]
+        subtours[[counter_list]]$tour <-  tour
+        subtours[[counter_list]]$root <- par1
+        counter_list <- counter_list + 1
       }
     }
   }
@@ -673,5 +661,21 @@ create_route_from_main_route_and_subroutes<-function(subtours, main_tour) {
  }
  
  return(new_route)
+}
+
+update_solution<-function(initial_solution, input, problem_type) {
+    iroute <- all_routes(initial_solution)
+    icost <- calculateTotalDistance(input, iroute)
+    if (problem_type == "TTRP")   {
+      result <- createFinalResult_TTRP(iroute, icost, input$matriz.distancia, initial_solution, input$vector.demandas, input)
+      solution <- result$result_res
+    }
+    if (problem_type == "MCTTRP") {
+      
+      result <- createResultStruct_MCTTRP(iroute, icost, input$H.camion_res, input$H.trailer_res, input$matriz.demandas, initial_solution, input)
+      solution <- result$result_res
+    }
+
+  return(solution)
 }
 

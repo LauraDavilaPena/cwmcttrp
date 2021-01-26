@@ -5,8 +5,7 @@ tabu_movements_core <- function(input, current_solution, tabulist, max_size_tabu
   
   # Partimos de una solucion perturbada
   counter_tabu <- 1
-  n_movs <- 1000
-  exist <- 0
+  
   
   for (nn in 1:n_movs) {
       res <- movements_imp(input, current_solution, type_problem)
@@ -33,27 +32,21 @@ tabu_movements_core <- function(input, current_solution, tabulist, max_size_tabu
               current_solution <- result_ins$current_solution
               not_in_tabu_list <- result_ins$not_in_tabu_list
               
-              
-              #if (not_in_tabu_list) {
-              #  print(paste0("ADD ", mov_list[[index_order[counter_index_order]]]$mov_name))
-              #  print(old_route1)
-              #  print(mov_list[[index_order[counter_index_order]]]$route1)
+              if (not_in_tabu_list) {
+                print(paste0("ADD ", mov_list[[index_order[counter_index_order]]]$mov_name))
+                print(old_route1)
+                print(mov_list[[index_order[counter_index_order]]]$route1)
                 #print(old_route2)
                 #print(mov_list[[index_order[counter_index_order]]]$route2)
-              #}
+              }
             }
             else {
               not_in_tabu_list <- 1
-              exist <- 1
-              
             }
             
             counter_index_order <- counter_index_order + 1
             
           }
-          
-          if (exist) break
-          
       } else break
       
       #for (ii in 1:length(current_solution)){

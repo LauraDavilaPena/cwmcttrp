@@ -238,11 +238,8 @@ CW_MCTTRPcore<-function(matriz.demandas, matriz.distancia, capacidad.truck, capa
   
   ##################################################################################
   # POSTPROCESSING
-  #rutas_res <- postproc_MCTTRP(rutas, input, R, Rhat, Tolvas, CWTTRP_struct, nf)
+  rutas_res <- postproc_MCTTRP(rutas, input, R, Rhat, Tolvas, CWTTRP_struct, nf)
   
-  # BORRAR:::!!!!!!!!!
-  rutas_res <-  create_result_struct(rutas, input, "MCTTRP")
-  rutas_res <-  extract_info_from_hoppers(rutas_res, Tolvas, input)
   ##################################################################################
   # POSTPROCESSING
   #rutas_res <- improvement_CW(input, rutas_res, "MCTTRP")
@@ -261,10 +258,10 @@ CW_MCTTRPcore<-function(matriz.demandas, matriz.distancia, capacidad.truck, capa
                                             input$matriz.demandas, rutas_res, input)
 
   #rutas <- convert_in_route(rutas_res)
-  analyse(rutas, input, result$result_res, "MCTTRP")
-  print(paste0("l  ---> ", length(unique(rutas))))
-  print(paste0("n  ---> ", input$n))
-  print(paste0("n1 ---> ", input$n1))
+  #analyse(rutas, input, result$result_res, "MCTTRP")
+  #print(paste0("l  ---> ", length(unique(rutas))))
+  #print(paste0("n  ---> ", input$n))
+  #print(paste0("n1 ---> ", input$n1))
   
   return(result)
 } #Fin de la funcion
