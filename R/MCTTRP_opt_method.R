@@ -54,7 +54,7 @@ MCTTRP_opt_method<-function(result, initial_solution, input, init_time, type_pro
         bestroute <- all_routes(current_solution)
         bestcost <- newcost
       }
-      print(paste0("fobj ", newcost, " iter ", iter, " time ", current_time))
+      print(paste0("fobj ", newcost, " iter ", iter, " (best fobj ", bestcost , ")  time ", current_time, " s"))
       
       # check stopping conditions
       stopping_conditions <- check_stoppping_conditions(iter, init_time, newcost, input)
