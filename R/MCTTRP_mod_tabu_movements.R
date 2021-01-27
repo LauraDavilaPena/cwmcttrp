@@ -578,7 +578,6 @@ exchange_movement_vc_main_tour_tc_subtour<-function(input, result, mov_list, mov
                         # new routes
                         route1 <- replace_route_client_subroute(clienti, clientz, clientw, result[[i]]$route)
                         route2 <- replace_route_client(clientz, clienti, result[[z]]$route)
-                        
                         # feasibility
                         feasible_route1 <- check_feasibility(result, route1, input, result[[i]]$type, type_problem) 
                         feasible_route2 <- check_feasibility(result, route2, input, result[[z]]$type, type_problem) 

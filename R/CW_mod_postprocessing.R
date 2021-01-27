@@ -490,14 +490,14 @@ postproc_TTRP<-function(rutas_res, rutas, input, R, Rhat){
     }
     
     ## TRANSFORM AND SPLIT AGAIN
-    if ((length(non_selected_pvr_cvr_index)!=0)||(length(non_selected_ptr_index)!=0)) {
+    #if ((length(non_selected_pvr_cvr_index)!=0)||(length(non_selected_ptr_index)!=0)) {
       
-      result_transform_space <- transform_marginal_routes(rutas_res, non_selected_ptr_index, non_selected_pvr_cvr_index, selected_ptr_index, selected_pvr_cvr_index, input, "TTRP")
-      rutas_res <- result_transform_space$rutas_res
-      non_selected_ptr_index <- result_transform_space$non_selected_ptr_index 
-      non_selected_pvr_cvr_index <- result_transform_space$non_selected_pvr_cvr_index 
+    #  result_transform_space <- transform_marginal_routes(rutas_res, non_selected_ptr_index, non_selected_pvr_cvr_index, selected_ptr_index, selected_pvr_cvr_index, input, "TTRP")
+    #  rutas_res <- result_transform_space$rutas_res
+    #  non_selected_ptr_index <- result_transform_space$non_selected_ptr_index 
+    #  non_selected_pvr_cvr_index <- result_transform_space$non_selected_pvr_cvr_index 
       
-    }
+    #}
 
     ## SWITCH RESIDUAL ROUTES
     if ((length(non_selected_pvr_cvr_index)!=0)||(length(non_selected_ptr_index)!=0)) {
@@ -571,18 +571,18 @@ postproc_MCTTRP<-function(routes, input, R, Rhat, Hoppers, CWTTRP_struct, nf){
     }
     
     ## SWITCH RESIDUAL ROUTES
-    #if ((length(non_selected_pvr_cvr_index)!=0)||(length(non_selected_ptr_index)!=0)) {
-    #  rutas_res <- switch_routes(rutas_res, append(selected_pvr_cvr_index, selected_ptr_index), 
-    #                             append(non_selected_pvr_cvr_index, non_selected_ptr_index), input)
+    if ((length(non_selected_pvr_cvr_index)!=0)||(length(non_selected_ptr_index)!=0)) {
+      rutas_res <- switch_routes(rutas_res, append(selected_pvr_cvr_index, selected_ptr_index), 
+                                 append(non_selected_pvr_cvr_index, non_selected_ptr_index), input)
       
-    #  result_split <- split_and_insert(rutas_res, selected_pvr_cvr_index, non_selected_pvr_cvr_index, 
-    #                                   selected_ptr_index, non_selected_ptr_index, input, "TTRP", 1)
+      result_split <- split_and_insert(rutas_res, selected_pvr_cvr_index, non_selected_pvr_cvr_index, 
+                                       selected_ptr_index, non_selected_ptr_index, input, "TTRP", 1)
       
-    #  rutas_res <- result_split$rutas_res
-    #  non_selected_ptr_index <- result_split$non_selected_ptr_index
-    #  non_selected_pvr_cvr_index <- result_split$non_selected_pvr_cvr_index
+      rutas_res <- result_split$rutas_res
+      non_selected_ptr_index <- result_split$non_selected_ptr_index
+      non_selected_pvr_cvr_index <- result_split$non_selected_pvr_cvr_index
       
-    #}
+    }
     
     rutas_res <- clean_rutas_res(rutas_res)
 
@@ -1001,46 +1001,50 @@ check_insert_segment_in_route<-function(routes_to_add, rutas_res, index, input, 
 
 switch_routes<-function(rutas_res, routes_selected, routes_to_add, input) {
   
-  res_list <- list()
-  res_list$value <- Inf
-  res_list$index_i_route <- -1
-  res_list$index_j_route <- -1
-  res_list$index_z_route <- -1
-  res_list$load <- Inf
   
   for (j in 1:length(routes_to_add)) {
     flag_exit <- 0
     prev_value <- Inf
+    
+    res_list <- list()
+    res_list$index_i_route <- -1
+    res_list$index_j_route <- -1
+    res_list$index_z_route <- -1
+    res_list$load <- Inf
     while(!flag_exit) {
+      
+      res_list$value <- Inf
+      
       node_to_check <- rutas_res[[routes_to_add[[j]]]]$route[2] 
       #####3
-      
       res_list <- switch_r(res_list, routes_selected, rutas_res, node_to_check, routes_to_add[[j]], input)
+      
+      #print(paste0("note check ", node_to_check, " carga ", calc_load2(node_to_check, input$vector.demandas), " load ", res_list$load, " prev_value", prev_value))
       
       ######
       
       if (res_list$load<prev_value) {
+        #print("OLD routes")
+        #print(rutas_res[[res_list$index_i_route]]$route)
+        #print(rutas_res[[res_list$index_j_route]]$route)
+        #print("NEW routes")
+        #print(res_list$route)
+        #print(res_list$node_selected)
+        #readline()
+        
         prev_value <- res_list$load
-        node_selected1 <- rutas_res[[res_list$index_i_route]]$route[res_list$index_z_route]
-        node_selected2 <- rutas_res[[res_list$index_j_route]]$route[2]
+        node_selected1 <- res_list$node_selected
+
         
-        # SELECTED
-        n_route <- rutas_res[[res_list$index_i_route]]$route
-        logic_n_route <- (n_route == node_selected1)
-        for (i in 1:length(logic_n_route)) {
-          if (logic_n_route[i]) {
-            n_route[i] <- node_selected2
-          }
-        }
-        
-        rutas_res[[res_list$index_i_route]]$route <- n_route
-        rutas_res[[res_list$index_i_route]]$total_load <- calc_load2(n_route, input$vector.demandas)
-        rutas_res[[res_list$index_i_route]]$total_load_tc_clients <- calc_load_only_truck(n_route, input$vector.demandas, input)
-        rutas_res[[res_list$index_i_route]]$cost <- local_cost(n_route, input$matriz.distancia)
+        rutas_res[[res_list$index_i_route]]$route <- res_list$route
+        subtours <- return_subroutes2(res_list$route, input$n1)
+        if (length(subtours)&&(rutas_res[[res_list$index_i_route]]$type == "PVR"))  rutas_res[[res_list$index_i_route]]$type <- "CVR"
+        rutas_res[[res_list$index_i_route]]$total_load <- calc_load2(res_list$route, input$vector.demandas)
+        rutas_res[[res_list$index_i_route]]$total_load_tc_clients <- calc_load_only_truck(res_list$route, input$vector.demandas, input)
+        rutas_res[[res_list$index_i_route]]$cost <- local_cost(res_list$route, input$matriz.distancia)
         
         rutas_res[[res_list$index_j_route]]$route[2] <- node_selected1
         n_route2 <- rutas_res[[res_list$index_j_route]]$route
-        rutas_res[[res_list$index_j_route]]$route <- n_route2
         rutas_res[[res_list$index_j_route]]$total_load <- calc_load2(n_route2, input$vector.demandas)
         rutas_res[[res_list$index_j_route]]$total_load_tc_clients <- calc_load_only_truck(n_route2, input$vector.demandas, input)
         rutas_res[[res_list$index_j_route]]$cost <- local_cost(n_route2, input$matriz.distancia) 
@@ -1058,48 +1062,54 @@ switch_routes<-function(rutas_res, routes_selected, routes_to_add, input) {
 switch_r<-function(res_list, routes_selected, rutas_res, node_j, routes_to_add, input) {
   
   for (i in 1:length(routes_selected)){
-
     route_i <- rutas_res[[routes_selected[[i]]]]
+    cap_node_j <- calc_load2(node_j, input$vector.demandas)
+    
     # for PTR
     if (route_i$type == "PTR") {
       for (z in 2:(length(route_i$route)-1)) {
-        res_list <- create_switch_route(res_list, route_i$route, node_j, input,  routes_selected[[i]], routes_to_add, z, input$capacidad.truck, 0)
+        res_list <- create_switch_route(res_list, route_i$route, node_j, input,  routes_selected[[i]], routes_to_add, z, input$capacidad.truck, 1, 0)
       }
     }
     # for VTR
-    if ((node_j<=input$n1)&&(route_i$type == "PVR")) {
-      for (z in 2:(length(route_i$route)-1)) {
-        res_list <- create_switch_route(res_list, route_i$route, node_j, input,  routes_selected[[i]], routes_to_add, z, input$capacidad.vehiculo, 0)
-      }
-    }
-    # tc for CVR
-    if (route_i$type == "CVR") {
-      subroute <- return_subroutes_string(route_i$route, input$n1)
-      for (z in 2:(length(route_i$route)-1)) {
-        if (sum(subroute==route_i$route[z])!=0){
-          res_list <- create_switch_route(res_list, route_i$route, node_j, input, routes_selected[[i]], routes_to_add, z, input$capacidad.truck, 0)
+    if (route_i$type == "PVR") {
+      if ((node_j<=input$n1)) {
+        for (z in 2:(length(route_i$route)-1)) {
+          res_list <- create_switch_route(res_list, route_i$route, node_j, input,  routes_selected[[i]], routes_to_add, z, input$capacidad.vehiculo, 0, 0)
+        }
+      } else {
+        if (length(route_i$route)>3) {
+          for (z in 3:(length(route_i$route)-1)) {
+            res_list <- create_switch_route(res_list, route_i$route, node_j, input,  routes_selected[[i]], routes_to_add, z, input$capacidad.vehiculo, 1, 1)
+          }
         }
       }
     }
-    # vc for CVR
+    # CVR
     if (route_i$type == "CVR") {
-      subroute <- return_subroutes_string(route_i$route, input$n1)
-      for (z in 2:(length(route_i$route)-1)) {
-        # in subrroute
-        if (sum(subroute==route_i$route[z])!=0){
-          sr <- return_subroutes(route_i$route, input$n1)
-          subroute_index <- -1
-          for (t in 1:length(sr)) {
-            if(sum(sr[[t]]$tour==route_i$route[z])) {
-              subroute_index <- t
-            }
+      subroutes <- return_subroutes2(route_i$route, input$n1)
+      for (s in 1:length(subroutes)) {
+        subroute_i <-  subroutes[[s]]
+        for (ss in 2:(length(subroute_i$tour)-1)) {
+          return_index <- which(subroute_i$tour[ss] == route_i$route)
+          if ((node_j<=input$n1)) {
+            res_list <- create_switch_route(res_list, route_i$route, node_j, input, routes_selected[[i]], routes_to_add, return_index, input$capacidad.truck, 1, 0)
           }
-          cap_subtour <-  calc_load2(sr[[subroute_index]]$tour[2:(length(sr[[subroute_index]]$tour)-1)], input$vector.demandas)
-          res_list <- create_switch_route(res_list, route_i$route, node_j, input, routes_selected[[i]], routes_to_add, z, input$capacidad.vehiculo, 0)
-        } 
-        # in main route
-        else {
-          res_list <- create_switch_route(res_list, route_i$route, node_j, input, routes_selected[[i]], routes_to_add, z, input$capacidad.vehiculo, 0)
+          else if ((node_j>input$n1)){
+            res_list <- create_switch_route(res_list, route_i$route, node_j, input, routes_selected[[i]], routes_to_add, return_index, input$capacidad.truck, 1, 0)
+          }
+        }
+      }
+      main_route <- return_main_route(route_i$route)
+      for (m in 2:(length(main_route)-1)) {
+        if (sum(main_route[m]==route_i$route)==1) {
+          return_index<- which(main_route[m] == route_i$route)
+          if ((node_j<=input$n1)) {
+            res_list <- create_switch_route(res_list, route_i$route, node_j, input, routes_selected[[i]], routes_to_add, return_index, input$capacidad.vehiculo, 0, 0)
+          }
+          else if ((node_j>input$n1)&&(ss > 2)){
+            res_list <- create_switch_route(res_list, route_i$route, node_j, input, routes_selected[[i]], routes_to_add, return_index, input$capacidad.vehiculo, 1, 1)
+          }
         }
       }
     }
@@ -1108,7 +1118,7 @@ switch_r<-function(res_list, routes_selected, rutas_res, node_j, routes_to_add, 
   return(res_list)
 }
   
-create_switch_route<-function(res_list, n_route, selected_node, input, i, j, z, capacity, allow_different_type){
+create_switch_route<-function(res_list, n_route, selected_node, input, i, j, z, capacity, allow_different_type, insert_as_subroute){
   if (selected_node <= input$n1) type_selected_node <- "vc"
   else type_selected_node <- "tc"
   if (n_route[z] <= input$n1) type_node <- "vc"
@@ -1125,39 +1135,64 @@ create_switch_route<-function(res_list, n_route, selected_node, input, i, j, z, 
   }
   
   if (check) {
-    prev_node <- n_route[z]
-    logic_n_route <- (n_route == n_route[z])
-    for (ii in 1:length(logic_n_route)) {
-      if (logic_n_route[ii]) {
-        n_route[ii] <- selected_node
+    
+    if (!insert_as_subroute){
+      prev_node <- n_route[z]
+      logic_n_route <- (n_route == n_route[z])
+      for (ii in 1:length(logic_n_route)) {
+        if (logic_n_route[ii]) {
+          n_route[ii] <- selected_node
+        }
+      }
+    } else {
+      prev_node <- n_route[z]
+      old_route <- n_route
+      n_route <- c(0)
+      for (ii in 2:length(old_route)) {
+        if (old_route[ii]==prev_node) {
+          n_route <- c(n_route, selected_node, old_route[ii-1])
+        } else {
+          n_route <- c(n_route, old_route[ii])
+        }
       }
     }
+    
     new_capacity <-  calc_load2(n_route, input$vector.demandas)
-
+    
+    #print("")
+    #print(n_route)
+    #print(paste0("new cap ", new_capacity))
+    
     if (new_capacity <= capacity) {
-      subtours <- return_subroutes2(n_route, input$n1)
+      # check subroutes
       subroute_index <- 0
+      subtours <- return_subroutes2(n_route, input$n1)
       if (length(subtours)) subroute_index <- return_subroute_index(n_route, z, subtours)
       
       feasible <- 1
-      if (subroute_index!=0) {
+      if ((subroute_index!=0)&&(!insert_as_subroute)) {
         feasible <- 0
         new_truck_cap <- calc_load2(subtours[[subroute_index]]$tour[2:(length(subtours[[subroute_index]]$tour)-1)], input$vector.demandas)
         if (new_truck_cap <= input$capacidad.truck) {
           feasible <- 1
         }
       }
+      
       if (feasible){
         old_node_capacity <-  calc_load2(prev_node, input$vector.demandas)
         node_capacity <- calc_load2(selected_node, input$vector.demandas)
-        if (old_node_capacity < node_capacity ) {
-          total_cost <- local_cost(n_route, input$matriz.distancia)
+        total_cost <- local_cost(n_route, input$matriz.distancia)
+        #print(paste0("cost ", total_cost, "  <= ", res_list$value))
+        #print(paste0("capacity ", old_node_capacity, "  <= ", node_capacity))
+        if ((old_node_capacity < node_capacity ) && (total_cost <= res_list$value)) {
           res_list$load <-  node_capacity
           res_list$value <- total_cost
           res_list$index_i_route <- i
           res_list$index_j_route <- j
           res_list$index_z_route <- z
-          
+          res_list$insert_as_subroute <- insert_as_subroute
+          res_list$route <- n_route
+          res_list$node_selected <- prev_node
         }
       }
     }
@@ -2349,6 +2384,15 @@ improvement_CW <- function(input, current_solution, type_problem){
   exist <- 0
   
   for (nn in 1:n_movs) {
+    
+    
+    #for (ii in 1:length(current_solution)){
+    #  print(current_solution[[ii]]$route)
+    #}
+    #print("")
+    #readline()
+    
+    
     res <- movements_imp(input, current_solution, type_problem)
     mov_list <- res$mov_list
     mov_list_cost <- res$mov_list_cost
@@ -2367,10 +2411,21 @@ improvement_CW <- function(input, current_solution, type_problem){
       while (!not_in_tabu_list) {
         
         if ((mov_list_cost_vect[index_order[counter_index_order]]>=0)) {
+          old_route1 <- mov_list[[index_order[counter_index_order]]]$route1
           result_ins <- insert_selected_mov(input, mov_list[[index_order[counter_index_order]]] , current_solution, tabulist, max_size_tabu_list, type_problem)
           tabulist <- result_ins$tabulist
           current_solution <- result_ins$current_solution
           not_in_tabu_list <- result_ins$not_in_tabu_list
+          
+          
+          
+          if (not_in_tabu_list) {
+            #print(paste0("ADD ", mov_list[[index_order[counter_index_order]]]$mov_name))
+            #print(old_route1)
+            #print(mov_list[[index_order[counter_index_order]]]$route1)
+            #print(old_route2)
+            #print(mov_list[[index_order[counter_index_order]]]$route2)
+          }
         }
         else {
           not_in_tabu_list <- 1
@@ -2378,6 +2433,8 @@ improvement_CW <- function(input, current_solution, type_problem){
         }
         
         counter_index_order <- counter_index_order + 1
+        
+        
       }
       
       if (exist) break

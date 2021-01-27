@@ -496,10 +496,10 @@ return_main_route<-function(route) {
 return_subroutes_string<-function(route, n1) {
   
   subroutes_list <- return_subroutes(route, n1)
-  subroutes_strings <- c(subroutes_list[[1]]$tour)
+  subroutes_strings <- c(subroutes_list[[1]]$tour[2:(length(subroutes_list[[1]]$tour)-1)])
   if (length(subroutes_list)>1) {
     for (i in 2:length(subroutes_list)) {
-      subroutes_strings <- c(subroutes_strings, subroutes_list[[i]]$tour)
+      subroutes_strings <- c(subroutes_strings, subroutes_list[[i]]$tour[2:(length(subroutes_list[[i]]$tour)-1)])
     }
   }
   

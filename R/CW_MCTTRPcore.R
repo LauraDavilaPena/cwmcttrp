@@ -245,7 +245,15 @@ CW_MCTTRPcore<-function(matriz.demandas, matriz.distancia, capacidad.truck, capa
   rutas_res <-  extract_info_from_hoppers(rutas_res, Tolvas, input)
   ##################################################################################
   # POSTPROCESSING
-  #rutas_res <- improvement_CW(input, rutas_res, "MCTTRP")
+  #coste.total<-0
+  #for(i in 1:(length(rutas)-1)){
+  #  coste.total<-coste.total+input$matriz.distancia[rutas[i]+1,rutas[i+1]+1]
+  #}
+  #result <- createResultStruct_MCTTRP(rutas, coste.total,
+  #                                    CWTTRP_struct$H.camion_res,
+  #                                    CWTTRP_struct$H.trailer_res,
+  #                                    input$matriz.demandas, rutas_res, input)
+  #rutas_res <- improvement_CW(input, result$rutas_res, "MCTTRP")
     
   rutas <- convert_in_route(rutas_res)
   rutas <- delete_dupl_zeros_route(rutas)

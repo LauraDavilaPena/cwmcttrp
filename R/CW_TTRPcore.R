@@ -198,22 +198,24 @@ rutas_res <- create_result_struct(rutas, input, "TTRP")
 rutas_res <- postproc_TTRP(rutas_res, rutas, input, R, Rhat)
 
 ##################################################################################
-# POSTPROCESSING
-rutas_res <- improvement_CW(input, rutas_res, "TTRP")
+# IMPROVING
+coste.total<-0
+for(i in 1:(length(rutas)-1)){ coste.total<-coste.total+matriz.distancia[rutas[i]+1,rutas[i+1]+1] }
+result <- createFinalResult_TTRP(rutas,  coste.total, matriz.distancia, rutas_res, vector.demandas, input)
 
+rutas_res <- improvement_CW(input, result$result_res, "TTRP")
+
+coste.total<-0
+for(i in 1:(length(rutas)-1)){ coste.total<-coste.total+matriz.distancia[rutas[i]+1,rutas[i+1]+1] }
 rutas <- convert_in_route(rutas_res)
 rutas <- delete_dupl_zeros_route(rutas)
 
-coste.total<-0
-for(i in 1:(length(rutas)-1)){
-  coste.total<-coste.total+matriz.distancia[rutas[i]+1,rutas[i+1]+1]
-}
 result <- createFinalResult_TTRP(rutas,  coste.total, matriz.distancia, rutas_res, vector.demandas, input)
 
-#analyse(rutas, input, result$result_res, "TTRP")
-#print(paste0("l  ---> ", length(unique(rutas))))
-#print(paste0("n  ---> ", input$n))
-#print(paste0("n1 ---> ", input$n1))
+analyse(rutas, input, result$result_res, "TTRP")
+print(paste0("l  ---> ", length(unique(rutas))))
+print(paste0("n  ---> ", input$n))
+print(paste0("n1 ---> ", input$n1))
 
   return(result)
 } #Fin de la funcion
