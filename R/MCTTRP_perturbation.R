@@ -127,12 +127,12 @@ perturbation <- function(input, initial_solution, problem_type, seed, tabulist){
   
   # Ahora lo que tengo que hacer es, esos clientes que he eliminado de sus rutas originales, insertarlos en una
   # ruta distinta (donde sea factible; la idea es que tengo que intentar insertar todos)
-  print("DELETED")
+  #print("DELETED")
   #for (i in 1:length(intermediate_solution)) {
   #  print(intermediate_solution[[i]]$route)
   #}
-  print("")
-  print(aggregated_list_info$aggregated_clients)
+  #print("")
+  #print(aggregated_list_info$aggregated_clients)
   #print(aggregated_list_info$aggregated_routes)
   # Basicamente, para cada uno de los clientes que debo insertar (que son los que he eliminado), tengo que crearme 
   # una lista con sus posibles "destination_routes"

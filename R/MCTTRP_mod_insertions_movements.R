@@ -650,11 +650,7 @@ GENI <- function(input, route, v){
   best_route_II = four_opt_asterisk(input, new_route_II)
   
   
-  
-  
   # Ahora escogemos la mejor insercion: tipo I vs tipo II
-  
-  
   if(delta_I < delta_II){
     best_route = best_route_I
     delta = delta_I

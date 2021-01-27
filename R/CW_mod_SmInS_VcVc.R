@@ -290,22 +290,22 @@ SmInS_VcVc_manage_hoppers_trailer<-function(CWTTRP_struct, Tolvas, R,
       
       min.TolvasLib <- min(which(Tolvas[,4]==trailer_lib & Tolvas[,3]=="trailer")) #primera tolva en la matriz Tolvas q estaba siendo usada por el trailer_lib
       tot.TolvasLib <- which(Tolvas[,4]==trailer_lib & Tolvas[,3]=="trailer")
-      if(tol.lib_ocup!=0){
-        for (k in tot.TolvasLib[1:tol.lib_ocup]){
-          Tolvas[k,4] <- trailer_ocup
-        }
-      }
+      #if(tol.lib_ocup!=0){
+      #  for (k in tot.TolvasLib[1:tol.lib_ocup]){
+      #    Tolvas[k,4] <- trailer_ocup
+      #  }
+      #}
       #for (k in ((min.TolvasLib+tol.lib_ocup):(min.TolvasLib+tol.ocup_lib-1))){
-      lista_aux <- tot.TolvasLib[(tol.lib_ocup+1):tol.ocup_lib]
+      lista_aux <- tot.TolvasLib
       
-      availability <- PVRx2_available_compartments(input, ntol.lib_ocup, tot.TolvasLib, tol.lib_ocup, 
+      availability <- PVRx2_available_compartments(input, tol.lib_ocup, lista_aux, 
                                                    tol.ocup_lib, Tolvas)
       
       if(availability$available_compartments){
-        needed_trailer_hoppers_per_product <- availability$needed_trailer_hoppers_per_product
-        needed_truck_hoppers_per_product <- availability$needed_truck_hoppers_per_product
+        needed_trailer_hoppers_per_product <- availability$trailer_hoppers
+        needed_truck_hoppers_per_product <- availability$truck_hoppers
         
-        Tolvas_new <- PVRx2_union(input, ntol.lib_ocup, lista_aux, Tolvas, n.trailer_j, s, needed_trailer_hoppers_per_product,
+        Tolvas_new <- PVRx2_union(input, tol.lib_ocup, lista_aux, Tolvas, n.trailer_j, s, needed_trailer_hoppers_per_product,
                                   needed_truck_hoppers_per_product)
         
         Tolvas <- Tolvas_new$Tolvas_aux
@@ -559,14 +559,14 @@ SmInS_VcVc_manage_hoppers_trailer<-function(CWTTRP_struct, Tolvas, R,
 }
 
 
-PVRx2_available_compartments <- function(input, ntol.lib_ocup, tot.TolvasLib, tol.lib_ocup, 
+PVRx2_available_compartments <- function(input, tol.lib_ocup, lista_aux, 
                                          tol.ocup_lib, Tolvas){
   
   available_compartments <- FALSE
   
-  available_trailer_hoppers <- ntol.lib_ocup
+  available_trailer_hoppers <- tol.lib_ocup
   
-  lista_aux <- tot.TolvasLib[(tol.lib_ocup+1):tol.ocup_lib]
+  #lista_aux <- tot.TolvasLib[(tol.lib_ocup+1):tol.ocup_lib]
   
   clients <- numeric()
   for(k in 1:length(lista_aux)){
@@ -623,21 +623,21 @@ PVRx2_available_compartments <- function(input, ntol.lib_ocup, tot.TolvasLib, to
   
   
   if(needed_truck_hoppers_total <=  available_truck_hoppers){
-    print(paste0( available_trailer_hoppers , " " ,(dim(input$H.trailer)[2])))
+    #print(paste0( available_trailer_hoppers , " " ,(dim(input$H.trailer)[2])))
     available_compartments <- TRUE
   }
   
   
   
-  return(list(available_compartments=available_compartments, needed_trailer_hoppers_per_product = needed_trailer_hoppers_per_product, needed_truck_hoppers_per_product=needed_truck_hoppers_per_product)) 
+  return(list(available_compartments=available_compartments, trailer_hoppers = needed_trailer_hoppers_per_product, truck_hoppers = needed_truck_hoppers_per_product)) 
 }
 
 
-PVRx2_union <- function(input, ntol.lib_ocup, lista_aux, Tolvas, n.trailer_j, s, needed_trailer_hoppers_per_product,
+PVRx2_union <- function(input, tol.lib_ocup, lista_aux, Tolvas, n.trailer_j, s, needed_trailer_hoppers_per_product,
                         needed_truck_hoppers_per_product){
   
   
-  available_trailer_hoppers <- ntol.lib_ocup
+  available_trailer_hoppers <- tol.lib_ocup
   
   
   clients <- numeric()
