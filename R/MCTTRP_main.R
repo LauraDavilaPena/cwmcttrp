@@ -18,8 +18,7 @@ MCTTRP_opt_solver<-function(string, option, n_trucks, n_trailers, total_time=360
       input$H.camion_res <- results_CW$H.camion_res
       input$H.trailer_res <- results_CW$H.trailer_res
     }
-
-        
+    
     print(paste0("START ITERATIVE LOCAL SEARCH (time ", difftime(Sys.time(), init_time, units = "secs"),"s)"))
     result_MCTTRP_opt <- MCTTRP_opt_method(results_CW, initial_solution, input, init_time, option, seed)
     print("END ITERATIVE LOCAL SEARCH")

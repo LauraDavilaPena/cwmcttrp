@@ -307,6 +307,9 @@ createFinalResult_TTRP<-function(rutas, coste.total, matriz.distancia, result_re
   cvr <- 0
   
   for (i in 1:length(result_res)) {
+    result_res[[i]]$total_load <-  calc_load2(result_res[[i]]$route, input$vector.demandas)
+    result_res[[i]]$total_load_tc_clients <- calc_load_only_truck(result_res[[i]]$route, input$vector.demandas, input)
+    
     if (result_res[[i]]$type == "CVR") {
       result_res[[i]]$main_tour <- return_main_route(result_res[[i]]$route)
       result_res[[i]]$subtours <- return_subroutes(result_res[[i]]$route, input$n1)

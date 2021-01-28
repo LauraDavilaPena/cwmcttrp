@@ -270,8 +270,7 @@ SmInS_VcVc_manage_hoppers_trailer<-function(CWTTRP_struct, Tolvas, R,
         trailer_ocup <- n.trailer_j
         # trailer mas liberado
         trailer_lib <- n.trailer_i
-      }
-      else{
+      }else{
         trailer_ocup <- n.trailer_i
         trailer_lib <- n.trailer_j
       }
@@ -305,7 +304,7 @@ SmInS_VcVc_manage_hoppers_trailer<-function(CWTTRP_struct, Tolvas, R,
         needed_trailer_hoppers_per_product <- availability$trailer_hoppers
         needed_truck_hoppers_per_product <- availability$truck_hoppers
         
-        Tolvas_new <- PVRx2_union(input, tol.lib_ocup, lista_aux, Tolvas, n.trailer_j, s, needed_trailer_hoppers_per_product,
+        Tolvas_new <- PVRx2_union(input, tol.lib_ocup, lista_aux, Tolvas, trailer_ocup, s, needed_trailer_hoppers_per_product,
                                   needed_truck_hoppers_per_product)
         
         Tolvas <- Tolvas_new$Tolvas_aux
@@ -598,7 +597,7 @@ PVRx2_available_compartments <- function(input, tol.lib_ocup, lista_aux,
           
           needed_trailer_hoppers_per_product_res2[[i]][j] <- max(needed_trailer_hoppers_per_product_res[[i]][j]-available_trailer_hoppers,0 )
           load_res[[i]][j] <- max(0, load_res[[i]][j] - (needed_trailer_hoppers_per_product_res[[i]][j]-needed_trailer_hoppers_per_product_res2[[i]][j])*input$H.trailer[1,1])
-          available_trailer_hoppers <- available_trailer_hoppers - 1 #(needed_trailer_hoppers_per_product_res[[i]][j] - needed_trailer_hoppers_per_product_res2[[i]][j])
+          available_trailer_hoppers <- available_trailer_hoppers - (needed_trailer_hoppers_per_product_res[[i]][j] - needed_trailer_hoppers_per_product_res2[[i]][j])
           needed_trailer_hoppers_per_product_res <- needed_trailer_hoppers_per_product_res2
           
         }
@@ -629,11 +628,11 @@ PVRx2_available_compartments <- function(input, tol.lib_ocup, lista_aux,
   
   
   
-  return(list(available_compartments=available_compartments, trailer_hoppers = needed_trailer_hoppers_per_product, truck_hoppers = needed_truck_hoppers_per_product)) 
+  return(list(available_compartments=available_compartments, trailer_hoppers=needed_trailer_hoppers_per_product, truck_hoppers=needed_truck_hoppers_per_product)) 
 }
 
 
-PVRx2_union <- function(input, tol.lib_ocup, lista_aux, Tolvas, n.trailer_j, s, needed_trailer_hoppers_per_product,
+PVRx2_union <- function(input, tol.lib_ocup, lista_aux, Tolvas, trailer_ocup, s, needed_trailer_hoppers_per_product,
                         needed_truck_hoppers_per_product){
   
   
@@ -663,7 +662,7 @@ PVRx2_union <- function(input, tol.lib_ocup, lista_aux, Tolvas, n.trailer_j, s, 
       if(needed_trailer_hoppers_per_product[[i]][f]!=0){
         while(clients_demands_res[[i]][f]>0 & available_trailer_hoppers > 0){
           quantity <- min(clients_demands_res[[i]][f], capacity_trailer_hoppers)
-          new_hoppers_trailers[[t]] <- data.frame(clients[i], f, "trailer", n.trailer_j, quantity, quantity/capacity_trailer_hoppers)
+          new_hoppers_trailers[[t]] <- data.frame(clients[i], f, "trailer", trailer_ocup, quantity, quantity/capacity_trailer_hoppers)
           colnames(new_hoppers_trailers[[t]]) <- c("Cliente", "Pienso", "Tipo_vehiculo", "numero vehiculo", "Cantidad", "Proporcion")
           clients_demands_res[[i]][f] <- clients_demands_res[[i]][f] - quantity
           available_trailer_hoppers <- available_trailer_hoppers - 1

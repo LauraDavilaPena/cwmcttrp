@@ -270,6 +270,7 @@ perturbation <- function(input, initial_solution, problem_type, seed, tabulist){
       perturbed_solution <- initial_solution
       
     }else{
+      intermediate_solution <- update_solution(intermediate_solution, input, problem_type)
       perturbed_solution <- intermediate_solution
       
     }
@@ -285,7 +286,7 @@ return_cap_and_route_permutation<-function(intermediate_solution, input, type) {
   if (intermediate_solution$type == "CVR")  {
     if (type == "MCTTRP") tcap <- input$capacidad.vehiculo[1]
     if (type == "TTRP") tcap <- input$capacidad.vehiculo
-    route <- return_main_route(intermediate_solution$route)
+    route <- intermediate_solution$route#return_main_route(intermediate_solution$route)
   }
   if (intermediate_solution$type == "PVR")  {
     if (type == "MCTTRP") tcap <- input$capacidad.vehiculo[1]

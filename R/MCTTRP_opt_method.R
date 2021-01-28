@@ -4,8 +4,8 @@ MCTTRP_opt_method<-function(result, initial_solution, input, init_time, type_pro
     stopping_conditions <- 0
     iter <- 1
     tabulist <- list()
-    max_size_tabu_list <- input$n
-    n_movs <- 10
+    max_size_tabu_list <- input$n * 10
+    n_movs <- 100
 
     bestroute <- all_routes(current_solution)
     bestcost <- calculateTotalDistance(input, bestroute)
@@ -13,13 +13,14 @@ MCTTRP_opt_method<-function(result, initial_solution, input, init_time, type_pro
 
     current_time <- difftime(Sys.time(), init_time, units = "secs")
 
-    print(paste0("fobj ", bestcost, " iter ", 0, " time ", current_time))
+    print(paste0("fobj ", bestcost, " iter ", 0, " time ", difftime(Sys.time(), init_time, units = "secs")))
     
     while (!stopping_conditions) {
+      
       # improvement
       current_solution <- bestsolution
       current_solution <- result_improvement(input, current_solution)
-        
+
       #print("init")
       #for (i in 1:length(current_solution)) {
       #  print(current_solution[[i]]$route)
@@ -32,6 +33,7 @@ MCTTRP_opt_method<-function(result, initial_solution, input, init_time, type_pro
         current_solution <- perturbed_solution[["perturbed_solution"]]
         perturbation_not_obtained <- perturbed_solution$perturbation_not_obtained
       }
+      
       
       #print("end perturbation")
       #for (i in 1:length(current_solution)) {
@@ -49,13 +51,13 @@ MCTTRP_opt_method<-function(result, initial_solution, input, init_time, type_pro
       # print iterations
       newcost <- calculateTotalDistance(input, all_routes(current_solution))
       if (bestcost >  newcost) {
-        current_time <- difftime(Sys.time(), init_time, units = "secs")
         bestsolution <- current_solution 
         bestroute <- all_routes(current_solution)
         bestcost <- newcost
       }
-      print(paste0("fobj ", newcost, " iter ", iter, " (best fobj ", bestcost , ")  time ", current_time, " s"))
+      print(paste0("fobj ", newcost, " iter ", iter, " (best fobj ", bestcost , ")  time ", difftime(Sys.time(), init_time, units = "secs"), " s"))
       
+
       # check stopping conditions
       stopping_conditions <- check_stoppping_conditions(iter, init_time, newcost, input)
     

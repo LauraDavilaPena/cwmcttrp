@@ -493,8 +493,13 @@ analyse<-function(rutas, input, rutas_res, option) {
       sr <- return_subroutes(rutas_res[[i]]$route, input$n1)
       main_route <- return_main_route(rutas_res[[i]]$route)
       
-      if ((tload != rutas_res[[i]]$total_load)&&(tload < cap_total)) {
-        print(paste0("   ERROR total capacity in CVR, route number ", i))
+      if ((tload != rutas_res[[i]]$total_load)){
+        print(paste0("   ERROR total load in CVR is not updated, route number ", i, " load in struct ", rutas_res[[i]]$total_load, " real load ", tload))
+        counter_errors <- counter_errors +  1
+      }
+      
+      if (tload > cap_total) {
+        print(paste0("   ERROR total capacity in CVR, route number ", i, " current load ", tload, " max load ", cap_total))
         counter_errors <- counter_errors +  1
       }
       
@@ -517,14 +522,22 @@ analyse<-function(rutas, input, rutas_res, option) {
       }
     }
     else if (rutas_res[[i]]$type == "PTR") {
-      if ((tload != rutas_res[[i]]$total_load)&&(tload > cap_truck)) {
-        print(paste0("   ERROR total capacity in PTR, route number ", i))
+      if ((tload != rutas_res[[i]]$total_load)) {
+        print(paste0("   ERROR total load in PTR is not updated, route number ", i, " load in struct ", rutas_res[[i]]$total_load, " real load ", tload))
+        counter_errors <- counter_errors +  1
+      }
+      if ((tload > cap_truck)) {
+        print(paste0("   ERROR total capacity in PTR, route number ", i, " current load ", tload, " max load ", cap_total))
         counter_errors <- counter_errors +  1
       }
     }
     else if (rutas_res[[i]]$type == "PVR") {
-      if ((tload != rutas_res[[i]]$total_load)&&(tload > cap_total)) {
-        print(paste0("   ERROR total capacity in PVR, route number ", i))
+      if ((tload != rutas_res[[i]]$total_load)){
+        print(paste0("   ERROR total load in PVR is not updated, route number ", i, " load in struct ", rutas_res[[i]]$total_load, " real load ", tload))
+        counter_errors <- counter_errors +  1
+      }
+      if(tload > cap_total) {
+        print(paste0("   ERROR total capacity in PVR, route number ", i, " current load ", tload, " max load ", cap_total))
         counter_errors <- counter_errors +  1
       }
     }

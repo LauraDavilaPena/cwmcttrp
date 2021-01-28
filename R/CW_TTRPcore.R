@@ -196,6 +196,7 @@ rutas_res <- create_result_struct(rutas, input, "TTRP")
 ##################################################################################
 # POSTPROCESSING
 rutas_res <- postproc_TTRP(rutas_res, rutas, input, R, Rhat)
+rutas <- all_routes(rutas_res)
 
 ##################################################################################
 # IMPROVING
@@ -204,6 +205,7 @@ for(i in 1:(length(rutas)-1)){ coste.total<-coste.total+matriz.distancia[rutas[i
 result <- createFinalResult_TTRP(rutas,  coste.total, matriz.distancia, rutas_res, vector.demandas, input)
 
 rutas_res <- improvement_CW(input, result$result_res, "TTRP")
+rutas <- all_routes(rutas_res)
 
 coste.total<-0
 for(i in 1:(length(rutas)-1)){ coste.total<-coste.total+matriz.distancia[rutas[i]+1,rutas[i+1]+1] }

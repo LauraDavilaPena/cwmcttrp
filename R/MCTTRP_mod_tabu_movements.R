@@ -34,13 +34,13 @@ tabu_movements_core <- function(input, current_solution, tabulist, max_size_tabu
               not_in_tabu_list <- result_ins$not_in_tabu_list
               
               
-              #if (not_in_tabu_list) {
-              #  print(paste0("ADD ", mov_list[[index_order[counter_index_order]]]$mov_name))
+              if (not_in_tabu_list) {
+                print(paste0("ADD ", mov_list[[index_order[counter_index_order]]]$mov_name))
               #  print(old_route1)
               #  print(mov_list[[index_order[counter_index_order]]]$route1)
                 #print(old_route2)
                 #print(mov_list[[index_order[counter_index_order]]]$route2)
-              #}
+              }
             }
             else {
               not_in_tabu_list <- 1
