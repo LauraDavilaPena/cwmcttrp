@@ -28,7 +28,10 @@ MCTTRP_opt_method<-function(result, initial_solution, input, init_time, type_pro
       
       # perturbation
       perturbation_not_obtained <- TRUE
+      counter <- 1
       while(perturbation_not_obtained){
+        #print(counter)
+        counter <- counter + 1
         perturbed_solution <-  perturbation(input, current_solution, type_problem, seed, tabulist)
         current_solution <- perturbed_solution[["perturbed_solution"]]
         perturbation_not_obtained <- perturbed_solution$perturbation_not_obtained

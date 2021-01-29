@@ -174,8 +174,10 @@ perturbation <- function(input, initial_solution, problem_type, seed, tabulist){
                 route_try[[t]] <- candidate_destination_route$route
                 index_ins[[t]] <- r
               }
+              init_time <- Sys.time()
               res_geni <- GENI(input, route_try[[t]], inserting_client)
-
+              #print(paste0("GENI time ", difftime(Sys.time(), init_time, units = "secs","s)")))
+              
               new_route_ins[[t]] <- res_geni$best_route
               delta_ins[[t]] <- res_geni$delta_GENI
               route_try[[t]] <- new_route_ins[[t]]
@@ -207,9 +209,11 @@ perturbation <- function(input, initial_solution, problem_type, seed, tabulist){
               if(avail){ 
                 route_try[[t]] <- candidate_destination_route$route
                 index_ins[[t]] <- r
-              
+                
+                init_time <- Sys.time()
                 res_geni <- GENI(input, route_try[[t]], inserting_client)
-
+                #print(paste0("GENI time ", difftime(Sys.time(), init_time, units = "secs","s)")))
+                
                 new_route_ins[[t]] <- res_geni$best_route
                 delta_ins[[t]] <- res_geni$delta_GENI
                 route_try[[t]] <- new_route_ins[[t]]

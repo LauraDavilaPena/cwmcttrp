@@ -238,23 +238,18 @@ CW_MCTTRPcore<-function(matriz.demandas, matriz.distancia, capacidad.truck, capa
   
   ##################################################################################
   # POSTPROCESSING
-  #rutas_res <- postproc_MCTTRP(rutas, input, R, Rhat, Tolvas, CWTTRP_struct, nf)
-  
-  # BORRAR:::!!!!!!!!!
-  rutas_res <-  create_result_struct(rutas, input, "MCTTRP")
-  rutas_res <-  extract_info_from_hoppers(rutas_res, Tolvas, input)
+  rutas_res <- postproc_MCTTRP(rutas, input, R, Rhat, Tolvas, CWTTRP_struct, nf)
+  rutas <- all_routes(rutas_res)
+
   ##################################################################################
-  # POSTPROCESSING
-  #coste.total<-0
-  #for(i in 1:(length(rutas)-1)){
-  #  coste.total<-coste.total+input$matriz.distancia[rutas[i]+1,rutas[i+1]+1]
-  #}
-  #result <- createResultStruct_MCTTRP(rutas, coste.total,
-  #                                    CWTTRP_struct$H.camion_res,
-  #                                    CWTTRP_struct$H.trailer_res,
-  #                                    input$matriz.demandas, rutas_res, input)
-  #rutas_res <- improvement_CW(input, result$rutas_res, "MCTTRP")
-    
+  # IMPROVING
+  coste.total<-0
+  for(i in 1:(length(rutas)-1)){ coste.total<-coste.total+input$matriz.distancia[rutas[i]+1,rutas[i+1]+1]}
+  result <- createResultStruct_MCTTRP(rutas, coste.total, CWTTRP_struct$H.camion_res, CWTTRP_struct$H.trailer_res,
+                                      input$matriz.demandas, rutas_res, input)
+  rutas_res <- result$result_res
+  #rutas_res <- improvement_CW(input, result$result_res, "MCTTRP")
+  rutas <- all_routes(rutas_res)
   rutas <- convert_in_route(rutas_res)
   rutas <- delete_dupl_zeros_route(rutas)
   
@@ -263,10 +258,8 @@ CW_MCTTRPcore<-function(matriz.demandas, matriz.distancia, capacidad.truck, capa
   for(i in 1:(length(rutas)-1)){
     coste.total<-coste.total+input$matriz.distancia[rutas[i]+1,rutas[i+1]+1]
   }
-  result <- createResultStruct_MCTTRP(rutas, coste.total,
-                                            CWTTRP_struct$H.camion_res,
-                                            CWTTRP_struct$H.trailer_res,
-                                            input$matriz.demandas, rutas_res, input)
+  result <- createResultStruct_MCTTRP(rutas, coste.total, CWTTRP_struct$H.camion_res, CWTTRP_struct$H.trailer_res,
+                                      input$matriz.demandas, rutas_res, input)
 
   #rutas <- convert_in_route(rutas_res)
   analyse(rutas, input, result$result_res, "MCTTRP")

@@ -547,19 +547,19 @@ analyse<-function(rutas, input, rutas_res, option) {
   if (option == "MCTTRP") {
     for (i in 1:length(rutas_res)) {
       if (rutas_res[[i]]$type == "CVR") {
-        if (!check_capacity_hoppers_MCTTRP_CVR(rutas_res[[i]]$route, rutas_res, input)) {
+        if (!check_capacity_hoppers_MCTTRP_analysis(rutas_res[[i]], input)) {
           print(paste0("   ERROR in hoppers (CVR), route number ", i))
           counter_errors <- counter_errors +  1
         } 
       }
       else if (rutas_res[[i]]$type == "PTR") {
-        if (!check_capacity_hoppers_MCTTRP_PR(rutas_res[[i]]$route, rutas_res, input, cap_truck)) {
+        if (!check_capacity_hoppers_MCTTRP_analysis(rutas_res[[i]], input)) {
           print(paste0("   ERROR in hoppers (PTR), route number ", i))
           counter_errors <- counter_errors +  1
         } 
       }
       else if (rutas_res[[i]]$type == "PVR") {
-        if (!check_capacity_hoppers_MCTTRP_PR(rutas_res[[i]]$route, rutas_res, input, (cap_total))) {
+        if (!check_capacity_hoppers_MCTTRP_analysis(rutas_res[[i]], input)) {
           print(paste0("   ERROR in hoppers (PVR), route number ", i))
           counter_errors <- counter_errors +  1
         } 
