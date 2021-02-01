@@ -56,7 +56,7 @@ check_feasibility<-function(routes_res, route, input, type_root, type_problem) {
   # check hoppers
   if ((type_problem == "MCTTRP") && (feasible)){
     if (type_root == "CVR") feasible <- check_capacity_hoppers_MCTTRP_CVR_analysis(route, routes_res, input) 
-    else feasible <- check_capacity_hoppers_MCTTRP_PR_analysis (route, routes_res, input, total_capacity ) 
+    else feasible <- check_capacity_hoppers_MCTTRP_PR (route, routes_res, input, total_capacity ) 
   } 
   
   return(feasible)
@@ -323,10 +323,55 @@ check_capacity_hoppers_MCTTRP_CVR_new<-function(route_i, routes_res, input) {
   
 }
 
-check_capacity_hoppers_MCTTRP_PR_analysis<-function(route_i, routes_res, input, capacity) {
+check_capacity_hoppers_MCTTRP_PVR_new<-function(route_i, routes_res, input, capacity){
+  
+  for (i in 1:(length(routes_res))) {
+    if ( sum(routes_res[[i]]$route==route_i[2]) > 0 ) {
+      index <- i
+      break
+    }
+  }
+  
+  
+  new_order <- c(0)
+  for (i in 2:(length(route_i)-1)) {
+    res <- return_size_hoppers(routes_res, index, route_i[i])
+    size_tra <-  res$size_tra 
+    size_tru <-  res$size_tru
+    if ((size_tra > 0)&&(size_tru == 0)) {
+      new_order <- c(new_order, route_i[i])
+    }
+  }
+  
+  for (i in 2:(length(route_i)-1)) {
+    res <- return_size_hoppers(routes_res, index, route_i[i])
+    size_tra <-  res$size_tra 
+    size_tru <-  res$size_tru
+    if ((size_tra > 0)&&(size_tru > 0)) {
+      new_order <- c(new_order, route_i[i])
+    }
+  }
+  
+  for (i in 2:(length(route_i)-1)) {
+    res <- return_size_hoppers(routes_res, index, route_i[i])
+    size_tra <-  res$size_tra 
+    size_tru <-  res$size_tru
+    if ((size_tra == 0)&&(size_tru > 0)) {
+      new_order <- c(new_order, route_i[i])
+    }
+  }
+  
+  new_order <- c(new_order, 0)
+  
+  flag_exit <- check_capacity_hoppers_MCTTRP_generic(new_order, input, 1) 
+  
+  return(flag_exit)
+}
+
+check_capacity_hoppers_MCTTRP_PR<-function(route_i, old_solution, input, capacity) {
   
   if (capacity[1] == input$capacidad.vehiculo[1] ) {
-    flag_exit <- check_capacity_hoppers_MCTTRP_PVR(route_i, routes_res, input, capacity)
+    flag_exit <- check_capacity_hoppers_MCTTRP_PVR_update(route_i, old_solution, input)
   } else {
     flag_exit <- check_capacity_hoppers_MCTTRP_generic(route_i, input, 0) 
   }
@@ -366,110 +411,18 @@ check_capacity_hoppers_MCTTRP_generic<-function(route_i, input, check_trailer) {
   
   if (check_trailer) {
     if ((counter_hoppers_trailer <= n_hoppers_trailer)&&(counter_hoppers_truck <= n_hoppers_truck)) {
-      #print("return 1")
       return (1)
     } else {
-      #print("return 0")
       return (0)
     }
   }
   else {
     if (counter_hoppers_truck <= n_hoppers_truck) {
-      #print("return 1")
       return (1)
     } else {
-      #print("return 0")
       return (0)
     }
   }
-  
-}
-
-check_capacity_hoppers_MCTTRP_PVR_new<-function(route_i, routes_res, input, capacity){
-
-  for (i in 1:(length(routes_res))) {
-    if ( sum(routes_res[[i]]$route==route_i[2]) > 0 ) {
-      index <- i
-      break
-    }
-  }
-  
-
-  new_order <- c(0)
-  for (i in 2:(length(route_i)-1)) {
-    res <- return_size_hoppers(routes_res, index, route_i[i])
-    size_tra <-  res$size_tra 
-    size_tru <-  res$size_tru
-    if ((size_tra > 0)&&(size_tru == 0)) {
-      new_order <- c(new_order, route_i[i])
-    }
-  }
-  
-  for (i in 2:(length(route_i)-1)) {
-    res <- return_size_hoppers(routes_res, index, route_i[i])
-    size_tra <-  res$size_tra 
-    size_tru <-  res$size_tru
-    if ((size_tra > 0)&&(size_tru > 0)) {
-      new_order <- c(new_order, route_i[i])
-    }
-  }
-  
-  for (i in 2:(length(route_i)-1)) {
-    res <- return_size_hoppers(routes_res, index, route_i[i])
-    size_tra <-  res$size_tra 
-    size_tru <-  res$size_tru
-    if ((size_tra == 0)&&(size_tru > 0)) {
-      new_order <- c(new_order, route_i[i])
-    }
-  }
-  
-  new_order <- c(new_order, 0)
-
-  flag_exit <- check_capacity_hoppers_MCTTRP_generic(new_order, input, 1) 
-
-  return(flag_exit)
-}
-
-return_size_hoppers<-function(routes_res, index, route_i) {
-  size_tra <- 0
-  size_tru <- 0
-  
-  for (i in 1:length(routes_res[[index]]$clients_vc)) {
-    if (routes_res[[index]]$clients_vc[[i]]$id == route_i) {
-      size_tra <- size_tra + length(routes_res[[index]]$clients_vc[[i]]$hoppers_trailers)
-      size_tru <- size_tru + length(routes_res[[index]]$clients_vc[[i]]$hoppers_trucks)
-    }
-  }
-  
-  res <- list()
-  res$size_tra <- size_tra
-  res$size_tru <- size_tru
-  
-  return(res)
-}
-
-return_occupied_hoppers_MCTTRP<-function(type, hoppers, id_vehicle) {
-  counter <- 0
-  
-  for (i in 1:length(hoppers[,1])) {
-    if ((hoppers[i,4]==id_vehicle)&&(hoppers[i,3]==type)) {
-      counter <- counter + 1
-    }
-  }
-  
-  return(counter)
-}
-
-return_i_vehicle<-function(route_i, route_res) {
-  node <- route_i[2]
-  for (i in 1:length(route_res)) {
-    if (sum(route_res[[i]]$route==node)>0) {
-      id <- i
-      break;
-    }
-  }
-  
-  return(id)
 }
 
 check_capacity_hoppers_MCTTRP_analysis<-function(solution, input) {
@@ -528,7 +481,49 @@ check_capacity_hoppers_MCTTRP_analysis<-function(solution, input) {
   if ((hcounter_trailer != 0) && (hcounter_trailer > n_hoppers_trailer)) error <- error + 1
   if ((hcounter_truck != 0) && (hcounter_truck > n_hoppers_truck)) error <- error + 1
   
-
+  
   return(!error)
 }
+
+return_size_hoppers<-function(routes_res, index, route_i) {
+  size_tra <- 0
+  size_tru <- 0
   
+  for (i in 1:length(routes_res[[index]]$clients_vc)) {
+    if (routes_res[[index]]$clients_vc[[i]]$id == route_i) {
+      size_tra <- size_tra + length(routes_res[[index]]$clients_vc[[i]]$hoppers_trailers)
+      size_tru <- size_tru + length(routes_res[[index]]$clients_vc[[i]]$hoppers_trucks)
+    }
+  }
+  
+  res <- list()
+  res$size_tra <- size_tra
+  res$size_tru <- size_tru
+  
+  return(res)
+}
+
+return_occupied_hoppers_MCTTRP<-function(type, hoppers, id_vehicle) {
+  counter <- 0
+  
+  for (i in 1:length(hoppers[,1])) {
+    if ((hoppers[i,4]==id_vehicle)&&(hoppers[i,3]==type)) {
+      counter <- counter + 1
+    }
+  }
+  
+  return(counter)
+}
+
+return_i_vehicle<-function(route_i, route_res) {
+  node <- route_i[2]
+  for (i in 1:length(route_res)) {
+    if (sum(route_res[[i]]$route==node)>0) {
+      id <- i
+      break;
+    }
+  }
+  
+  return(id)
+}
+

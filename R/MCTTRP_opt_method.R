@@ -4,8 +4,8 @@ MCTTRP_opt_method<-function(result, initial_solution, input, init_time, type_pro
     stopping_conditions <- 0
     iter <- 1
     tabulist <- list()
-    max_size_tabu_list <- input$n * 10
-    n_movs <- 100
+    max_size_tabu_list <- input$n * 10 
+    n_movs <- 10
 
     bestroute <- all_routes(current_solution)
     bestcost <- calculateTotalDistance(input, bestroute)
@@ -18,33 +18,39 @@ MCTTRP_opt_method<-function(result, initial_solution, input, init_time, type_pro
     while (!stopping_conditions) {
       
       # improvement
-      current_solution <- bestsolution
-      current_solution <- result_improvement(input, current_solution)
-
+      print("result_improvement")
+      current_solution_iter <- result_improvement(input, current_solution)
+      print(paste0("result_improvement end ", difftime(Sys.time(), init_time, units = "secs")))
+      
       #print("init")
       #for (i in 1:length(current_solution)) {
       #  print(current_solution[[i]]$route)
       #}
       
       # perturbation
+      print("perturbation")
       perturbation_not_obtained <- TRUE
       counter <- 1
-      while(perturbation_not_obtained){
-        #print(counter)
-        counter <- counter + 1
-        perturbed_solution <-  perturbation(input, current_solution, type_problem, seed, tabulist)
-        current_solution <- perturbed_solution[["perturbed_solution"]]
-        perturbation_not_obtained <- perturbed_solution$perturbation_not_obtained
+      perturbed_solution <-  perturbation(input, current_solution_iter, type_problem, seed, tabulist)
+      current_solution_iter <- perturbed_solution[["perturbed_solution"]]
+      perturbation_not_obtained <- perturbed_solution$perturbation_not_obtained
+      if (perturbation_not_obtained) {
+        res_perturb <- full_random_perturbation(input, current_solution_iter, type_problem, seed, tabulist, max_size_tabu_list)
+        current_solution_iter <- res_perturb$current_solution
+        tabulist <- res_perturb$tabulist
       }
       
       
       #print("end perturbation")
       #for (i in 1:length(current_solution)) {
-      #  print(current_solution[[i]]$route)
+      #  print(current_solution_iter[[i]]$route)
       #}
       
       # tabu movements
-      current_solution <- tabu_movements_core(input, current_solution, tabulist, max_size_tabu_list, n_movs, type_problem)
+      print("tabu_movements_core")
+      res_tabu <- tabu_movements_core(input, current_solution_iter, tabulist, max_size_tabu_list, n_movs, type_problem, 0)
+      current_solution_iter <- res_tabu$current_solution
+      tabulist <- res_tabu$tabulist
       
       #print("end tabu")
       #for (i in 1:length(current_solution)) {
@@ -52,12 +58,19 @@ MCTTRP_opt_method<-function(result, initial_solution, input, init_time, type_pro
       #}
       
       # print iterations
-      newcost <- calculateTotalDistance(input, all_routes(current_solution))
+      newcost <- calculateTotalDistance(input, all_routes(current_solution_iter))
       if (bestcost >  newcost) {
-        bestsolution <- current_solution 
+        bestsolution <- current_solution_iter 
         bestroute <- all_routes(current_solution)
         bestcost <- newcost
+        current_solution <- current_solution_iter
       }
+      
+      # accept the solution
+      if (runif(1)  < (iter/input$max_iter)^2) {
+        current_solution <- current_solution_iter
+      }
+      
       print(paste0("fobj ", newcost, " iter ", iter, " (best fobj ", bestcost , ")  time ", difftime(Sys.time(), init_time, units = "secs"), " s"))
       
 

@@ -465,7 +465,7 @@ insert_hoppers_MCTTRP_CVR_new<-function(solution, old_route, input) {
 }
 
 
-insert_hoppers_MCTTRP_PVR_new<-function(route_i, old_route, input) {
+insert_hoppers_MCTTRP_PVR_new<-function(solution, old_route, input) {
   route <- solution$route
   
   n_hoppers_truck <- length(input$H.camion[1,])
@@ -546,7 +546,6 @@ insert_hoppers_MCTTRP_PVR_new<-function(route_i, old_route, input) {
   return(result_h)
   
 }
-
 
 
 insert_hoppers_MCTTRP_CVR_update<-function(route_i, old_solution, input) {
@@ -687,9 +686,8 @@ insert_hoppers_MCTTRP_PVR_update<-function(route_i, old_solution, input) {
   cap_hoppers_truck <- input$H.camion[1,1]
   cap_hoppers_trailer <- input$H.trailer[1,1]
   
-  route_i <- old_solution$route
+  old_route <- old_solution$route
   clients_to_add <- unique(diff_clients(old_route, route_i))
-  
   
   counter_clients_tc <- length(old_solution$client_tc)
   counter_clients_vc <- length(old_solution$client_vc)
@@ -780,6 +778,7 @@ diff_clients<-function(route1, route2) {
   
   return(diff_clients)  
 }
+
 
 position_to_add_in_truck<-function(clients, route, input) {
   

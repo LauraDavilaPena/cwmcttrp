@@ -4,6 +4,40 @@
 # y la salida debe ser una soluci?n perturbada: "rutas_des_perturb"
 
 
+full_random_perturbation<-function(input, current_solution, type_problem, seed, tabulist, max_size_tabu_list) {
+  
+  n_random_of_movs <- 1 + sample(1:input$n_trucks,1)
+  
+  counter_movs <- 0
+  while (counter_movs < n_random_of_movs) {
+    res <- movements_imp(input, current_solution, type_problem)
+    mov_list <- res$mov_list
+    mov_list_cost <- res$mov_list_cost
+    
+    if (length(mov_list_cost)) {
+      
+      not_in_tabu_list <- 0
+      while (!not_in_tabu_list) {
+        index_r <- sample(1:length(mov_list), 1)
+        print(index_r)
+        result_ins <- insert_selected_mov(input, mov_list[[index_r]] , current_solution, tabulist, max_size_tabu_list, type_problem)
+        tabulist <- result_ins$tabulist
+        current_solution <- result_ins$current_solution
+        not_in_tabu_list <- result_ins$not_in_tabu_list
+        counter_movs <- counter_movs + 1
+      }
+    }
+    else counter_movs <- n_random_of_movs
+  }
+  
+  result <- list()
+  result$tabulist <- tabulist
+  result$current_solution <- current_solution
+  return(result)
+}
+
+
+
 
 perturbation <- function(input, initial_solution, problem_type, seed, tabulist){
 

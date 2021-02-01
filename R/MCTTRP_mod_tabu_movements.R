@@ -1,15 +1,17 @@
 # Algoritmo Tabu
 
 
-tabu_movements_core <- function(input, current_solution, tabulist, max_size_tabu_list, n_movs, type_problem){
+tabu_movements_core <- function(input, current_solution, tabulist, max_size_tabu_list, n_movs, type_problem, limit_of_improvement){
   
   # Partimos de una solucion perturbada
   counter_tabu <- 1
-  n_movs <- 1000
   exist <- 0
   
   for (nn in 1:n_movs) {
+      #init_time <- Sys.time()
       res <- movements_imp(input, current_solution, type_problem)
+      #print(paste0("mov", difftime(Sys.time(), init_time, units = "secs")))
+
       mov_list <- res$mov_list
       mov_list_cost <- res$mov_list_cost
       
@@ -25,7 +27,7 @@ tabu_movements_core <- function(input, current_solution, tabulist, max_size_tabu
           
           while (!not_in_tabu_list) {
             
-            if ((mov_list_cost_vect[index_order[counter_index_order]]>=0)) {
+            if ((mov_list_cost_vect[index_order[counter_index_order]]>=limit_of_improvement)) {
               old_route1 <- current_solution[[mov_list[[index_order[counter_index_order]]]$indexr1]]$route
               #old_route2 <- current_solution[[mov_list[[index_order[counter_index_order]]]$indexr2]]$route
               result_ins <- insert_selected_mov(input, mov_list[[index_order[counter_index_order]]] , current_solution, tabulist, max_size_tabu_list, type_problem)
@@ -35,7 +37,10 @@ tabu_movements_core <- function(input, current_solution, tabulist, max_size_tabu
               
               
               #if (not_in_tabu_list) {
-                #print(paste0("ADD ", mov_list[[index_order[counter_index_order]]]$mov_name))
+              #  print(paste0("ADD ", mov_list[[index_order[counter_index_order]]]$mov_name))
+              #  for (i in 1:length(current_solution)) {
+              #    print(current_solution[[i]]$route)
+              #  }
               #  print(old_route1)
               #  print(mov_list[[index_order[counter_index_order]]]$route1)
                 #print(old_route2)
@@ -68,7 +73,10 @@ tabu_movements_core <- function(input, current_solution, tabulist, max_size_tabu
       counter_tabu <- counter_tabu + 1
   }
   
-  return(current_solution)
+  result <- list()
+  result$current_solution <- current_solution
+  result$tabulist <- tabulist
+  return(result)
 }
 
 
@@ -714,7 +722,7 @@ exchange_movement_client_subtour_and_vc_creating_subtour<-function(input, result
           for (j in 2:(length(subroutes[[s]]$tour)-1)) {
             clienti <- subroutes[[s]]$tour[j]
             for (z in 1:length(result)) {
-              if (i!=z) {
+              if ((i!=z)&&(result[[z]]$type != "PTR")) {
                   if (result[[z]]$type == "CVR") route_z <- result[[z]]$main_tour
                   else route_z <- result[[z]]$route
                   for (t in 2:(length(route_z)-1)) {

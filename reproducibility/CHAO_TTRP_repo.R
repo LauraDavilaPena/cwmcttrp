@@ -18,9 +18,9 @@ options(max.print=3000)
 #}
 
 result <- list()
-result[[1]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_01.txt", "TTRP", 5, 3, total_time=3600, total_iterations=10000, verbose=0)
-result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
-result[[3]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_03.txt", "TTRP", 5, 3, total_time=3600, total_iterations=10000, verbose=0)
+result[[1]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_01.txt", "TTRP", 5, 3, total_time=3600, total_iterations=10, verbose=0)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=10, verbose=0)
+result[[3]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_03.txt", "TTRP", 5, 3, total_time=3600, total_iterations=10, verbose=0)
 
 result[[4]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_04.txt", "TTRP", 9, 5, total_time=3600, total_iterations=10000, verbose=0)
 result[[5]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_05.txt", "TTRP", 9, 5, total_time=3600, total_iterations=10000, verbose=0)

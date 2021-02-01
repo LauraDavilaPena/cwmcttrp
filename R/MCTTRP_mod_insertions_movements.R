@@ -35,24 +35,19 @@ two_opt_all_segments <- function(route){
 }
 
 
-
-
-
 two_opt <- function(input, route){
-  print("entrando")
-  readline()
   delta = list()
   segm = list()
   new_route = list()
   
-  if(length(two_opt_all_segments(route))>=1){
-    for (kk in 1:length(two_opt_all_segments(route))){
-      segm[[kk]] = two_opt_all_segments(route)[[kk]]
-      delta[[kk]] = two_opt_Swap(input, route, segm[[kk]][1], segm[[kk]][2])$delta
-      new_route[[kk]] = two_opt_Swap(input, route, segm[[kk]][1], segm[[kk]][2])$new_route
+  res_s <- two_opt_all_segments(route)
+  if(length(res_s)>=1){
+    for (kk in 1:length(res_s)){
+      segm[[kk]] = res_s[[kk]]
+      res_t <- two_opt_Swap(input, route, segm[[kk]][1], segm[[kk]][2])
+      delta[[kk]] = res_t$delta
+      new_route[[kk]] = res_t$new_route
     }
-    print(delta)
-    readline()
     if (all(delta >=0)){
       best_route <- route
     }else{
@@ -73,38 +68,33 @@ two_opt <- function(input, route){
 }
 
 
-
-
-
-
-two_opt <- function(input, route){
-  delta = list()
-  segm = list()
-  new_route = list()
-  
-  if(length(two_opt_all_segments(route))>=1){
-    for (kk in 1:length(two_opt_all_segments(route))){
-      segm[[kk]] = two_opt_all_segments(route)[[kk]]
-      delta[[kk]] = two_opt_Swap(input, route, segm[[kk]][1], segm[[kk]][2])$delta
-      new_route[[kk]] = two_opt_Swap(input, route, segm[[kk]][1], segm[[kk]][2])$new_route
-    }
-    if (all(delta >=0)){
-      best_route <- route
-    }else{
-      
-      delta_min_positions <- which(delta == min(unlist(delta)))
-      if(length(delta_min_positions) == 1){
-        delta_chosen_position <- delta_min_positions
-      }else{
-        delta_chosen_position <- sample(delta_min_positions,1)
-      }
-      best_route <- new_route[[delta_chosen_position]]
-    }
-  }else{
-    best_route <- route
-  }
-  return(best_route)
-}
+#two_opt <- function(input, route){
+#  delta = list()
+#  segm = list()
+#  new_route = list()
+#  res_s <- two_opt_all_segments(route)
+#  if(length(res_s)>=1){
+#    for (kk in 1:length(two_opt_all_segments(route))){
+#      segm[[kk]] = two_opt_all_segments(route)[[kk]]
+#      delta[[kk]] = two_opt_Swap(input, route, segm[[kk]][1], segm[[kk]][2])$delta
+#      new_route[[kk]] = two_opt_Swap(input, route, segm[[kk]][1], segm[[kk]][2])$new_route
+#    }
+#    if (all(delta >=0)){
+#      best_route <- route
+#    }else{
+#      delta_min_positions <- which(delta == min(unlist(delta)))
+#      if(length(delta_min_positions) == 1){
+#        delta_chosen_position <- delta_min_positions
+#      }else{
+#        delta_chosen_position <- sample(delta_min_positions,1)
+#      }
+#      best_route <- new_route[[delta_chosen_position]]
+#    }
+#  }else{
+#    best_route <- route
+#  }
+#  return(best_route)
+#}
 
 
 
@@ -193,11 +183,14 @@ three_opt <- function(input, route){
   segm = list()
   new_route = list()
   
-  if(length(three_opt_all_segments(route))>=1){
-    for (kk in 1:length(three_opt_all_segments(route))){
-      segm[[kk]] = three_opt_all_segments(route)[[kk]]
-      delta[[kk]] = three_opt_reverse_segment_if_better(input, route, segm[[kk]][1], segm[[kk]][2], segm[[kk]][3])$delta
-      new_route[[kk]] = three_opt_reverse_segment_if_better(input, route, segm[[kk]][1], segm[[kk]][2], segm[[kk]][3])$new_route
+  res_s <- three_opt_all_segments(route)
+  if(length(res_s)>=1){
+    for (kk in 1:length(res_s)){
+      segm[[kk]] = res_s[[kk]]
+      res_t = three_opt_reverse_segment_if_better(input, route, segm[[kk]][1], segm[[kk]][2], segm[[kk]][3])
+      delta[[kk]] = res_t$delta
+      new_route[[kk]] = res_t$new_route
+      
     }
     if (all(delta >=0)){
       best_route <- route
@@ -398,11 +391,13 @@ four_opt_asterisk <- function(input, route){
   segm = list()
   new_route = list()
   
-  if(length(four_opt_asterisk_all_segments(route))>=1){
-    for (kk in 1:length(four_opt_asterisk_all_segments(route))){
-      segm[[kk]] = four_opt_asterisk_all_segments(route)[[kk]]
-      delta[[kk]] = four_opt_asterisk_swap(input, route, segm[[kk]][1], segm[[kk]][2], segm[[kk]][3])$delta
-      new_route[[kk]] = four_opt_asterisk_swap(input, route, segm[[kk]][1], segm[[kk]][2], segm[[kk]][3])$best_route4opt
+  res_f <- four_opt_asterisk_all_segments(route)
+  if(length(res_f)>=1){
+    for (kk in 1:length(res_f)){
+      segm[[kk]] = res_f[[kk]]
+      res = four_opt_asterisk_swap(input, route, segm[[kk]][1], segm[[kk]][2], segm[[kk]][3])
+      delta[[kk]] = res$delta
+      new_route[[kk]] = res$best_route4opt
     }
     
     if (all(delta >=0)){
@@ -483,11 +478,13 @@ insertion_typeI <- function(input, route, v){
   segm = list()
   new_route = list()
   
-  if(length(insertion_typeI_all_segments(route))>=1){
-    for (kk in 1:length(insertion_typeI_all_segments(route))){
-      segm[[kk]] = insertion_typeI_all_segments(route)[[kk]]
-      delta[[kk]] = insertion_typeI_swap(input, route, v, route[segm[[kk]][1]], route[segm[[kk]][2]], route[segm[[kk]][3]])$delta
-      new_route[[kk]] = insertion_typeI_swap(input, route, v, route[segm[[kk]][1]], route[segm[[kk]][2]], route[segm[[kk]][3]])$new_route
+  res_insertions <- insertion_typeI_all_segments(route)
+  if(length(res_insertions)>=1){
+    for (kk in 1:length(res_insertions)){
+      segm[[kk]] = res_insertions[[kk]]
+      res <- insertion_typeI_swap(input, route, v, route[segm[[kk]][1]], route[segm[[kk]][2]], route[segm[[kk]][3]])
+      delta[[kk]] <- res$delta
+      new_route[[kk]] <- res$new_route
     }
     
     
@@ -570,11 +567,13 @@ insertion_typeII <- function(input, route, v){
   segm = list()
   new_route = list()
   
-  if(length(insertion_typeII_all_segments(route))>=1){
-    for (kk in 1:length(insertion_typeII_all_segments(route))){
-      segm[[kk]] = insertion_typeII_all_segments(route)[[kk]]
-      delta[[kk]] = insertion_typeII_swap(input, route, v, route[segm[[kk]][1]], route[segm[[kk]][2]], route[segm[[kk]][3]], route[segm[[kk]][4]])$delta
-      new_route[[kk]] = insertion_typeII_swap(input, route, v, route[segm[[kk]][1]], route[segm[[kk]][2]], route[segm[[kk]][3]], route[segm[[kk]][4]])$new_route
+  res_insert <- insertion_typeII_all_segments(route)
+  if(length(res_insert)>=1){
+    for (kk in 1:length(res_insert)){
+      segm[[kk]] <- res_insert[[kk]]
+      res <- insertion_typeII_swap(input, route, v, route[segm[[kk]][1]], route[segm[[kk]][2]], route[segm[[kk]][3]], route[segm[[kk]][4]])
+      delta[[kk]] <- res$delta
+      new_route[[kk]] <- res$new_route
     }
     
     
@@ -589,7 +588,7 @@ insertion_typeII <- function(input, route, v){
     
   }else{
     new_route_compulsory <- c(route[1:ceiling(length(route)/2)], v, route[(ceiling(length(route)/2)+1): length(route)])
-    best_route = four_opt_asterisk(input, new_route_compulsory)
+    best_route <- four_opt_asterisk(input, new_route_compulsory)
     delta <- calculateTotalDistance(input, best_route) - calculateTotalDistance(input, route)
   }
   
@@ -603,52 +602,53 @@ insertion_typeII <- function(input, route, v){
 GENI <- function(input, route, v){
   
   #Elegimos el mejor orden para insercion tipo I
-  delta_ins_I = insertion_typeI(input, route, v)$delta_I
-  delta_ins_I_rev = insertion_typeI(input, rev(route), v)$delta_I
+  res_route_I = insertion_typeI(input, route, v)
+  res_route_I_rev = insertion_typeI(input, rev(route), v)
   
-  if(delta_ins_I < delta_ins_I_rev){
-    delta_I <- delta_ins_I
-    new_route_I =  insertion_typeI(input,route, v)$best_route_I
-  }else if(delta_ins_I > delta_ins_I_rev){
-    delta_I <- delta_ins_I_rev
-    new_route_I =  insertion_typeI(input,rev(route), v)$best_route_I
+  # best_route_I = best_route, delta_I = delta
+  if(res_route_I$delta_I < res_route_I_rev$delta_I){
+    delta_I <- res_route_I$delta_I
+    new_route_I =  res_route_I$best_route_I
+  }else if(res_route_I$delta_I > res_route_I_rev$delta_I){
+    delta_I <- res_route_I_rev$delta_I
+    new_route_I =  res_route_I_rev$best_route_I
   }else{
     rand = sample(c("I","I_rev"),1)
     if(rand == "I"){
-      delta_I <- delta_ins_I
-      new_route_I =  insertion_typeI(input,route, v)$best_route_I
+      delta_I <- res_route_I$delta_I
+      new_route_I =  res_route_I$best_route_I
     }else{
-      delta_I <- delta_ins_I_rev
-      new_route_I =  insertion_typeI(input,rev(route), v)$best_route_I
+      delta_I <- res_route_I_rev$delta_I
+      new_route_I =  res_route_I_rev$best_route_I
     }
   }
   
   best_route_I = three_opt(input, new_route_I)
   
-  
   #Elegimos el mejor orden para insercion tipo II
-  delta_ins_II = insertion_typeII(input, route, v)$delta_II
-  delta_ins_II_rev = insertion_typeII(input,rev(route), v)$delta_II
+  res_route_II = insertion_typeII(input, route, v)
+  res_route_II_rev = insertion_typeII(input,rev(route), v)
+  # best_route_I = best_route, delta_I = delta
   
-  if(delta_ins_II < delta_ins_II_rev){
-    delta_II <- delta_ins_II
-    new_route_II =  insertion_typeII(input,route, v)$best_route_II
-  }else if(delta_ins_II > delta_ins_II_rev){
-    delta_II <- delta_ins_II_rev
-    new_route_II =  insertion_typeII(input,rev(route), v)$best_route_II
+  if(res_route_II$delta_II < res_route_II_rev$delta_II){
+    delta_II <- res_route_II$delta_II
+    new_route_II =  res_route_II$best_route_II
+  }else if(res_route_II$delta_II > res_route_II_rev$delta_II){
+    delta_II <- res_route_II_rev$delta_II
+    new_route_II =  res_route_II_rev$best_route_II
   }else{
     rand = sample(c("II","II_rev"),1)
     if(rand == "II"){
-      delta_II <- delta_ins_II
-      new_route_II =  insertion_typeII(input,route, v)$best_route_II
+      delta_II <- res_route_II$delta_II
+      new_route_II =  res_route_II$best_route_II
     }else{
-      delta_II <- delta_ins_II_rev
-      new_route_II =  insertion_typeII(input,rev(route), v)$best_route_II
+      delta_II <- res_route_II_rev$delta_II
+      new_route_II =  res_route_II_rev$best_route_II
     }
   }
-  
+
+
   best_route_II = four_opt_asterisk(input, new_route_II)
-  
   
   # Ahora escogemos la mejor insercion: tipo I vs tipo II
   if(delta_I < delta_II){
@@ -725,11 +725,13 @@ removal_typeI <- function(input, route, v_i){
   segm = list()
   new_route = list()
   
-  if(length(removal_typeI_all_segments(route, v_i))>=1){
-    for (kk in 1:length(removal_typeI_all_segments(route, v_i))){
-      segm[[kk]] = removal_typeI_all_segments(route, v_i)[[kk]]
-      delta[[kk]] = removal_typeI_swap(input, route, v_i, route[segm[[kk]][2]], route[segm[[kk]][3]])$delta
-      new_route[[kk]] = removal_typeI_swap(input, route, v_i, route[segm[[kk]][2]], route[segm[[kk]][3]])$new_route
+  res_r <- removal_typeI_all_segments(route, v_i)
+  if(length(res_r)>=1){
+    for (kk in 1:length(res_r)){
+      segm[[kk]] <- res_r[[kk]]
+      res <- removal_typeI_swap(input, route, v_i, route[segm[[kk]][2]], route[segm[[kk]][3]])
+      delta[[kk]] <- res$delta
+      new_route[[kk]] <- res$new_route
     }
     
     
@@ -743,7 +745,7 @@ removal_typeI <- function(input, route, v_i){
     delta <- delta[[delta_chosen_position]]
     
   }else{
-    best_route = two_opt( input,route[-which(route==v_i)])
+    best_route <- two_opt( input,route[-which(route==v_i)])
     delta <- calculateTotalDistance(input, best_route) - calculateTotalDistance(input, route)
   }
   return(list(best_route_remI = best_route, delta_remI = delta))
@@ -809,13 +811,14 @@ removal_typeII <- function(input, route, v_i){
   segm = list()
   new_route = list()
   
-  if(length(removal_typeII_all_segments(route, v_i))>=1){
-    for (kk in 1:length(removal_typeII_all_segments(route, v_i))){
-      segm[[kk]] = removal_typeII_all_segments(route, v_i)[[kk]]
-      delta[[kk]] = removal_typeII_swap(input, route, v_i, route[segm[[kk]][2]], route[segm[[kk]][3]], route[segm[[kk]][4]])$delta
-      new_route[[kk]] = removal_typeII_swap(input, route, v_i, route[segm[[kk]][2]], route[segm[[kk]][3]], route[segm[[kk]][4]])$new_route
+  res_r <- removal_typeII_all_segments(route, v_i)
+  if(length(res_r)>=1){
+    for (kk in 1:length(res_r)){
+      segm[[kk]] <- res_r[[kk]]
+      res <- removal_typeII_swap(input, route, v_i, route[segm[[kk]][2]], route[segm[[kk]][3]], route[segm[[kk]][4]])
+      delta[[kk]] <- res$delta
+      new_route[[kk]] <- res$new_route
     }
-    
     
     delta_min_positions <- which(delta == min(unlist(delta)))
     if(length(delta_min_positions) == 1){
@@ -827,7 +830,7 @@ removal_typeII <- function(input, route, v_i){
     delta <- delta[[delta_chosen_position]]
     
   }else{
-    best_route = two_opt( input,route[-which(route==v_i)])
+    best_route <- two_opt( input,route[-which(route==v_i)])
     delta <- calculateTotalDistance(input, best_route) - calculateTotalDistance(input, route)
   }
   return(list(best_route_remII = best_route, delta_remII = delta))
@@ -838,25 +841,23 @@ removal_typeII <- function(input, route, v_i){
 
 GENI_US <- function(input, route, v_i){
   
-  
   #Elegimos el mejor orden para removal tipo I
-  delta_rem_I = removal_typeI(input, route, v_i)$delta_remI
-  delta_rem_I_rev = removal_typeI(input, rev(route), v_i)$delta_remI
-  
-  if(delta_rem_I < delta_rem_I_rev){
-    delta_I <- delta_rem_I
-    new_route_I =  removal_typeI( input,route, v_i)$best_route_remI
-  }else if(delta_rem_I > delta_rem_I_rev){
-    delta_I <- delta_rem_I_rev
-    new_route_I =  removal_typeI( input,rev(route), v_i)$best_route_remI
+  res_rem_I <- removal_typeI(input, route, v_i)
+  res_rem_I_rev <- removal_typeI(input, rev(route), v_i)
+  if(res_rem_I$delta_remI < res_rem_I_rev$delta_remI){
+    delta_I <- res_rem_I$delta_remI
+    new_route_I <-  res_rem_I$best_route_remI
+  }else if(res_rem_I$delta_remI > res_rem_I_rev$delta_remI){
+    delta_I <- res_rem_I_rev$delta_remI
+    new_route_I <-  res_rem_I_rev$best_route_remI
   }else{
     rand = sample(c("I","I_rev"),1)
     if(rand == "I"){
-      delta_I <- delta_rem_I
-      new_route_I =  removal_typeI( input,route, v_i)$best_route_remI
+      delta_I <- res_rem_I$delta_remI
+      new_route_I =  res_rem_I$best_route_remI
     }else{
-      delta_I <- delta_rem_I_rev
-      new_route_I =  removal_typeI( input,rev(route), v_i)$best_route_remI
+      delta_I <- res_rem_I_rev$delta_remI
+      new_route_I =  res_rem_I_rev$best_route_remI
     }
   }
   
@@ -886,12 +887,7 @@ GENI_US <- function(input, route, v_i){
   
   best_route_II = four_opt_asterisk(input, new_route_II)
   
-  
-  
-  
   # Ahora escogemos la mejor removal: tipo I vs tipo II
-  
-  
   if(delta_I < delta_II){
     best_route = best_route_I
   }else if(delta_I > delta_II){
