@@ -214,10 +214,10 @@ rutas <- delete_dupl_zeros_route(rutas)
 
 result <- createFinalResult_TTRP(rutas,  coste.total, matriz.distancia, rutas_res, vector.demandas, input)
 
-#analyse(rutas, input, result$result_res, "TTRP")
-#print(paste0("l  ---> ", length(unique(rutas))))
-#print(paste0("n  ---> ", input$n))
-#print(paste0("n1 ---> ", input$n1))
+analyse(rutas, input, result$result_res, "TTRP")
+print(paste0("l  ---> ", length(unique(rutas))))
+print(paste0("n  ---> ", input$n))
+print(paste0("n1 ---> ", input$n1))
 
   return(result)
 } #Fin de la funcion

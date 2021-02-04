@@ -499,7 +499,7 @@ postproc_TTRP<-function(rutas_res, rutas, input, R, Rhat){
       
     #}
 
-    ## SWITCH RESIDUAL ROUTES
+    # SWITCH RESIDUAL ROUTES
     if ((length(non_selected_pvr_cvr_index)!=0)||(length(non_selected_ptr_index)!=0)) {
   
       rutas_res <- switch_routes(rutas_res, append(selected_pvr_cvr_index, selected_ptr_index), 
@@ -511,7 +511,7 @@ postproc_TTRP<-function(rutas_res, rutas, input, R, Rhat){
       rutas_res <- result_split$rutas_res
       non_selected_ptr_index <- result_split$non_selected_ptr_index
       non_selected_pvr_cvr_index <- result_split$non_selected_pvr_cvr_index
-        
+      
     }
      
     rutas_res <- clean_rutas_res(rutas_res)
@@ -2384,7 +2384,7 @@ improvement_CW <- function(input, current_solution, type_problem){
   
   tabulist <- list() 
   max_size_tabu_list <- 10
-  n_movs <- 10
+  n_movs <- 100
   
   # improvement
   current_solution <- result_improvement(input, current_solution)
@@ -2400,7 +2400,7 @@ improvement_CW <- function(input, current_solution, type_problem){
     #readline()
     
     
-    res <- movements_imp(input, current_solution, type_problem)
+    res <- movements_imp(input, current_solution, type_problem, input$vecinity, 1)
     mov_list <- res$mov_list
     mov_list_cost <- res$mov_list_cost
     

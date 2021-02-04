@@ -93,6 +93,7 @@ createInputStruct_MCTTRP<-function(matriz.demandas, matriz.distancia, capacidad.
   input$n <-  dim(input$matriz.distancia)[1]
   input$n_trucks <- n_trucks
   input$n_trailers <- n_trailers
+  input$vecinity <- calc_vecinity(input)
   
   return(input)
 }
@@ -117,7 +118,8 @@ createInputStruct_TTRP<-function(vector.demandas, matriz.distancia, capacidad.tr
   input$n <- dim(input$matriz.distancia)[1]
   input$n_trucks <- n_trucks
   input$n_trailers <- n_trailers
-
+  input$vecinity <- calc_vecinity(input)
+  
   return(input)
 }
 

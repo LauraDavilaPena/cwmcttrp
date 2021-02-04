@@ -13,6 +13,7 @@ MCTTRP_opt_solver<-function(string, option, n_trucks, n_trailers, total_time=360
     input$max_time <- total_time
     input$max_iter <- total_iterations
     input$vtr <- vtr
+
     
     if (option == "MCTTRP") {
       input$H.camion_res <- results_CW$H.camion_res
