@@ -132,7 +132,6 @@ perturbation <- function(input, initial_solution, problem_type, seed, tabulist){
           if(length(which(new_routes_after_removal[[i]]==subtours[[k]]$root)) > 1){
             kk <- sum(new_routes_after_removal[[i]]  == subtours[[k]]$root)
           }
-          #print(kk)
           new_routes_after_removal[[i]] <- c(new_routes_after_removal[[i]][1:which(new_routes_after_removal[[i]]==subtours[[k]]$root)[kk] ], subtours[[k]]$tour[2:(length(subtours[[k]]$tour))], 
                                             new_routes_after_removal[[i]][(which(new_routes_after_removal[[i]]==subtours[[k]]$root)[kk]+1): length(new_routes_after_removal[[i]])] ) 
           
@@ -192,6 +191,9 @@ perturbation <- function(input, initial_solution, problem_type, seed, tabulist){
   #print(aggregated_list_info$aggregated_routes)
   # Basicamente, para cada uno de los clientes que debo insertar (que son los que he eliminado), tengo que crearme 
   # una lista con sus posibles "destination_routes"
+  
+  # reordenar por carga ---> aggregated_list_info$aggregated_clients
+  
   
   for(k in 1:length(aggregated_list_info$aggregated_clients)){
     for(i in 1:length(aggregated_list_info$aggregated_clients[[k]])){
@@ -337,7 +339,7 @@ perturbation <- function(input, initial_solution, problem_type, seed, tabulist){
   
   
   
-  return(list(perturbation_not_obtained = perturbation_not_obtained, perturbed_solution = perturbed_solution))
+  return(list(perturbation_not_obtained = perturbation_not_obtained, perturbed_solution = perturbed_solution, phi = phi))
   
 }
 

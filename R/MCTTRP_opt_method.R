@@ -18,11 +18,12 @@ MCTTRP_opt_method<-function(result, initial_solution, input, init_time, type_pro
     tabulist_data$perc_v <- 0.1
     tabulist_data$penalty_capacity <- 0
     tabulist_data$alpha <- 1
+    tabulist_data$zeta <- 1
     tabulist_data$aspiration_criterion <- 1
     tabulist_data$candidates <- list()
     
-    init_cost <- calculateTotalDistanceTS(input, all_routes(initial_solution), tabulist_data$alpha, initial_solution)
-    
+    init_cost <- calculateTotalDistanceTS(input, tabulist_data$alpha, tabulist_data$zeta, initial_solution)
+
     bestlist <- init_best_solution(bestsolution_size, initial_solution, init_cost)
     bestsolution <- initial_solution 
     bestcost <- init_cost
@@ -35,7 +36,7 @@ MCTTRP_opt_method<-function(result, initial_solution, input, init_time, type_pro
     
     while (!stopping_conditions) {
       
-      tabulist_data$candidates -> sample(1:input$n1, input$n1/4)
+      #tabulist_data$candidates -> sample(1:input$n1, input$n1/4)
       
       current_solution <- return_best_solution(bestlist)
 
@@ -58,7 +59,7 @@ MCTTRP_opt_method<-function(result, initial_solution, input, init_time, type_pro
       }
       
       # tabu movements
-      res_tabu <- tabu_movements_core(input, current_solution, type_problem, tabulist_data) #tabulist, max_size_tabu_list, n_movs, type_problem, input$vecinity, perc_v, penalty_capacity)
+      res_tabu <- tabu_search (input, current_solution, type_problem, tabulist_data) #tabulist, max_size_tabu_list, n_movs, type_problem, input$vecinity, perc_v, penalty_capacity)
       current_solution <- res_tabu$current_solution
       tabulist <- res_tabu$tabulist
       
@@ -149,67 +150,20 @@ calc_vecinity<-function(input) {
    return(vecinity_index_order)
 }
 
-init_best_solution<-function(best_list_max, init_solution, init_cost) {
-  
-  best_list <- list()
-
-  for (i in 1:best_list_max) {
-    best_list[[i]] <- list()
-    best_list[[i]]$solution <- init_solution
-    best_list[[i]]$cost <-  init_cost
-  }
-  
-  return(best_list)
-}
-
-update_best_solution<-function(best_list, solution, cost) {
-  
-  # return worst
-  index_worst_cost <- return_worst_cost(best_list)
-  
-  exist_in_list <- 0
-  route_1 <- all_routes(solution)
-  for (i in 1:length(best_list)) {
-    route_2 <- all_routes(best_list[[i]]$solution)
-    if (((length(route_1)==length(route_2))&&(all(route_1==route_2)))||(cost==best_list[[i]]$cost)) {
-      exist_in_list <- 1
-      break
-    }
-  }
-  if ((best_list[[index_worst_cost]]$cost > cost)&&(!exist_in_list)) {
-    best_list[[index_worst_cost]]$cost <- cost
-    best_list[[index_worst_cost]]$solution <- solution
-  }
-    
-  return(best_list)
-}
-
-return_worst_cost<-function(best_list) {
-  # return worst
-  index_worst_cost <- 1
-  for (i in 2:length(best_list)) {
-    if (best_list[[i]]$cost > best_list[[index_worst_cost]]$cost) {
-      index_worst_cost <- i
-    }
-  }
-  
-  return(index_worst_cost)
-}
-
-return_best_solution<-function(best_list) {
-  randomN <- floor(runif(1)*length(best_list))+1
-  
-  return(best_list[[randomN]]$solution)
-}
 
 
-calculateTotalDistanceTS <- function(input, route, alpha, routes_res){
+calculateTotalDistanceTS <- function(input, alpha, zeta,  routes_res){
+  route <- all_routes(initial_solution)
+  
   cost <- 0
   for (i in 1:(length(route)-1)){
     cost <- cost + input$matriz.distancia[route[i]+1, route[i+1]+1]
   }
   
-  print(calc_penalty(input, routes_res))
-  return(cost+alpha*calc_penalty(input, routes_res)
-)
+  ## F(S,M) -- Diversification
+  
+  FS  <- cost+alpha*calc_penalty(input, routes_res)
+  FSM <- FS  
+  
+  return(FSM)
 }

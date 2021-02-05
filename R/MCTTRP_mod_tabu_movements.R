@@ -1,7 +1,7 @@
 # Algoritmo Tabu
 
 
-tabu_movements_core <- function(input, current_solution, type_problem, tabulist_data) {#tabulist, max_size_tabu_list, n_movs, type_problem, vecinity, perc_v, penalty_capacity){
+tabu_search <- function(input, current_solution, type_problem, tabulist_data) {#tabulist, max_size_tabu_list, n_movs, type_problem, vecinity, perc_v, penalty_capacity){
   # Partimos de una solucion perturbada
   counter_tabu <- 1
   exist <- 0
@@ -11,6 +11,9 @@ tabu_movements_core <- function(input, current_solution, type_problem, tabulist_
   vecinity <-  input$vecinity
   perc_v <-  tabulist_data$perc_v
   penalty_capacity <- tabulist_data$penalty_capacity
+  
+  # select tau
+  tau <- return_tau(input$n, length(current_solution))
   
   for (nn in 1:tabulist_data$n_movs) {
       #init_time <- Sys.time()
@@ -140,7 +143,6 @@ movements_imp <- function(input, current_solution, type_problem, vecinity, perc_
 }
 
 
-
 insert_selected_mov<-function(input, mov, current_solution, tabulist, max_size_tabu_list, type_problem){
 
   if (length(mov$route2)>1) {
@@ -178,7 +180,6 @@ insert_selected_mov<-function(input, mov, current_solution, tabulist, max_size_t
     
   return(result)
 }
-
 
 
 insert_element_in_solution<-function(input, new_route, pos, current_solution, tabulist, max_size_tabu_list, type_problem){
@@ -230,35 +231,6 @@ insert_element_in_solution<-function(input, new_route, pos, current_solution, ta
   res_i$tabulist <- tabulist
   
   return(res_i)
-}
-
-
-check_in_tabulist<-function(tabulist, route) {
-  flag_exit <- 0
-  
-  if (length(tabulist)) {
-      for (i in 1:length(tabulist)) {
-        if ((length(tabulist[[i]]) == length(route))&&(all(tabulist[[i]] == route))) {
-          flag_exit <- 1
-          break
-        }
-      }
-  }
-  
-
-  return(flag_exit)
-}
-
-
-insert_in_tabu_list<-function(route, tabulist, max_size_tabu_list) {
-  
-  end_position <- length(tabulist)
-  
-  if (end_position > max_size_tabu_list) tabulist <- tabulist[-1]
-  
-  tabulist[[length(tabulist)+1]] <- route
-  
-  return(tabulist)
 }
 
 
@@ -352,6 +324,7 @@ exchange_vc_two_routes<-function(input, result, mov_list, mov_list_cost, type_pr
   return(res)
   
 }
+
 
 exchange_ptr_and_subtour<-function(input, result, mov_list, mov_list_cost, type_problem, penalty_capacity) {
   
@@ -474,6 +447,7 @@ move_subroute<-function(input, result, mov_list, mov_list_cost, type_problem,pen
   return(res)
   
 }
+
 
 move_subroute_same_route<-function(input, result, mov_list, mov_list_cost, type_problem, penalty_capacity) {
   
@@ -844,14 +818,6 @@ exchange_movement_client_subtour_and_vc_creating_subtour<-function(input, result
 }
 
 
-mov_tc_route<-function() {
-  
-}
-
-mov_vc_route<-function(){
-  
-}
-
 replace_subroute_vc<-function(subroute, clientvc, route){
   
   # delete subroutes
@@ -899,6 +865,8 @@ replace_route_client<-function(clienti, clientj, route){
   return(route)
 }
 
+
+
 replace_route_client_subroute<-function(clienti, clientj, clientz, route){
   # delete clienti
   new_route <- c(0)
@@ -940,6 +908,8 @@ replace_route_client_subroute<-function(clienti, clientj, clientz, route){
   return(new_route2)
 }
 
+
+
 replace_route_client_vc_subroute<-function(clienti, clientj, route){
   # delete clienti from subroute
   for (i in 2:length(route)) {
@@ -953,6 +923,8 @@ replace_route_client_vc_subroute<-function(clienti, clientj, route){
   return(new_route)
 }
 
+
+
 replace_subroute<-function(old_subroute, subroute, route){
   root <- old_subroute[1]
 
@@ -962,6 +934,8 @@ replace_subroute<-function(old_subroute, subroute, route){
   
   return(route)
 }
+
+
 
 add_subroute<-function(clienti, subroute, route){
   
@@ -993,6 +967,8 @@ add_subroute<-function(clienti, subroute, route){
   return(new_route)
 }
 
+
+
 delete_subroute<-function(subroute, route){
   
   subroute <- subroute[2:(length(subroute)-1)]
@@ -1014,6 +990,8 @@ delete_subroute<-function(subroute, route){
   return(new_route2)
 }
 
+
+
 delete_client<-function(client, route){
   
   new_route <- c(0)
@@ -1026,6 +1004,7 @@ delete_client<-function(client, route){
   
   return(new_route)
 }
+
 
 split_subroute<-function(clienti, route){
   
@@ -1053,6 +1032,8 @@ split_subroute<-function(clienti, route){
   
   return(route)
 }
+
+
 
 add_movements_to_list<-function(input, result, indexr1, indexr2, string, route1, route2, mov_list, mov_list_cost) {
   
@@ -1089,53 +1070,3 @@ is_in_vecinity<-function(clienti, clientw, vecinity, perc_vecinity){
   if (sum(clientw %in% local_vecinity)) return (1)
   else return (0)
 }
-### DELETE
-
-
-#exchange_movement_client_short_subtour_and_client_in_subtour<-function(input, result, mov_list, mov_list_cost, type_problem) {
-  
-#  for (i in 1:length(result)) {
-#    if (result[[i]]$type == "CVR") {
-#      subroutes <- return_subroutes(result[[i]]$route, input$n1)
-#      for (s in 1:length(subroutes))  {
-#        if (length(subroutes[[s]]$tour)==3) {
-#          for (j in 2:(length(subroutes[[s]]$tour)-1)) {
-#            clienti <- subroutes[[s]]$tour[j]
-#            for (z in 1:length(result)) {
-#              if ((result[[z]]$type == "CVR") && (i!=z)) {
-#                subroutes2 <- return_subroutes(result[[z]]$route, input$n1)
-#                for (s2 in 1:length(subroutes2))  {
-#                  for (t in 2:(length(subroutes2[[s2]]$tour)-1)) {
-#                    clientz <- subroutes2[[s2]]$tour[t]
-#                    if (clientz <= input$n1) {
-#                      # new routes
-#                      route1 <- replace_route_client_vc_subroute(clienti, clientz, result[[i]]$route)
-#                      route2 <- replace_route_client(clientz, clienti, result[[z]]$route)
-                      
-                      # feasibility
-#                      feasible_route1 <- check_feasibility(result, route1, input, result[[i]]$type, type_problem) 
-#                      feasible_route2 <- check_feasibility(result, route2, input, result[[z]]$type, type_problem) 
-#                      # add to mov list
-#                      if (feasible_route1 && feasible_route2) {
-#                        res_mov <- add_movements_to_list(input, result, i, z, "exchange_movement_client_short_subtour_and_client_in_subtour", 
-#                                                         route1, route2,  mov_list, mov_list_cost)
-#                        mov_list <- res_mov$mov_list
-#                        mov_list_cost <- res_mov$mov_list_cost 
-#                      }
-#                    }
-#                  }
-#                }
-#              }
-#            }
-#          }
-#        }
-#      }
-#    }
-#  }
-  
-#  res <- list()
-#  res$mov_list <- mov_list
-#  res$mov_list_cost <- mov_list_cost
-  
-#  return(res)
-#}
