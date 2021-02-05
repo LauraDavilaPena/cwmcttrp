@@ -1,13 +1,18 @@
 # Algoritmo Tabu
 
 
-tabu_movements_core <- function(input, current_solution, tabulist, max_size_tabu_list, n_movs, type_problem, vecinity, perc_v, penalty_capacity){
-  
+tabu_movements_core <- function(input, current_solution, type_problem, tabulist_data) {#tabulist, max_size_tabu_list, n_movs, type_problem, vecinity, perc_v, penalty_capacity){
   # Partimos de una solucion perturbada
   counter_tabu <- 1
   exist <- 0
   
-  for (nn in 1:n_movs) {
+  tabulist <- tabulist_data$tabulist
+  max_size_tabu_list <- tabulist_data$max_size_tabu_list
+  vecinity <-  input$vecinity
+  perc_v <-  tabulist_data$perc_v
+  penalty_capacity <- tabulist_data$penalty_capacity
+  
+  for (nn in 1:tabulist_data$n_movs) {
       #init_time <- Sys.time()
       res <- movements_imp(input, current_solution, type_problem, vecinity, perc_v, penalty_capacity)
       #print(paste0("mov", difftime(Sys.time(), init_time, units = "secs")))

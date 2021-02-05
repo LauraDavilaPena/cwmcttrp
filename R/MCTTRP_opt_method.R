@@ -2,14 +2,27 @@ MCTTRP_opt_method<-function(result, initial_solution, input, init_time, type_pro
   
     stopping_conditions <- 0
     iter <- 1
-    tabulist <- list()
-    max_size_tabu_list <- input$n 
-    n_movs <- 10
-    perc_v <- 0.1
+    #tabulist <- list()
+    #max_size_tabu_list <- input$n 
+    #n_movs <- 10
+    #perc_v <- 0.1
     bestsolution_size <- floor(input$n/10)
-    penalty_capacity <- 0
+    #penalty_capacity <- 0
+    #alpha <- 1
     
-    init_cost <- calculateTotalDistance(input, all_routes(initial_solution))
+    # tabu search data
+    tabulist_data <- list()
+    tabulist_data$tabulist <- list()
+    tabulist_data$max_size_tabu_list <- input$n 
+    tabulist_data$n_movs <- 10
+    tabulist_data$perc_v <- 0.1
+    tabulist_data$penalty_capacity <- 0
+    tabulist_data$alpha <- 1
+    tabulist_data$aspiration_criterion <- 1
+    tabulist_data$candidates <- list()
+    
+    init_cost <- calculateTotalDistanceTS(input, all_routes(initial_solution), tabulist_data$alpha, initial_solution)
+    
     bestlist <- init_best_solution(bestsolution_size, initial_solution, init_cost)
     bestsolution <- initial_solution 
     bestcost <- init_cost
@@ -21,6 +34,8 @@ MCTTRP_opt_method<-function(result, initial_solution, input, init_time, type_pro
     
     
     while (!stopping_conditions) {
+      
+      tabulist_data$candidates -> sample(1:input$n1, input$n1/4)
       
       current_solution <- return_best_solution(bestlist)
 
@@ -37,13 +52,13 @@ MCTTRP_opt_method<-function(result, initial_solution, input, init_time, type_pro
         counter <- counter + 1
       }
       if (perturbation_not_obtained) {
-        res_perturb <- full_random_perturbation(input, current_solution, type_problem, seed, tabulist, max_size_tabu_list, input$vecinity, perc_v)
+        res_perturb <- full_random_perturbation(input, current_solution, type_problem, seed, tabulist_data) # tabulist, max_size_tabu_list, input$vecinity, perc_v)
         current_solution <- res_perturb$current_solution
         tabulist <- res_perturb$tabulist
       }
       
       # tabu movements
-      res_tabu <- tabu_movements_core(input, current_solution, tabulist, max_size_tabu_list, n_movs, type_problem, input$vecinity, perc_v, penalty_capacity)
+      res_tabu <- tabu_movements_core(input, current_solution, type_problem, tabulist_data) #tabulist, max_size_tabu_list, n_movs, type_problem, input$vecinity, perc_v, penalty_capacity)
       current_solution <- res_tabu$current_solution
       tabulist <- res_tabu$tabulist
       
@@ -55,7 +70,7 @@ MCTTRP_opt_method<-function(result, initial_solution, input, init_time, type_pro
       #}
       
       # print iterations
-      newcost <- calculateTotalDistance(input, all_routes(current_solution))
+      newcost <- calculateTotalDistanceTS(input, all_routes(current_solution), tabulist_data$alpha, current_solution)
       if (bestcost >  newcost) {
             bestsolution <- current_solution 
             bestcost <- newcost
@@ -65,7 +80,7 @@ MCTTRP_opt_method<-function(result, initial_solution, input, init_time, type_pro
         bestlist <- update_best_solution(bestlist, current_solution, newcost) 
       }
       
-      print(paste0("fobj ", newcost, " iter ", iter, " (best fobj ", bestcost , ") perc_v ", perc_v, " time ", difftime(Sys.time(), init_time, units = "secs"), " s"))
+      print(paste0("fobj ", newcost, " iter ", iter, " (best fobj ", bestcost , ") perc_v ", tabulist_data$perc_v , " time ", difftime(Sys.time(), init_time, units = "secs"), " s"))
       
 
       # check stopping conditions
@@ -185,4 +200,16 @@ return_best_solution<-function(best_list) {
   randomN <- floor(runif(1)*length(best_list))+1
   
   return(best_list[[randomN]]$solution)
+}
+
+
+calculateTotalDistanceTS <- function(input, route, alpha, routes_res){
+  cost <- 0
+  for (i in 1:(length(route)-1)){
+    cost <- cost + input$matriz.distancia[route[i]+1, route[i+1]+1]
+  }
+  
+  print(calc_penalty(input, routes_res))
+  return(cost+alpha*calc_penalty(input, routes_res)
+)
 }
