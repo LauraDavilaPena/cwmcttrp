@@ -10,7 +10,7 @@ full_random_perturbation<-function(input, current_solution, type_problem, seed, 
   
   counter_movs <- 0
   while (counter_movs < n_random_of_movs) {
-    res <- movements_imp(input, current_solution, type_problem, vecinity, perc_vec)
+    res <- movements_imp(input, current_solution, type_problem, vecinity, perc_vec, 0)
     mov_list <- res$mov_list
     mov_list_cost <- res$mov_list_cost
     
@@ -29,6 +29,16 @@ full_random_perturbation<-function(input, current_solution, type_problem, seed, 
         tabulist <- result_ins$tabulist
         current_solution <- result_ins$current_solution
         not_in_tabu_list <- result_ins$not_in_tabu_list
+        
+        #if (not_in_tabu_list) {
+        #  print(paste0("ADD ", mov_list[[index_order[index_r[i]]]]$mov_name))
+        #  print("xxxxxxxxxxxxxxxxx")
+        #  for (i in 1:length(current_solution)) {
+        #    print(current_solution[[i]]$route)
+        #  }
+        #  readline()
+        #  print("xxxxxxxxxxxxxxxxx")
+        #}
         
         counter_movs <- counter_movs + 1
         if (not_in_tabu_list) break
@@ -116,8 +126,8 @@ perturbation <- function(input, initial_solution, problem_type, seed, tabulist){
         for(k in 1:length(subtours)){
           if(length(which(new_routes_after_removal[[i]]==subtours[[k]]$root)) > 1){
             kk <- sum(new_routes_after_removal[[i]]  == subtours[[k]]$root)
-            
           }
+          #print(kk)
           new_routes_after_removal[[i]] <- c(new_routes_after_removal[[i]][1:which(new_routes_after_removal[[i]]==subtours[[k]]$root)[kk] ], subtours[[k]]$tour[2:(length(subtours[[k]]$tour))], 
                                             new_routes_after_removal[[i]][(which(new_routes_after_removal[[i]]==subtours[[k]]$root)[kk]+1): length(new_routes_after_removal[[i]])] ) 
           

@@ -1,0 +1,24 @@
+{
+    "id": "483C2B02",
+    "path": "~/GitHub/cwmcttrp/R/CW_TTRPcore.R",
+    "project_path": "R/CW_TTRPcore.R",
+    "type": "r_source",
+    "hash": "0",
+    "contents": "",
+    "dirty": false,
+    "created": 1612456866131.0,
+    "source_on_save": false,
+    "relative_order": 8,
+    "properties": {
+        "cursorPosition": "206,0",
+        "scrollLine": "189"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1612457049,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1612457049085,
+    "read_only": false,
+    "read_only_alternatives": []
+}
