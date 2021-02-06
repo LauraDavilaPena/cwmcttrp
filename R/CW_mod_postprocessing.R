@@ -2380,10 +2380,8 @@ add_to_route_TTRP<-function(R, rutas, ruta_origin, position, newclient) {
 improvement_CW <- function(input, current_solution, type_problem){
   
   # Partimos de una solucion perturbada
-  counter_tabu <- 1
+  counter <- 1
   
-  tabulist <- list() 
-  max_size_tabu_list <- 10
   n_movs <- 100
   
   # improvement
@@ -2392,15 +2390,7 @@ improvement_CW <- function(input, current_solution, type_problem){
   
   for (nn in 1:n_movs) {
     
-    
-    #for (ii in 1:length(current_solution)){
-    #  print(current_solution[[ii]]$route)
-    #}
-    #print("")
-    #readline()
-    
-    
-    res <- movements_imp(input, current_solution, type_problem, input$vecinity, 1, 0)
+    res <- movements_imp(input, current_solution, type_problem, input$vecinity, 1, 0, 0, 0, list(), 1)
     mov_list <- res$mov_list
     mov_list_cost <- res$mov_list_cost
     
@@ -2412,44 +2402,13 @@ improvement_CW <- function(input, current_solution, type_problem){
       
       index_order <- order(mov_list_cost_vect, decreasing = TRUE)
       
-      not_in_tabu_list <- 0
-      counter_index_order <- 1
-      
-      while (!not_in_tabu_list) {
+      if ((mov_list_cost_vect[index_order[1]]>=0)) {
+          current_solution <- insert_selected_mov(input, mov_list[[index_order[1]]] , current_solution, type_problem)
+      } else break
         
-        if ((mov_list_cost_vect[index_order[counter_index_order]]>=0)) {
-          old_route1 <- mov_list[[index_order[counter_index_order]]]$route1
-          result_ins <- insert_selected_mov(input, mov_list[[index_order[counter_index_order]]] , current_solution, tabulist, max_size_tabu_list, type_problem)
-          tabulist <- result_ins$tabulist
-          current_solution <- result_ins$current_solution
-          not_in_tabu_list <- result_ins$not_in_tabu_list
-          
-          
-          
-          #if (not_in_tabu_list) {
-          #  print(paste0("ADD ", mov_list[[index_order[counter_index_order]]]$mov_name))
-          #  print(old_route1)
-          #  print(current_solution[[5]]$route)
-            #print(old_route2)
-            #print(mov_list[[index_order[counter_index_order]]]$route2)
-          #  readline()
-          #}
-        }
-        else {
-          not_in_tabu_list <- 1
-          exist <- 1
-        }
-        
-        counter_index_order <- counter_index_order + 1
-        
-        
-      }
-      
-      if (exist) break
-      
     } else break
     
-    counter_tabu <- counter_tabu + 1
+  counter <- counter + 1
   }
   
   return(current_solution)

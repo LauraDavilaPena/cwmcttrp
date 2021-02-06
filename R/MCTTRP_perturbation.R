@@ -1,26 +1,45 @@
 #perturbacion
+perturbation_core<-function(input, current_solution, type_problem) {
+  
+  perturbation_not_obtained <- TRUE
+  counter_p <- 1
+  while ((perturbation_not_obtained) && (counter_p < 5)) {
+    print("perturbation_core")
+    perturbed_solution <-  perturbation(input, current_solution, type_problem)
+    current_solution <- perturbed_solution[["perturbed_solution"]]
+    perturbation_not_obtained <- perturbed_solution$perturbation_not_obtained
+    phi <- perturbed_solution$phi
+    counter_p <- counter_p + 1
+  }
+  
+  if (perturbation_not_obtained) {
+    print("full_random_perturbation")
+    res_perturb <- full_random_perturbation(input, current_solution, type_problem, 0.5)
+    current_solution <- res_perturb$current_solution
+    phi <- res_perturb$phi
+  }
+
+  res_p <- list()
+  res_p$current_solution <- current_solution
+  res_p$phi <- phi
+  
+  return(res_p)
+}
 
 # Aqui como argumento de entrada le habr?a que pasar una soluci?n "rutas_des" por ejemplo
 # y la salida debe ser una soluci?n perturbada: "rutas_des_perturb"
-
-
-full_random_perturbation<-function(input, current_solution, type_problem, seed, tabulist_data) {#tabulist, max_size_tabu_list, vecinity, perc_vec) {
+full_random_perturbation<-function(input, current_solution, type_problem, perc_v)  {
   
-  tabulist <- tabulist_data$tabulist
-  max_size_tabu_list <- tabulist_data$max_size_tabu_list
-  vecinity <-  input$vecinity
-  perc_v <-  tabulist_data$perc_v
-
   n_random_of_movs <- sample(1:5,1)
   
   counter_movs <- 0
   while (counter_movs < n_random_of_movs) {
-    res <- movements_imp(input, current_solution, type_problem, vecinity, perc_v, 0)
+    
+    res <- movements_imp(input, current_solution, type_problem, input$vecinity, perc_v, 0, 0, 0, list(), 1)
     mov_list <- res$mov_list
     mov_list_cost <- res$mov_list_cost
     
     if (length(mov_list_cost)) {
-      not_in_tabu_list <- 0
 
       mov_list_cost_vect <- c(mov_list_cost[[1]])
       for (i in 2:length(mov_list_cost)) mov_list_cost_vect <- c(mov_list_cost_vect ,mov_list_cost[[i]] )
@@ -28,40 +47,26 @@ full_random_perturbation<-function(input, current_solution, type_problem, seed, 
       index_r <- sample(1:(length(index_order/4)), (length(index_order/4)))
       
       
-      for (i in 1:length(index_r)){
-        result_ins <- insert_selected_mov(input, mov_list[[index_order[index_r[i]]]] , current_solution, tabulist, max_size_tabu_list, type_problem)
+      current_solution <- insert_selected_mov(input, mov_list[[index_order[index_r[1]]]] , current_solution, type_problem)
+
+      #print(paste0("ADD ", mov_list[[index_order[index_r[1]]]]$mov_name))
         
-        tabulist <- result_ins$tabulist
-        current_solution <- result_ins$current_solution
-        not_in_tabu_list <- result_ins$not_in_tabu_list
-        
-        #if (not_in_tabu_list) {
-        #  print(paste0("ADD ", mov_list[[index_order[index_r[i]]]]$mov_name))
-        #  print("xxxxxxxxxxxxxxxxx")
-        #  for (i in 1:length(current_solution)) {
-        #    print(current_solution[[i]]$route)
-        #  }
-        #  readline()
-        #  print("xxxxxxxxxxxxxxxxx")
-        #}
-        
-        counter_movs <- counter_movs + 1
-        if (not_in_tabu_list) break
-      }
+      counter_movs <- counter_movs + 1
     }
     else counter_movs <- n_random_of_movs
   }
   
   result <- list()
-  result$tabulist <- tabulist
   result$current_solution <- current_solution
+  result$phi <- n_random_of_movs
+  
   return(result)
 }
 
 
 
 
-perturbation <- function(input, initial_solution, problem_type, seed, tabulist){
+perturbation <- function(input, initial_solution, problem_type){
 
   initial_solution <- update_solution(initial_solution, input, problem_type)
   intermediate_solution <- initial_solution
@@ -127,8 +132,8 @@ perturbation <- function(input, initial_solution, problem_type, seed, tabulist){
                                                  aggregated_list_info_after_removal$aggregated_clients[[i]][j])
         intermediate_solution[[aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$main_tour <- new_routes_after_removal[[i]]
         subtours <- intermediate_solution[[aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$subtours
-        kk <- 1
         for(k in 1:length(subtours)){
+          kk <- 1
           if(length(which(new_routes_after_removal[[i]]==subtours[[k]]$root)) > 1){
             kk <- sum(new_routes_after_removal[[i]]  == subtours[[k]]$root)
           }
@@ -182,13 +187,7 @@ perturbation <- function(input, initial_solution, problem_type, seed, tabulist){
   
   # Ahora lo que tengo que hacer es, esos clientes que he eliminado de sus rutas originales, insertarlos en una
   # ruta distinta (donde sea factible; la idea es que tengo que intentar insertar todos)
-  #print("DELETED")
-  #for (i in 1:length(intermediate_solution)) {
-  #  print(intermediate_solution[[i]]$route)
-  #}
-  #print("")
-  #print(aggregated_list_info$aggregated_clients)
-  #print(aggregated_list_info$aggregated_routes)
+
   # Basicamente, para cada uno de los clientes que debo insertar (que son los que he eliminado), tengo que crearme 
   # una lista con sus posibles "destination_routes"
   

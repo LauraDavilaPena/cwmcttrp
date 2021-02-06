@@ -1,84 +1,61 @@
 MCTTRP_opt_method<-function(result, initial_solution, input, init_time, type_problem, seed){
   
+    # init parameters
     stopping_conditions <- 0
     iter <- 1
-    #tabulist <- list()
-    #max_size_tabu_list <- input$n 
-    #n_movs <- 10
-    #perc_v <- 0.1
-    bestsolution_size <- floor(input$n/10)
-    #penalty_capacity <- 0
-    #alpha <- 1
-    
+
     # tabu search data
     tabulist_data <- list()
-    tabulist_data$tabulist <- list()
-    tabulist_data$max_size_tabu_list <- input$n 
-    tabulist_data$n_movs <- 10
+    tabulist_data$tabulist <- create_tabu_list()
+    tabulist_data$table_freq <- create_table_freq(input$n, length(initial_solution))
     tabulist_data$perc_v <- 0.1
-    tabulist_data$penalty_capacity <- 0
+    tabulist_data$penalty_capacity <- 50
     tabulist_data$alpha <- 1
-    tabulist_data$zeta <- 1
-    tabulist_data$aspiration_criterion <- 1
     tabulist_data$candidates <- list()
     
-    init_cost <- calculateTotalDistanceTS(input, tabulist_data$alpha, tabulist_data$zeta, initial_solution)
 
-    bestlist <- init_best_solution(bestsolution_size, initial_solution, init_cost)
+    # init best solution
     bestsolution <- initial_solution 
-    bestcost <- init_cost
-      
-
-    current_time <- difftime(Sys.time(), init_time, units = "secs")
-
+    bestcost <- calculateTotalDistanceTS(input, tabulist_data$alpha, initial_solution)
+    
+    # init current solution
+    current_solution <- bestsolution
+    current_cost <- bestcost
+    
+    # print init output
     print(paste0("fobj ", bestcost, " iter ", 0, " time ", difftime(Sys.time(), init_time, units = "secs")))
     
     
     while (!stopping_conditions) {
-      
-      #tabulist_data$candidates -> sample(1:input$n1, input$n1/4)
-      
-      current_solution <- return_best_solution(bestlist)
-
-      # improvement
-      current_solution <- result_improvement(input, current_solution)
 
       start_time <- Sys.time()
-      perturbation_not_obtained <- TRUE
-      counter <- 1
-      while ((perturbation_not_obtained) && (counter < 5)) {
-        perturbed_solution <-  perturbation(input, current_solution, type_problem, seed, tabulist)
-        current_solution <- perturbed_solution[["perturbed_solution"]]
-        perturbation_not_obtained <- perturbed_solution$perturbation_not_obtained
-        counter <- counter + 1
-      }
-      if (perturbation_not_obtained) {
-        res_perturb <- full_random_perturbation(input, current_solution, type_problem, seed, tabulist_data) # tabulist, max_size_tabu_list, input$vecinity, perc_v)
-        current_solution <- res_perturb$current_solution
-        tabulist <- res_perturb$tabulist
-      }
       
-      # tabu movements
-      res_tabu <- tabu_search (input, current_solution, type_problem, tabulist_data) #tabulist, max_size_tabu_list, n_movs, type_problem, input$vecinity, perc_v, penalty_capacity)
-      current_solution <- res_tabu$current_solution
-      tabulist <- res_tabu$tabulist
+      # perturbation
+      res_p <- perturbation_core(input, current_solution, type_problem)
+      current_solution <- res_p$current_solution
+      phi <- res_p$phi
       
-      #totaltime <- difftime(Sys.time(), start_time, units = "secs")    
-      #print(paste0("end perturbation ", totaltime))
-      #print("end tabu")
-      #for (i in 1:length(current_solution)) {
-      #  print(current_solution[[i]]$route)
-      #}
+      # improvement
+      current_solution <- result_improvement(input, current_solution)
+      current_cost <- calculateTotalDistanceTS(input, tabulist_data$alpha, current_solution)
       
-      # print iterations
-      newcost <- calculateTotalDistanceTS(input, all_routes(current_solution), tabulist_data$alpha, current_solution)
+      # tabu search
+      res_tabu <- tabu_search (input, current_solution, current_cost, type_problem, tabulist_data, input$max_iter, iter, phi)
+      current_solution <- res_tabu$best_local_solution
+      current_cost <- res_tabu$best_local_cost
+      tabulist_data <- res_tabu$tabulist_data
+      
+      # best solution
+      newcost <- calculateTotalDistanceTS(input, tabulist_data$alpha, current_solution)
       if (bestcost >  newcost) {
             bestsolution <- current_solution 
             bestcost <- newcost
       }
       
-      if (bestlist[[return_worst_cost(bestlist)]]$cost > newcost) {
-        bestlist <- update_best_solution(bestlist, current_solution, newcost) 
+      # return to the best solution
+      if (runif(1) < (iter/input$max_iter)^2) {
+            current_solution <- bestsolution
+            current_cost <- bestcost
       }
       
       print(paste0("fobj ", newcost, " iter ", iter, " (best fobj ", bestcost , ") perc_v ", tabulist_data$perc_v , " time ", difftime(Sys.time(), init_time, units = "secs"), " s"))
@@ -152,8 +129,8 @@ calc_vecinity<-function(input) {
 
 
 
-calculateTotalDistanceTS <- function(input, alpha, zeta,  routes_res){
-  route <- all_routes(initial_solution)
+calculateTotalDistanceTS <- function(input, alpha, routes_res){
+  route <- all_routes(routes_res)
   
   cost <- 0
   for (i in 1:(length(route)-1)){
@@ -163,7 +140,22 @@ calculateTotalDistanceTS <- function(input, alpha, zeta,  routes_res){
   ## F(S,M) -- Diversification
   
   FS  <- cost+alpha*calc_penalty(input, routes_res)
-  FSM <- FS  
   
-  return(FSM)
+  return(FS)
 }
+
+update_penalties <- function(input, alpha, gamma, current_solution){
+
+  feasibility <- calc_penalty(input, current_solution)
+  
+  print(paste0("current solution pen -> ", feasibility, " gamma ", gamma, " alpha ", alpha))
+  if (feasibility > 0) {
+    alpha <- ( 1 + gamma) * alpha
+  }
+  else {
+    alpha <- ( 1 + gamma) / alpha
+  }
+  
+  return(alpha)
+}
+

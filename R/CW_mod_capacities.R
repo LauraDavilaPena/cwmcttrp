@@ -15,6 +15,17 @@ calc_penalty<-function(input, routes_res) {
 }
 
 
+calc_penalty_unique<-function(input, type, route) {
+  
+  exc <- 0
+  
+  if (type != "PTR")  exc <- max(0, calc_load2(route, input$vector.demandas) - input$capacidad.vehiculo)
+  else   exc <- max(0, calc_load2(route, input$vector.demandas) - input$capacidad.truck)
+  
+  return(exc)
+}
+
+
 check_feasibility<-function(routes_res, route, input, type_root, type_problem, penalty_capacity) {
   all_vc <- 1
   subroutes <- 0
