@@ -11,6 +11,7 @@ check_in_tabulist<-function(tabulist, clients, id_route) {
         }
       }
     }
+    if (flag_exit) break
   }
   return(flag_exit)
 }
@@ -23,15 +24,36 @@ insert_in_tabu_list<-function(clients, id_route, tau, tabulist) {
     tabulist <- delete_tabu_list_element(tabulist, index_to_delete)
   }
   
-  end_position <- length(tabulist$tabu_list_clients) 
+  
+  
   for (i in 1:length(clients)) {
     client <- clients[i]
-    tabulist$tabu_list_clients [[end_position+i]] <- client
-    tabulist$tabu_list_routes  [[end_position+i]] <- id_route
-    tabulist$tabu_list_counters[[end_position+i]] <- tau
+    index <- check_element_exist_in_tabu_list(client, id_route, tabulist)
+    if(index == 0) {
+      end_position <- length(tabulist$tabu_list_clients) 
+      tabulist$tabu_list_clients [[end_position+1]] <- client
+      tabulist$tabu_list_routes  [[end_position+1]] <- id_route
+      tabulist$tabu_list_counters[[end_position+1]] <- tau + 1
+    } else {
+      tabulist$tabu_list_counters[[index]] <- tau + 1
+    }
   }
   
+  
   return(tabulist)
+}
+
+check_element_exist_in_tabu_list<-function(client, route, tabulist) {
+  index <- 0
+  if ( length(tabulist$tabu_list_clients) ) {
+      for (i in 1:length(tabulist$tabu_list_clients)) {
+        if ((tabulist$tabu_list_clients[[i]] == client) &&
+            (tabulist$tabu_list_routes[[i]]  == route)) {
+          index <- i
+        }
+      }
+  }
+  return(index)
 }
 
 # return_tau
@@ -48,21 +70,18 @@ return_tau<-function(n_clients, n_routes) {
 update_counters_tabu_list<-function(tabulist) {
   
   if(length(tabulist$tabu_list_counters)) {
+      concat_index <- c(0)
       for (i in 1:length(tabulist$tabu_list_counters)) {
         tabulist$tabu_list_counters[[i]] <- tabulist$tabu_list_counters[[i]] - 1
+        if (tabulist$tabu_list_counters[[i]] > 0 ) concat_index <- c(concat_index, i)
       }
-    
+      concat_index <- concat_index[2:length(concat_index)]
+      
+      tabulist$tabu_list_clients  <- tabulist$tabu_list_clients[concat_index]
+      tabulist$tabu_list_routes   <- tabulist$tabu_list_routes[concat_index]
+      tabulist$tabu_list_counters <- tabulist$tabu_list_counters[concat_index]
+      
       size <- length(tabulist$tabu_list_counters)
-      counter <- 1
-      while(counter < size) {
-        if (tabulist$tabu_list_counters[[counter]] <= 0) {
-          tabulist <- delete_tabu_list_element(tabulist, counter)
-          
-          size <- length(tabulist$tabu_list_counters)
-        } else {
-          counter <- counter + 1
-        }
-      }
   }
   
   return(tabulist)
@@ -70,7 +89,7 @@ update_counters_tabu_list<-function(tabulist) {
 
 # print tabu list
 print_tabu_list<-function(tabulist){
-  
+  print( tabulist$max_size_tabu_list )
   if(length(tabulist$tabu_list_counters)) {
     for (i in 1:length(tabulist$tabu_list_counters)) {
       
@@ -140,4 +159,17 @@ update_table_freq<-function(table_frec, client, id_route){
 # return_table_freq
 return_table_freq<-function(table_frec, client, id_route){
   return(table_frec[[as.numeric(client)]][as.numeric(id_route)] )
+}
+
+# init_tabulist_data
+init_tabulist_data<-function(input, initial_solution){
+
+  # tabu search data
+  tabulist_data <- list()
+  tabulist_data$tabulist <- create_tabu_list()
+  tabulist_data$table_freq <- create_table_freq(input$n, length(initial_solution))
+  tabulist_data$penalty_capacity <- 50
+
+return(tabulist_data)
+
 }

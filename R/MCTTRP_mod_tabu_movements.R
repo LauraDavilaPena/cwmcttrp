@@ -1,84 +1,70 @@
 # Algoritmo Tabu
 
 
-tabu_search <- function(input, current_solution, current_cost, type_problem, tabulist_data, maxi, counter_i, phi) {
+tabu_search <- function(input, current_solution, current_cost, type_problem, perc_v, maxi, counter_i, phi) {
+  print("tabu_search")
   # Extract tabulist_data vars
-  tabulist <- tabulist_data$tabulist
-  perc_v <-  tabulist_data$perc_v
-  penalty_capacity <- tabulist_data$penalty_capacity
-  alpha <- tabulist_data$alpha
+  tabulist_data <- init_tabulist_data(input, current_solution)
+    
+  alpha <- 1
   vecinity <-  input$vecinity
   
   # inititalize parameters
-  tau <- return_tau(input$n, length(current_solution))
+  tau <- return_tau(input$n, length(current_solution)) + 1
   zeta <- runif(1)
   gamma <- runif(1)
   stop_tabu <- ceiling(sqrt((maxi-counter_i)*phi))
   best_local_solution <- current_solution
   best_local_cost <- current_cost
-    
-  #print(paste0("STOP TABU -> ", stop_tabu))
+  
   counter_not_improve <- 0
   while ( counter_not_improve < stop_tabu) {
     
-      print(paste0("init iteration feasibility -> ", calc_penalty(input, current_solution)))
+      #print(paste0("init iteration feasibility -> ", calc_penalty(input, current_solution)))
     
-      res <- movements_imp(input, current_solution, type_problem, vecinity, perc_v, penalty_capacity, zeta, tabulist_data$alpha, tabulist_data$table_freq, counter_i)
+      res <- movements_imp(input, current_solution, type_problem, vecinity, perc_v, tabulist_data$penalty_capacity, 
+                           zeta, alpha, tabulist_data$table_freq, counter_i)
 
       mov_list <- res$mov_list
       mov_list_cost <- res$mov_list_cost
       
       #concert list to vector
       if (length(mov_list_cost)) {
-      
-
-          mov_list_cost_vect <- c(mov_list_cost[[1]])
-          for (i in 2:length(mov_list_cost)) mov_list_cost_vect <- c(mov_list_cost_vect ,mov_list_cost[[i]] )
           
-          index_order <- order(mov_list_cost_vect, decreasing = TRUE)
-          
+          index_order <- order_movs(mov_list_cost)
           not_in_tabu_list <- 0
           counter_index_order <- 1
           
-          #print(mov_list_cost_vect[index_order])
-          
           while (!not_in_tabu_list) {
             
-            #print(paste0(mov_list_cost_vect[index_order[counter_index_order]],"   ", counter_index_order, 
-            #             " client1 ",  mov_list[[index_order[counter_index_order]]]$client1,
-            #             " client2 ",  mov_list[[index_order[counter_index_order]]]$client2, "  MOV ", mov_list[[index_order[counter_index_order]]]$mov_name))
+            current_solution <- update_solution(current_solution, input, type_problem)
             
-            
-            tabu_check <- check_in_tabulist(tabulist, mov_list[[index_order[counter_index_order]]]$client1, mov_list[[index_order[counter_index_order]]]$indexr1)
-            if ((!tabu_check)&&(length(mov_list[[index_order[counter_index_order]]]$route2)>1))
-              tabu_check <- tabu_check + check_in_tabulist(tabulist, mov_list[[index_order[counter_index_order]]]$client2, mov_list[[index_order[counter_index_order]]]$indexr2)
-            
-            if (!tabu_check) {
+            #print(mov_list_cost[[index_order[1]]])
+            #print(paste0(mov_list[[index_order[1]]]$client1[1], " ", mov_list[[index_order[1]]]$indexr1))
+            #print(paste0(mov_list[[index_order[1]]]$client2[1], " ", mov_list[[index_order[1]]]$indexr1))
+            #readline()
+
+            if (!check_result_in_tabu_list(tabulist_data$tabulist, mov_list, mov_list_cost, index_order, counter_index_order, 
+                                           calculateTotalDistanceTS(input, alpha, best_local_solution))) {
               prev_current_solution <- current_solution
               current_solution <- insert_selected_mov(input, mov_list[[index_order[counter_index_order]]] , current_solution, type_problem)
-              
-              print(paste0(mov_list_cost_vect[index_order[counter_index_order]],"   ", counter_index_order, 
-                           " client1 ",  mov_list[[index_order[counter_index_order]]]$client1,
-                           " client2 ",  mov_list[[index_order[counter_index_order]]]$client2, "  MOV ", mov_list[[index_order[counter_index_order]]]$mov_name, 
-                           " fobj prev: " , calculateTotalDistanceTS(input, tabulist_data$alpha, prev_current_solution), 
-                           " fobj current: " , calculateTotalDistanceTS(input, tabulist_data$alpha, current_solution)))
 
+              #print("")              
+              #print(paste0(counter_index_order," - Routes: ", mov_list[[index_order[counter_index_order]]]$indexr1, 
+              #                                           " ", mov_list[[index_order[counter_index_order]]]$indexr2,  " clients:"))
+              #print(mov_list[[index_order[counter_index_order]]]$client1)
+              #print(mov_list[[index_order[counter_index_order]]]$client2)
+              #print(paste0(" mov ", mov_list[[index_order[counter_index_order]]]$mov_name, " alpha: ", alpha,
+              #             " fobj best: " , calculateTotalDistanceTS(input, alpha, best_local_solution), 
+              #             " fobj current: " , calculateTotalDistanceTS(input, alpha, current_solution)))
+              #readline()
+              
+              #print(alpha * calc_penalty(input, current_solution))
               not_in_tabu_list <- 1
+              #readline()
               
-              tabulist <- insert_in_tabu_list(mov_list[[index_order[counter_index_order]]]$client1, mov_list[[index_order[counter_index_order]]]$indexr1, tau, tabulist) 
-
-              for (ii in 1:length(mov_list[[index_order[counter_index_order]]]$client1)) {
-                client <- mov_list[[index_order[counter_index_order]]]$client1[ii]
-                tabulist_data$table_freq <- update_table_freq(tabulist_data$table_freq, client, mov_list[[index_order[counter_index_order]]]$indexr1)
-              }
-              if ((length(mov_list[[index_order[counter_index_order]]]$route2)>1)&&(mov_list[[index_order[counter_index_order]]]$client2!=0)) {
-                tabulist <- insert_in_tabu_list(mov_list[[index_order[counter_index_order]]]$client2, mov_list[[index_order[counter_index_order]]]$indexr2, tau, tabulist) 
-                for (ii in 1:length(mov_list[[index_order[counter_index_order]]]$client2)) {
-                  client <- mov_list[[index_order[counter_index_order]]]$client2[ii]
-                  #print(mov_list[[index_order[counter_index_order]]]$indexr2)
-                  tabulist_data$table_freq <- update_table_freq(tabulist_data$table_freq, client, mov_list[[index_order[counter_index_order]]]$indexr2)
-                }
-              }
+              tabulist_data <- insert_result_in_tabulist(mov_list, index_order, counter_index_order, tabulist_data, tau)
+                
 
             }
             else {
@@ -94,13 +80,13 @@ tabu_search <- function(input, current_solution, current_cost, type_problem, tab
       } else stop <- 1
 
       
-      tabulist_data$alpha <- update_penalties(input,  tabulist_data$alpha, gamma, current_solution)
-      tabulist <- update_counters_tabu_list(tabulist)
+      alpha <- update_penalties(input,  alpha, gamma, current_solution)
+      tabulist_data$tabulist <- update_counters_tabu_list(tabulist_data$tabulist)
       #print_tabu_list(tabulist)
       
       
-      current_cost <- calculateTotalDistanceTS(input, tabulist_data$alpha, current_solution)
-      if (current_cost <= best_local_cost) {
+      current_cost <- calculateTotalDistanceTS(input, alpha, current_solution)
+      if (current_cost < best_local_cost) {
         best_local_solution <- current_solution
         best_local_cost <- current_cost
         counter_not_improve <- 0
@@ -110,43 +96,75 @@ tabu_search <- function(input, current_solution, current_cost, type_problem, tab
       
       if (stop) counter_not_improve <- stop_tabu
         
-      print(paste0("best ", best_local_cost, " cost ", current_cost, " end iteration ", counter_not_improve, " max ", stop_tabu, " alpha ", tabulist_data$alpha))
-      readline()
+      print(paste0("best ", best_local_cost, " current ", current_cost, " feasibility ", calc_penalty(input, current_solution), " end iteration ", counter_not_improve, 
+                   " max ", stop_tabu, " alpha ", alpha, " tau ", tau))
+      #print_tabu_list(tabulist_data$tabulist)
+      #readline()
   }
   
-  tabulist_data$tabulist <- tabulist
-  tabulist_data$perc_v <- perc_v
-  tabulist_data$penalty_capacity <- penalty_capacity
-  tabulist_data$alpha <- alpha
-
   result <- list()
-  result$best_local_solution <- best_local_solution
-  result$best_local_cost <- best_local_cost
-  result$tabulist_data <- tabulist_data
-  
-  #print(best_local_solution[[1]]$route)
-  #print(best_local_solution[[2]]$route)
-  #print(best_local_solution[[3]]$route)
-  #print(best_local_solution[[4]]$route)
-  #print(best_local_solution[[5]]$route)
-  
+  result$current_solution <- best_local_solution
+  result$current_cost <- best_local_cost
+
   return(result)
 }
 
+# order movs
+order_movs<-function(mov_list_cost) {
+   
+  
+    mov_list_cost_vect <- c(mov_list_cost[[1]])
+    for (i in 2:length(mov_list_cost)) mov_list_cost_vect <- c(mov_list_cost_vect ,mov_list_cost[[i]] )
+    
+    index_order <- order(mov_list_cost_vect, decreasing = FALSE)
 
-calculateTotalDistanceTS_movs_pen <- function(input, alpha, gamma, zeta,  routes_res){
-  route <- all_routes(routes_res)
+    #print(mov_list_cost_vect[index_order])
+  return(index_order)
+}
+
+# check_result_in_tabu_list 
+check_result_in_tabu_list<-function(tabulist, mov_list, mov_list_cost, index_order, counter_index_order, bestcost) {
   
-  cost <- 0
-  for (i in 1:(length(route)-1)){
-    cost <- cost + input$matriz.distancia[route[i]+1, route[i+1]+1]
+  if (mov_list_cost[index_order[counter_index_order]] >= bestcost) {
+  
+    tabu_check <- check_in_tabulist(tabulist, mov_list[[index_order[counter_index_order]]]$client1,
+                                              mov_list[[index_order[counter_index_order]]]$indexr1)
+    
+    if ((!tabu_check)&&(length(mov_list[[index_order[counter_index_order]]]$route2)>1))
+      tabu_check <- tabu_check + check_in_tabulist(tabulist, mov_list[[index_order[counter_index_order]]]$client2, 
+                                                             mov_list[[index_order[counter_index_order]]]$indexr2)
+    #print(paste0("is in tabu --> ", tabu_check))
+    
+  } else {
+    #print(paste0("aspiration criteria"))
+    tabu_check <- 0
   }
+    
+    return (tabu_check)
+}
+
+# insert in tabu list
+insert_result_in_tabulist<-function(mov_list, index_order, counter_index_order, tabulist_data, tau) {
   
-  ## F(S,M) -- Diversification
-  
-  FS  <- cost+alpha*calc_penalty(input, routes_res)
-  
-  return(FS)
+    tabulist_data$tabulist <- insert_in_tabu_list(mov_list[[index_order[counter_index_order]]]$client1, 
+                                    mov_list[[index_order[counter_index_order]]]$indexr1, tau, tabulist_data$tabulist) 
+    
+    for (ii in 1:length(mov_list[[index_order[counter_index_order]]]$client1)) {
+      client <- mov_list[[index_order[counter_index_order]]]$client1[ii]
+      tabulist_data$table_freq <- update_table_freq(tabulist_data$table_freq, client, mov_list[[index_order[counter_index_order]]]$indexr1)
+    }
+    
+    
+    if ((length(mov_list[[index_order[counter_index_order]]]$client2)>1)&&(mov_list[[index_order[counter_index_order]]]$client2!=0)) {
+      tabulist_data$tabulist <- insert_in_tabu_list(mov_list[[index_order[counter_index_order]]]$client2, 
+                                      mov_list[[index_order[counter_index_order]]]$indexr2, tau, tabulist_data$tabulist) 
+      for (ii in 1:length(mov_list[[index_order[counter_index_order]]]$client2)) {
+        client <- mov_list[[index_order[counter_index_order]]]$client2[ii]
+        tabulist_data$table_freq <- update_table_freq(tabulist_data$table_freq, client, mov_list[[index_order[counter_index_order]]]$indexr2)
+      }
+    }
+    
+    return(tabulist_data)
 }
 
 # movements_imp
@@ -224,7 +242,7 @@ movements_imp <- function(input, current_solution, type_problem, vecinity, perc_
 insert_selected_mov<-function(input, mov, current_solution, type_problem){
 
   if (length(mov$route2)>1) {
-    
+          
           # first  modification
           current_solution <- insert_element_in_solution(input, mov$route1, mov$indexr1, current_solution, type_problem)
 
@@ -615,14 +633,16 @@ exchange_movement_change_parking<-function(input, result, mov_list, mov_list_cos
                   route1 <- replace_subroute_vc(subroutes[[s]], clientz, result[[i]]$route)
                   route2 <- replace_route_client(clientz, clienti, result[[z]]$route)
                   route2 <- add_subroute(clienti, subroutes[[s]]$tour, route2)
-    
+                  
                   # feasibility
                   feasible_route1 <- check_feasibility(result, route1, input, result[[i]]$type, type_problem, penalty_capacity) 
                   feasible_route2 <- check_feasibility(result, route2, input, result[[z]]$type, type_problem, penalty_capacity) 
                   # add to mov list
                   if (feasible_route1 && feasible_route2) {
                     subroutei <- subroutes[[s]]$tour
-                    res_mov <- add_movements_to_list(input, result, i, z, subroutei[2:(length(subroutei)-1)], c(clientz),
+                    
+                    
+                    res_mov <- add_movements_to_list(input, result, i, z, subroutei[2:(length(subroutei)-1)], 0,
                                                      "exchange_movement_change_parking", 
                                                      route1, route2,  mov_list, mov_list_cost, zeta, alpha, table_freq, counter_i)
                     mov_list <- res_mov$mov_list
@@ -1109,7 +1129,7 @@ split_subroute<-function(clienti, route){
 add_movements_to_list<-function(input, result, indexr1, indexr2, client1, client2, string, 
                                 route1, route2, mov_list, mov_list_cost, zeta, alpha, table_freq, counter_i) {
   
-  if ((length(route2)>1)&&(client2 != 0))  {
+  if ((length(route2)>1))  {
     # type
     new_type1 <- check_new_type(result[[indexr1]]$type, route1, input)
     # penalty_inf
@@ -1125,7 +1145,7 @@ add_movements_to_list<-function(input, result, indexr1, indexr2, client1, client
     #    cost1 <-  (local_cost(route1, input$matriz.distancia) + penalty_inf) * penalty_freq
     #} else {
         # cost
-        cost1 <-  (local_cost(route1, input$matriz.distancia) + penalty_inf) 
+     #   cost1 <-  (local_cost(route1, input$matriz.distancia) + penalty_inf) 
     #}
     
     # type
@@ -1147,15 +1167,12 @@ add_movements_to_list<-function(input, result, indexr1, indexr2, client1, client
         cost2 <-  (local_cost(route2, input$matriz.distancia) + penalty_inf)
     #}
     
-    new_cost <- cost1 + cost2
-    
-    old1 <- local_cost(result[[indexr1]]$route, input$matriz.distancia) + alpha * calc_penalty_unique(input, result[[indexr1]]$type, result[[indexr1]]$route1) 
-    old2 <- local_cost(result[[indexr2]]$route, input$matriz.distancia) + alpha * calc_penalty_unique(input, result[[indexr2]]$type, result[[indexr2]]$route2)
-    
-    old_cost <- old1 + old2
+    result[[indexr1]]$route <- route1
+    result[[indexr2]]$route <- route2
+    new_cost <- calculateTotalDistanceTS(input, alpha, result)
   }
   else {
-
+    
     # type
     new_type1 <- check_new_type(result[[indexr1]]$type, route1, input)
     # penalty_inf
@@ -1171,14 +1188,12 @@ add_movements_to_list<-function(input, result, indexr1, indexr2, client1, client
     #  cost1 <-  (local_cost(route1, input$matriz.distancia) + penalty_inf) * penalty_freq
     #} else {
       # cost
-      cost1 <-  (local_cost(route1, input$matriz.distancia) + penalty_inf) 
+    #  cost1 <-  (local_cost(route1, input$matriz.distancia) + penalty_inf) 
     #}
 
-    new_cost <- cost1
+    result[[indexr1]]$route <- route1
+    new_cost <- calculateTotalDistanceTS(input, alpha, result)
     
-    old1 <- local_cost(result[[indexr1]]$route, input$matriz.distancia) + alpha * calc_penalty_unique(input, result[[indexr1]]$type, result[[indexr1]]$route1) 
-    
-    old_cost <- old1     
   }
   counter <- length(mov_list) + 1
       
@@ -1190,7 +1205,7 @@ add_movements_to_list<-function(input, result, indexr1, indexr2, client1, client
   mov_list[[counter]]$route2 <- route2
   mov_list[[counter]]$client1 <- client1
   mov_list[[counter]]$client2 <- client2
-  mov_list_cost[[counter]] <- old_cost - new_cost
+  mov_list_cost[[counter]] <- new_cost
 
   res <- list()
   res$mov_list <- mov_list

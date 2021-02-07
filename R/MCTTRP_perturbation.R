@@ -19,6 +19,8 @@ perturbation_core<-function(input, current_solution, type_problem) {
     phi <- res_perturb$phi
   }
 
+  current_solution <- update_solution(current_solution, input, type_problem)
+  
   res_p <- list()
   res_p$current_solution <- current_solution
   res_p$phi <- phi
@@ -43,7 +45,7 @@ full_random_perturbation<-function(input, current_solution, type_problem, perc_v
 
       mov_list_cost_vect <- c(mov_list_cost[[1]])
       for (i in 2:length(mov_list_cost)) mov_list_cost_vect <- c(mov_list_cost_vect ,mov_list_cost[[i]] )
-      index_order <- order(mov_list_cost_vect, decreasing = TRUE)
+      index_order <- order(mov_list_cost_vect, decreasing = FALSE)
       index_r <- sample(1:(length(index_order/4)), (length(index_order/4)))
       
       

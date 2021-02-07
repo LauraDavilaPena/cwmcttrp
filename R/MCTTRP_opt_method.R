@@ -3,20 +3,12 @@ MCTTRP_opt_method<-function(result, initial_solution, input, init_time, type_pro
     # init parameters
     stopping_conditions <- 0
     iter <- 1
-
-    # tabu search data
-    tabulist_data <- list()
-    tabulist_data$tabulist <- create_tabu_list()
-    tabulist_data$table_freq <- create_table_freq(input$n, length(initial_solution))
-    tabulist_data$perc_v <- 0.1
-    tabulist_data$penalty_capacity <- 50
-    tabulist_data$alpha <- 1
-    tabulist_data$candidates <- list()
-    
+    perc_v <- 1 #0.25
+    alpha <- 1
 
     # init best solution
     bestsolution <- initial_solution 
-    bestcost <- calculateTotalDistanceTS(input, tabulist_data$alpha, initial_solution)
+    bestcost <- calculateTotalDistanceTS(input, alpha, initial_solution)
     
     # init current solution
     current_solution <- bestsolution
@@ -37,16 +29,15 @@ MCTTRP_opt_method<-function(result, initial_solution, input, init_time, type_pro
       
       # improvement
       current_solution <- result_improvement(input, current_solution)
-      current_cost <- calculateTotalDistanceTS(input, tabulist_data$alpha, current_solution)
+      current_cost <- calculateTotalDistanceTS(input, alpha, current_solution)
       
       # tabu search
-      res_tabu <- tabu_search (input, current_solution, current_cost, type_problem, tabulist_data, input$max_iter, iter, phi)
-      current_solution <- res_tabu$best_local_solution
-      current_cost <- res_tabu$best_local_cost
-      tabulist_data <- res_tabu$tabulist_data
+      res_tabu <- tabu_search (input, current_solution, current_cost, type_problem, perc_v, input$max_iter, iter, phi)
+      current_solution <- res_tabu$current_solution
+      current_cost <- res_tabu$current_cost
       
       # best solution
-      newcost <- calculateTotalDistanceTS(input, tabulist_data$alpha, current_solution)
+      newcost <- calculateTotalDistanceTS(input, alpha, current_solution)
       if (bestcost >  newcost) {
             bestsolution <- current_solution 
             bestcost <- newcost
@@ -58,7 +49,7 @@ MCTTRP_opt_method<-function(result, initial_solution, input, init_time, type_pro
             current_cost <- bestcost
       }
       
-      print(paste0("fobj ", newcost, " iter ", iter, " (best fobj ", bestcost , ") perc_v ", tabulist_data$perc_v , " time ", difftime(Sys.time(), init_time, units = "secs"), " s"))
+      print(paste0("fobj ", newcost, " infea ", calc_penalty(input, current_solution), " iter ", iter, " (best fobj ", bestcost , ") perc_v ", perc_v , " time ", difftime(Sys.time(), init_time, units = "secs"), " s"))
       
 
       # check stopping conditions
@@ -148,7 +139,7 @@ update_penalties <- function(input, alpha, gamma, current_solution){
 
   feasibility <- calc_penalty(input, current_solution)
   
-  print(paste0("current solution pen -> ", feasibility, " gamma ", gamma, " alpha ", alpha))
+  #print(paste0("CALIBRATE PENALTIES: current solution pen -> ", feasibility, " gamma ", gamma, " alpha ", alpha))
   if (feasibility > 0) {
     alpha <- ( 1 + gamma) * alpha
   }

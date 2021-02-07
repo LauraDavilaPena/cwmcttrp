@@ -3,11 +3,10 @@ calc_penalty<-function(input, routes_res) {
   exc <- 0
   for (i in 1:length(routes_res)) {
     if (routes_res[[i]]$type != "PTR") {
-      exc <- exc +  max(0, routes_res[[i]]$total_load - input$capacidad.vehiculo)
+      exc <- exc +  max(0, calc_load2(routes_res[[i]]$route, input$vector.demandas) - input$capacidad.vehiculo)
     }
     else {
-      exc <- exc + max(0, routes_res[[i]]$total_load - input$capacidad.truck)
-      
+      exc <- exc + max(0, calc_load2(routes_res[[i]]$route, input$vector.demandas) - input$capacidad.truck)
     }
   }
   
