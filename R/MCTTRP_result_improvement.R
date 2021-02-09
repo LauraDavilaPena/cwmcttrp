@@ -4,7 +4,9 @@
 
 #solution <- result$result_res
 
-result_improvement <- function(input, solution){
+result_improvement <- function(input, solution, problem_type){
+  
+  solution <- update_solution(solution, input, problem_type)
   
   improved_solution <-list()
 

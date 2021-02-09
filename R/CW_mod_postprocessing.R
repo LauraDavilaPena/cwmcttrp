@@ -468,11 +468,15 @@ postproc_TTRP<-function(rutas_res, rutas, input, R, Rhat){
     
     # ADD DISCONNECTED CLIENTS
     rutas_res <- postproc_add_disconnected_clients_TTRP(rutas_res, rutas, input, R, Rhat)
-
+    rutas_res <- postproc_add_new_subroutes_TTRP(rutas_res, rutas, input, 0)
+    rutas_res <- postproc_add_new_subroutes_TTRP(rutas_res, rutas, input, 1)
+    rutas_res <- result_improvement(input, rutas_res, "TTRP")
+    
     # ADJUST THE FLEET
     result_fleet <- adjusts_n_trailers_and_first_transformations(rutas_res, input, "TTRP")
     rutas_res <- result_fleet$rutas_res
     n_ptr <- result_fleet$n_ptr
+    rutas_res <- result_improvement(input, rutas_res, "TTRP")
     
     # SELECTED ROUTES
     selected_pvr_cvr_index <- select_PVRs_CVRs(rutas_res, input$n_trailers, input)
@@ -488,7 +492,7 @@ postproc_TTRP<-function(rutas_res, rutas, input, R, Rhat){
       non_selected_ptr_index <- result_split$non_selected_ptr_index
       non_selected_pvr_cvr_index <- result_split$non_selected_pvr_cvr_index
     }
-    
+
     ## TRANSFORM AND SPLIT AGAIN
     #if ((length(non_selected_pvr_cvr_index)!=0)||(length(non_selected_ptr_index)!=0)) {
       
@@ -1869,7 +1873,7 @@ insert_PVR_in_CVR<-function(pvr_route, cvr_route, input, type_problem, routes_re
     # vc client --> add main tour
     if (main_route) {
       if (is_last_parking(cvr_route, i)) {
-        check <- check_capacity_total_routes(pvr_route, cvr_route, input, input$capacidad.vehiculo, type_problem)
+        check <- check_capacity_total_routes(pvr_route, cvr_route, input, input$capacidad.vehiculo, 0, type_problem)
         # check it it is parking
         if ((check)&&(!is_parking_i(cvr_route, i))) check <- 0
         # check if it is in subroute
@@ -1961,7 +1965,7 @@ insert_PR_in_PR<-function(route_to_insert, route_to_check, input, capacity, type
   
   for (i in 1:(length(route_to_check)-1)) {
     
-    cap_condition <- check_capacity_total_routes(route_to_insert, route_to_check, input, capacity, type_problem)
+    cap_condition <- check_capacity_total_routes(route_to_insert, route_to_check, input, capacity, 0, type_problem)
     if (cap_condition) {
         nroute <- c(route_to_check[1:i])
         nroute <- c(nroute, route_to_insert)
@@ -1998,7 +2002,7 @@ insert_PTR_in_CVR<-function(ptr_route, cvr_route, input, type_problem, routes_re
     
     # vc client not in subroute--> create subroute
     if (create_subroute) {
-      check <- check_capacity_total_routes(ptr_route, cvr_route, input, input$capacidad.vehiculo, type_problem)
+      check <- check_capacity_total_routes(ptr_route, cvr_route, input, input$capacidad.vehiculo, 0, type_problem)
       if (check) {
         if (is_last_parking(cvr_route, i)) {
           
@@ -2163,8 +2167,7 @@ postproc_add_new_subroutes_TTRP<-function(rutas_res, rutas, input, opt){
       min_cost <- local_cost(rutas, input$matriz.distancia) * correc
       for (j in 1:length(new_rutas_res)) {
         if (new_rutas_res[[j]]$type == "PTR" ) {
-          if (((rutas_res[[i]]$total_load + new_rutas_res[[j]]$total_load) <= input$capacidad.vehiculo) &&
-              ((rutas_res[[i]]$total_load_tc_clients + new_rutas_res[[j]]$total_load_tc_clients) <= input$capacidad.truck)){
+          if (((rutas_res[[i]]$total_load + new_rutas_res[[j]]$total_load) <= input$capacidad.vehiculo)){
             
             subroute_pvr <- rutas_res[[i]]$route
             subroute_ptr <- new_rutas_res[[j]]$route
@@ -2181,8 +2184,7 @@ postproc_add_new_subroutes_TTRP<-function(rutas_res, rutas, input, opt){
               new_route_eval <- new_route[-i]
               cost <- local_cost(convert_in_route(new_route_eval), input$matriz.distancia)
               feasible <- 0
-              if ((new_route[[j]]$total_load <= input$capacidad.vehiculo) &&
-                  (new_route[[j]]$total_load_tc_clients <= input$capacidad.truck)) feasible <- 1
+              if ((new_route[[j]]$total_load <= input$capacidad.vehiculo)) feasible <- 1
               if ((cost < min_cost) && (feasible == 1)) {
                 success <- 1
                 index_j <- j
@@ -2379,20 +2381,23 @@ add_to_route_TTRP<-function(R, rutas, ruta_origin, position, newclient) {
 
 improvement_CW <- function(input, current_solution, type_problem){
   
+  current_solution <- update_solution(current_solution, input, type_problem)
+  
   # Partimos de una solucion perturbada
   counter <- 1
   
-  n_movs <- 10
+  n_movs <- 100
   
   # improvement
-  current_solution <- result_improvement(input, current_solution)
   exist <- 0
   
   for (nn in 1:n_movs) {
     
+    current_solution <- result_improvement(input, current_solution, type_problem)
     current_cost <- calculateTotalDistanceTS(input, 0, current_solution)
     
-    res <- movements_imp(input, current_solution, type_problem, input$vecinity, 1, 0, 0, 0, list(), 1)
+    
+    res <- movements_imp(input, current_solution, type_problem, input$vecinity, 1, 0, 0, 0, list(), 1, 1:input$n)
     mov_list <- res$mov_list
     mov_list_cost <- res$mov_list_cost
     
@@ -2404,6 +2409,7 @@ improvement_CW <- function(input, current_solution, type_problem){
       
       index_order <- order(mov_list_cost_vect, decreasing = FALSE)
       
+      print(mov_list_cost_vect[index_order[1]])
       if ((mov_list_cost_vect[index_order[1]]<current_cost)) {
           current_solution <- insert_selected_mov(input, mov_list[[index_order[1]]] , current_solution, type_problem)
       } else break

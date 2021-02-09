@@ -1,10 +1,10 @@
 # Algoritmo Tabu
 
 
-tabu_search <- function(input, current_solution, current_cost, type_problem, perc_v, maxi, counter_i, phi) {
+tabu_search <- function(input, current_solution, current_cost, best_cost, type_problem, maxi, counter_i, phi, pen_max) {
   print("tabu_search")
   # Extract tabulist_data vars
-  tabulist_data <- init_tabulist_data(input, current_solution)
+  tabulist_data <- init_tabulist_data(input, current_solution, pen_max)
     
   alpha <- 1
   vecinity <-  input$vecinity
@@ -16,56 +16,75 @@ tabu_search <- function(input, current_solution, current_cost, type_problem, per
   stop_tabu <- ceiling(sqrt((maxi-counter_i)*phi))
   best_local_solution <- current_solution
   best_local_cost <- current_cost
+  best_f_solution <- current_solution
+  best_f_cost <- Inf
   
   counter_not_improve <- 0
+  real_iterations <- 0
+  num_imp_iter <- 10
+  candidate_list <- 1:input$n #sample(1:input$n, sample(ceiling(input$n/10):input$n, 1))
+  perc_v <- 1 #max (min (rnorm(1, mean = 0.3, sd = 0.1), 1.0), 0.1)
+  
+  
   while ( counter_not_improve < stop_tabu) {
     
-      #print(paste0("init iteration feasibility -> ", calc_penalty(input, current_solution)))
-    
-      res <- movements_imp(input, current_solution, type_problem, vecinity, perc_v, tabulist_data$penalty_capacity, 
-                           zeta, alpha, tabulist_data$table_freq, counter_i)
+      if (real_iterations %% num_imp_iter == (num_imp_iter-1)) {
+        current_solution <- result_improvement(input, current_solution, type_problem)
+      }
+      current_cost <- calculateTotalDistanceTS(input, alpha, current_solution)
 
+#print(paste0("CURRENT SOLUTION: ", current_cost, " INFEAS : ", (calc_penalty(input, current_solution))))
+      
+      res <- movements_imp(input, current_solution, type_problem, vecinity, perc_v, tabulist_data$penalty_capacity, 
+                                  zeta, alpha, tabulist_data$table_freq, counter_i, candidate_list)
+      
       mov_list <- res$mov_list
       mov_list_cost <- res$mov_list_cost
+      mov_list_cost_pen <- res$mov_list_cost_pen
       
+
       #concert list to vector
       if (length(mov_list_cost)) {
           
           index_order <- order_movs(mov_list_cost)
-          not_in_tabu_list <- 0
           counter_index_order <- 1
           
-          while (!not_in_tabu_list) {
+          not_in_tabu_list <- 0
+          enter_penalty_loop <- 0
+############
+#          print("NORMAL")
+#          mov_list_cost_vect <- c(mov_list_cost[[1]])
+#          for (i in 2:length(mov_list_cost)) mov_list_cost_vect <- c(mov_list_cost_vect ,mov_list_cost[[i]] )
+#          print(paste0( mov_list_cost_vect[index_order[1:12]]- current_cost))
+#          print(paste0( index_order[1:12]))
+#          
+#          
+############
+          while ((!not_in_tabu_list)&&(counter_index_order <= length(index_order))) {
             
-            current_solution <- update_solution(current_solution, input, type_problem)
-            
-            #print(mov_list_cost[[index_order[1]]])
-            #print(paste0(mov_list[[index_order[1]]]$client1[1], " ", mov_list[[index_order[1]]]$indexr1))
-            #print(paste0(mov_list[[index_order[1]]]$client2[1], " ", mov_list[[index_order[1]]]$indexr1))
-            #readline()
+            if (!check_result_in_tabu_list(tabulist_data$tabulist, mov_list, mov_list_cost, index_order, counter_index_order, best_cost)) {
 
-            if (!check_result_in_tabu_list(tabulist_data$tabulist, mov_list, mov_list_cost, index_order, counter_index_order, 
-                                           calculateTotalDistanceTS(input, alpha, best_local_solution))) {
-              prev_current_solution <- current_solution
-              current_solution <- insert_selected_mov(input, mov_list[[index_order[counter_index_order]]] , current_solution, type_problem)
-
-              #print("")              
-              #print(paste0(counter_index_order," - Routes: ", mov_list[[index_order[counter_index_order]]]$indexr1, 
-              #                                           " ", mov_list[[index_order[counter_index_order]]]$indexr2,  " clients:"))
-              #print(mov_list[[index_order[counter_index_order]]]$client1)
-              #print(mov_list[[index_order[counter_index_order]]]$client2)
-              #print(paste0(" mov ", mov_list[[index_order[counter_index_order]]]$mov_name, " alpha: ", alpha,
-              #             " fobj best: " , calculateTotalDistanceTS(input, alpha, best_local_solution), 
-              #             " fobj current: " , calculateTotalDistanceTS(input, alpha, current_solution)))
-              #readline()
-              
-              #print(alpha * calc_penalty(input, current_solution))
               not_in_tabu_list <- 1
-              #readline()
-              
-              tabulist_data <- insert_result_in_tabulist(mov_list, index_order, counter_index_order, tabulist_data, tau)
+              if ( mov_list_cost[[index_order[counter_index_order]]] < current_cost ) {
                 
-
+                
+############
+#print(paste0(" mov ", mov_list[[index_order[counter_index_order]]]$mov_name, " alpha: ", alpha,
+#             " mov_list_cost: " , mov_list_cost[[index_order[counter_index_order]]] , 
+#             " fobj current: " , calculateTotalDistanceTS(input, alpha, current_solution),
+#             " counter ", counter_index_order))
+#print(paste0("   routes: ", mov_list[[index_order[counter_index_order]]]$indexr1, "  ", mov_list[[index_order[counter_index_order]]]$indexr2))
+#print("   clients: ")
+#print(mov_list[[index_order[counter_index_order]]]$client1)      
+#print(mov_list[[index_order[counter_index_order]]]$client2)  
+#print(mov_list[[index_order[counter_index_order]]]$route1)      
+#print(mov_list[[index_order[counter_index_order]]]$route2)    
+############                
+                
+                  current_solution <- insert_selected_mov(input, mov_list[[index_order[counter_index_order]]] , current_solution, type_problem)
+                  tabulist_data <- insert_result_in_tabulist(mov_list, index_order, counter_index_order, tabulist_data, tau)
+              } else enter_penalty_loop <- 1
+              
             }
             else {
               not_in_tabu_list <- 0
@@ -75,64 +94,126 @@ tabu_search <- function(input, current_solution, current_cost, type_problem, per
             
           }
           
+          index_order2 <- order_movs(mov_list_cost_pen)
+          counter_index_order2 <- 1
+          not_in_tabu_list <- 0
+          
+          
+if (enter_penalty_loop) {
+############
+#  print("PROC")
+#  mov_list_cost_vect <- c(mov_list_cost_pen[[1]])
+##  for (i in 2:length(mov_list_cost_pen)) mov_list_cost_vect <- c(mov_list_cost_vect ,mov_list_cost_pen[[i]] )
+#  print(paste0( mov_list_cost_vect[index_order[1:12]]- current_cost))
+#  print(paste0( index_order[1:12]))
+#  
+############
+}          
+          
+          while((enter_penalty_loop)&&(!not_in_tabu_list)&&(counter_index_order2 <= length(index_order2)))  {
+            if ((!check_result_in_tabu_list(tabulist_data$tabulist, mov_list, mov_list_cost_pen, index_order2, counter_index_order2, best_cost))) {
+############              
+#print(paste0(" PEN mov ", mov_list[[index_order2[counter_index_order2]]]$mov_name, " alpha: ", alpha,
+#             " mov_list_cost: " , mov_list_cost[[index_order2[counter_index_order2]]], 
+#             " fobj current: " , calculateTotalDistanceTS(input, alpha, current_solution),
+#             " counter ", counter_index_order2))
+#print(paste0("   routes: ", mov_list[[index_order2[counter_index_order2]]]$indexr1, "  ", mov_list[[index_order2[counter_index_order2]]]$indexr2))
+#print("   clients: ")
+#print(mov_list[[index_order2[counter_index_order2]]]$client1)      
+#print(mov_list[[index_order2[counter_index_order2]]]$client2)      
+#print(mov_list[[index_order2[counter_index_order2]]]$route1)      
+#print(mov_list[[index_order2[counter_index_order2]]]$route2)      
+############
+              
+                  not_in_tabu_list <- 1
+                  current_solution <- insert_selected_mov(input, mov_list[[index_order2[counter_index_order2]]] , current_solution, type_problem)
+                  tabulist_data <- insert_result_in_tabulist(mov_list, index_order2, counter_index_order2, tabulist_data, tau)
+            }
+            else not_in_tabu_list <- 0
+            
+            counter_index_order2 <- counter_index_order2 + 1
+          }        
+          
           stop <- 0
           
       } else stop <- 1
 
       
-      alpha <- update_penalties(input,  alpha, gamma, current_solution)
-      tabulist_data$tabulist <- update_counters_tabu_list(tabulist_data$tabulist)
-      #print_tabu_list(tabulist)
-      
+########      
+#      print_tabu_list(tabulist_data$tabulist)
+########            
       
       current_cost <- calculateTotalDistanceTS(input, alpha, current_solution)
-      if (current_cost < best_local_cost) {
+      if ((current_cost < best_local_cost)) { #&&(!calc_penalty(input, current_solution))) {
         best_local_solution <- current_solution
         best_local_cost <- current_cost
         counter_not_improve <- 0
-      } else {
+      }
+      else {
         counter_not_improve <- counter_not_improve + 1
+      } 
+      
+      if ((current_cost < best_f_cost)&&(calc_penalty(input, current_solution)==0)) {
+        best_f_solution <- current_solution
+        best_f_cost <- current_cost
       }
       
       if (stop) counter_not_improve <- stop_tabu
         
-      print(paste0("best ", best_local_cost, " current ", current_cost, " feasibility ", calc_penalty(input, current_solution), " end iteration ", counter_not_improve, 
+      print(paste0("best  ", best_local_cost, " feasibility ", calc_penalty(input, best_local_solution)))
+      print(paste0("fbest ", best_f_cost,     " feasibility ", calc_penalty(input, best_f_solution)))
+      print(paste0("cbest ", current_cost   , " feasibility ", calc_penalty(input, current_solution)))
+      
+print(paste0("best ", best_local_cost, " feasibility ", calc_penalty(input, best_local_solution), " fea best ", best_f_cost,
+                   " current ", current_cost, " feasibility ", calc_penalty(input, current_solution), " end iteration ", counter_not_improve, 
                    " max ", stop_tabu, " alpha ", alpha, " tau ", tau))
-      #print_tabu_list(tabulist_data$tabulist)
-      #readline()
+
+#readline()
+      alpha <- update_penalties(input,  alpha, gamma, current_solution)
+      tabulist_data$tabulist <- update_counters_tabu_list(tabulist_data$tabulist)
   }
   
   result <- list()
   result$current_solution <- best_local_solution
   result$current_cost <- best_local_cost
-
+  result$best_f_solution <- best_f_solution
+  result$best_f_cost <- best_f_cost
+  
   return(result)
 }
 
 # order movs
 order_movs<-function(mov_list_cost) {
    
-  
-    mov_list_cost_vect <- c(mov_list_cost[[1]])
-    for (i in 2:length(mov_list_cost)) mov_list_cost_vect <- c(mov_list_cost_vect ,mov_list_cost[[i]] )
-    
-    index_order <- order(mov_list_cost_vect, decreasing = FALSE)
+    if (length(mov_list_cost)>1) {
+        mov_list_cost_vect <- c(mov_list_cost[[1]])
+        for (i in 2:length(mov_list_cost)) mov_list_cost_vect <- c(mov_list_cost_vect ,mov_list_cost[[i]] )
+        index_order <- order(mov_list_cost_vect, decreasing = FALSE)
+    } else index_order <- c(1)
 
-    #print(mov_list_cost_vect[index_order])
-  return(index_order)
+    return(index_order)
 }
 
 # check_result_in_tabu_list 
 check_result_in_tabu_list<-function(tabulist, mov_list, mov_list_cost, index_order, counter_index_order, bestcost) {
   
-  if (mov_list_cost[index_order[counter_index_order]] >= bestcost) {
+  #print(paste0("mov list ", mov_list_cost[[index_order[counter_index_order]]], " best ", bestcost))
   
-    tabu_check <- check_in_tabulist(tabulist, mov_list[[index_order[counter_index_order]]]$client1,
-                                              mov_list[[index_order[counter_index_order]]]$indexr1)
+  if (mov_list_cost[[index_order[counter_index_order]]] >= bestcost) {
     
-    if ((!tabu_check)&&(length(mov_list[[index_order[counter_index_order]]]$route2)>1))
+    if ((length(mov_list[[index_order[counter_index_order]]]$client2)>=1)&&(mov_list[[index_order[counter_index_order]]]$client2 != 0)) {
+      
+      tabu_check <- check_in_tabulist(tabulist, mov_list[[index_order[counter_index_order]]]$client1,
+                                      mov_list[[index_order[counter_index_order]]]$indexr2)
+      
       tabu_check <- tabu_check + check_in_tabulist(tabulist, mov_list[[index_order[counter_index_order]]]$client2, 
-                                                             mov_list[[index_order[counter_index_order]]]$indexr2)
+                                                             mov_list[[index_order[counter_index_order]]]$indexr1)
+    } else {
+      
+      tabu_check <- check_in_tabulist(tabulist, mov_list[[index_order[counter_index_order]]]$client1,
+                                      mov_list[[index_order[counter_index_order]]]$indexr1)
+      
+    }
     #print(paste0("is in tabu --> ", tabu_check))
     
   } else {
@@ -145,95 +226,251 @@ check_result_in_tabu_list<-function(tabulist, mov_list, mov_list_cost, index_ord
 
 # insert in tabu list
 insert_result_in_tabulist<-function(mov_list, index_order, counter_index_order, tabulist_data, tau) {
-  
-    tabulist_data$tabulist <- insert_in_tabu_list(mov_list[[index_order[counter_index_order]]]$client1, 
-                                    mov_list[[index_order[counter_index_order]]]$indexr1, tau, tabulist_data$tabulist) 
-    
-    for (ii in 1:length(mov_list[[index_order[counter_index_order]]]$client1)) {
-      client <- mov_list[[index_order[counter_index_order]]]$client1[ii]
-      tabulist_data$table_freq <- update_table_freq(tabulist_data$table_freq, client, mov_list[[index_order[counter_index_order]]]$indexr1)
-    }
     
     
-    if ((length(mov_list[[index_order[counter_index_order]]]$client2)>1)&&(mov_list[[index_order[counter_index_order]]]$client2!=0)) {
-      tabulist_data$tabulist <- insert_in_tabu_list(mov_list[[index_order[counter_index_order]]]$client2, 
-                                      mov_list[[index_order[counter_index_order]]]$indexr2, tau, tabulist_data$tabulist) 
-      for (ii in 1:length(mov_list[[index_order[counter_index_order]]]$client2)) {
-        client <- mov_list[[index_order[counter_index_order]]]$client2[ii]
+    if ((length(mov_list[[index_order[counter_index_order]]]$client2)>=1)&&(mov_list[[index_order[counter_index_order]]]$client2!=0)) {
+      
+      # tabu list
+      tabulist_data$tabulist <- insert_in_tabu_list(mov_list[[index_order[counter_index_order]]]$client1, 
+                                                    mov_list[[index_order[counter_index_order]]]$indexr1, tau, tabulist_data$tabulist) 
+      # table freq
+      for (ii in 1:length(mov_list[[index_order[counter_index_order]]]$client1)) {
+        client <- mov_list[[index_order[counter_index_order]]]$client1[ii]
         tabulist_data$table_freq <- update_table_freq(tabulist_data$table_freq, client, mov_list[[index_order[counter_index_order]]]$indexr2)
       }
+      
+      # tabu list
+      tabulist_data$tabulist <- insert_in_tabu_list(mov_list[[index_order[counter_index_order]]]$client2, 
+                                      mov_list[[index_order[counter_index_order]]]$indexr2, tau, tabulist_data$tabulist) 
+      # table freq
+      for (ii in 1:length(mov_list[[index_order[counter_index_order]]]$client2)) {
+        client <- mov_list[[index_order[counter_index_order]]]$client2[ii]
+        tabulist_data$table_freq <- update_table_freq(tabulist_data$table_freq, client, mov_list[[index_order[counter_index_order]]]$indexr1)
+      }
+    } else {
+      
+      # tabu list
+      tabulist_data$tabulist <- insert_in_tabu_list(mov_list[[index_order[counter_index_order]]]$client1, 
+                                                    mov_list[[index_order[counter_index_order]]]$indexr1, tau, tabulist_data$tabulist) 
+      # table freq
+      for (ii in 1:length(mov_list[[index_order[counter_index_order]]]$client1)) {
+        client <- mov_list[[index_order[counter_index_order]]]$client1[ii]
+        tabulist_data$table_freq <- update_table_freq(tabulist_data$table_freq, client, mov_list[[index_order[counter_index_order]]]$indexr1)
+      }
+      
     }
     
     return(tabulist_data)
 }
 
 # movements_imp
-movements_imp <- function(input, current_solution, type_problem, vecinity, perc_vecinity, penalty_capacity, zeta, alpha, table_freq, counter_i) {
+movements_imp <- function(input, current_solution, type_problem, vecinity, perc_vecinity, penalty_capacity, zeta, alpha, table_freq, counter_i, candidate_list) {
   mov_list <- list()
   mov_list_cost <- list()
+  mov_list_cost_pen <- list()
 
+  
+  #start_time <- Sys.time()
+  
   # exchange moves
-  res <- exchange_movement_client_subtour_and_vc_creating_subtour(input, current_solution, mov_list, mov_list_cost, type_problem, 
-                                                                  vecinity, perc_vecinity, penalty_capacity, zeta, alpha, table_freq, counter_i) 
+  res <- exchange_movement_client_subtour_and_vc_creating_subtour(input, current_solution, mov_list, mov_list_cost, mov_list_cost_pen, type_problem, 
+                                                                  vecinity, perc_vecinity, penalty_capacity, zeta, alpha, table_freq, counter_i, candidate_list) 
   mov_list <- res$mov_list
   mov_list_cost <- res$mov_list_cost
+  mov_list_cost_pen <- res$mov_list_cost_pen
   
-  res <- exchange_movement_change_parking(input, current_solution, mov_list, mov_list_cost, type_problem, vecinity, perc_vecinity ,
-                                          penalty_capacity, zeta, alpha, table_freq, counter_i) 
+  #print(paste0("   exchange_movement_client_subtour_and_vc_creating_subtour ", difftime(Sys.time(), start_time, units = "secs")))
+  #start_time <- Sys.time()
+  
+  
+  res <- exchange_movement_change_parking(input, current_solution, mov_list, mov_list_cost, mov_list_cost_pen, type_problem, vecinity, perc_vecinity ,
+                                          penalty_capacity, zeta, alpha, table_freq, counter_i, candidate_list) 
   mov_list <- res$mov_list
   mov_list_cost <- res$mov_list_cost
+  mov_list_cost_pen <- res$mov_list_cost_pen
   
-  res <- exchange_movement_vc_main_tour_tc_subtour(input, current_solution, mov_list, mov_list_cost, type_problem, vecinity, perc_vecinity, 
-                                                   penalty_capacity, zeta, alpha, table_freq, counter_i) 
+  
+  #print(paste0("   exchange_movement_change_parking ", difftime(Sys.time(), start_time, units = "secs")))
+  #start_time <- Sys.time()
+  
+  # MAS LENTA 1
+  res <- exchange_movement_vc_main_tour_tc_subtour(input, current_solution, mov_list, mov_list_cost, mov_list_cost_pen, type_problem, vecinity, perc_vecinity, 
+                                                   penalty_capacity, zeta, alpha, table_freq, counter_i, candidate_list) 
   mov_list <- res$mov_list
   mov_list_cost <- res$mov_list_cost
+  mov_list_cost_pen <- res$mov_list_cost_pen
   
-  res <- exchange_movement_client_short_subtour_and_client_in_main_tour(input, current_solution, mov_list, mov_list_cost, type_problem, 
-                                                                        vecinity, perc_vecinity, penalty_capacity, zeta, alpha, table_freq, counter_i) 
+  
+  #print(paste0("   exchange_movement_vc_main_tour_tc_subtour ", difftime(Sys.time(), start_time, units = "secs")))
+  #start_time <- Sys.time()
+  
+  # MAS LENTA 3
+  res <- exchange_movement_client_short_subtour_and_client_in_main_tour(input, current_solution, mov_list, mov_list_cost,mov_list_cost_pen,  type_problem, 
+                                                                        vecinity, perc_vecinity, penalty_capacity, zeta, alpha, table_freq, 
+                                                                        counter_i, candidate_list) 
   mov_list <- res$mov_list
   mov_list_cost <- res$mov_list_cost
+  mov_list_cost_pen <- res$mov_list_cost_pen
   
-  res <- move_subroute(input, current_solution, mov_list, mov_list_cost, type_problem, penalty_capacity, zeta, alpha, table_freq, counter_i) 
+  #print(paste0("   exchange_movement_client_short_subtour_and_client_in_main_tour ", difftime(Sys.time(), start_time, units = "secs")))
+  #start_time <- Sys.time()
+  
+  
+  res <- move_subroute(input, current_solution, mov_list, mov_list_cost, mov_list_cost_pen, type_problem, penalty_capacity, zeta, alpha, table_freq, 
+                       counter_i, candidate_list) 
   mov_list <- res$mov_list
   mov_list_cost <- res$mov_list_cost
+  mov_list_cost_pen <- res$mov_list_cost_pen
   
-  res <- exchange_ptr_and_subtour(input, current_solution, mov_list, mov_list_cost, type_problem, penalty_capacity, zeta, alpha, table_freq, counter_i) 
+  #print(paste0("   move_subroute ", difftime(Sys.time(), start_time, units = "secs")))
+  #start_time <- Sys.time()
+  
+  res <- exchange_ptr_and_subtour(input, current_solution, mov_list, mov_list_cost, mov_list_cost_pen, type_problem, penalty_capacity, zeta, alpha, 
+                                  table_freq, counter_i, candidate_list) 
   mov_list <- res$mov_list
   mov_list_cost <- res$mov_list_cost
+  mov_list_cost_pen <- res$mov_list_cost_pen
   
-  res <- exchange_movement_tc_PTR_and_vc_in_main_tour(input, current_solution, mov_list, mov_list_cost, type_problem, vecinity, 
-                                                      perc_vecinity, penalty_capacity, zeta, alpha, table_freq, counter_i)
+  #print(paste0("   exchange_ptr_and_subtour ", difftime(Sys.time(), start_time, units = "secs")))
+  #start_time <- Sys.time()
+  
+  # MAS LENTA 2
+  res <- exchange_movement_tc_PTR_and_vc_in_main_tour(input, current_solution, mov_list, mov_list_cost, mov_list_cost_pen, type_problem, vecinity, 
+                                                      perc_vecinity, penalty_capacity, zeta, alpha, table_freq, counter_i, candidate_list)
   mov_list <- res$mov_list
   mov_list_cost <- res$mov_list_cost 
+  mov_list_cost_pen <- res$mov_list_cost_pen
+  
+  #print(paste0("   exchange_movement_tc_PTR_and_vc_in_main_tour ", difftime(Sys.time(), start_time, units = "secs")))
+  #start_time <- Sys.time()
   
   # moves in the same root
-  res <- move_subroute_same_route(input, current_solution, mov_list, mov_list_cost, type_problem, penalty_capacity, zeta, alpha, table_freq, counter_i) 
+  res <- move_subroute_same_route(input, current_solution, mov_list, mov_list_cost, mov_list_cost_pen, type_problem, penalty_capacity, zeta, alpha, 
+                                  table_freq, counter_i, candidate_list) 
   mov_list <- res$mov_list
   mov_list_cost <- res$mov_list_cost
+  mov_list_cost_pen <- res$mov_list_cost_pen
   
-  res <- create_new_subtour_vc_same_route(input, current_solution, mov_list, mov_list_cost, type_problem, penalty_capacity, zeta, alpha, table_freq, counter_i)  
-  mov_list <- res$mov_list
-  mov_list_cost <- res$mov_list_cost
+  #print(paste0("   move_subroute_same_route ", difftime(Sys.time(), start_time, units = "secs")))
+  #start_time <- Sys.time()
   
-  res <- move_vc_client_subroute_to_main_tour_and_split_same_route(input, current_solution, mov_list, mov_list_cost, type_problem, 
-                                                                   penalty_capacity, zeta, alpha, table_freq, counter_i) 
+  res <- create_new_subtour_vc_same_route(input, current_solution, mov_list, mov_list_cost, mov_list_cost_pen, type_problem, penalty_capacity, 
+                                          zeta, alpha, table_freq, counter_i, candidate_list)  
   mov_list <- res$mov_list
   mov_list_cost <- res$mov_list_cost
+  mov_list_cost_pen <- res$mov_list_cost_pen
+  
+  #print(paste0("   create_new_subtour_vc_same_route ", difftime(Sys.time(), start_time, units = "secs")))
+  #start_time <- Sys.time()
+  
+  res <- move_vc_client_subroute_to_main_tour_and_split_same_route(input, current_solution, mov_list, mov_list_cost, mov_list_cost_pen, type_problem, 
+                                                                   penalty_capacity, zeta, alpha, table_freq, counter_i, candidate_list) 
+  mov_list <- res$mov_list
+  mov_list_cost <- res$mov_list_cost
+  mov_list_cost_pen <- res$mov_list_cost_pen
+  
+  #print(paste0("   move_vc_client_subroute_to_main_tour_and_split_same_route ", difftime(Sys.time(), start_time, units = "secs")))
+  #start_time <- Sys.time()
   
   # basic moves
-  res <- exchange_tc_two_routes(input, current_solution, mov_list, mov_list_cost, type_problem, vecinity, perc_vecinity, 
-                                penalty_capacity, zeta, alpha, table_freq, counter_i) 
+  res <- exchange_tc_two_routes(input, current_solution, mov_list, mov_list_cost, mov_list_cost_pen,  type_problem, vecinity, perc_vecinity, 
+                                penalty_capacity, zeta, alpha, table_freq, counter_i, candidate_list) 
   mov_list <- res$mov_list
   mov_list_cost <- res$mov_list_cost
+  mov_list_cost_pen <- res$mov_list_cost_pen
   
-  res <- exchange_vc_two_routes(input, current_solution, mov_list, mov_list_cost, type_problem, vecinity, perc_vecinity, 
-                                penalty_capacity, zeta, alpha, table_freq, counter_i) 
+  #print(paste0("   exchange_tc_two_routes ", difftime(Sys.time(), start_time, units = "secs")))
+  #start_time <- Sys.time()
+  
+  # MAS LENTA 4
+  res <- exchange_vc_two_routes(input, current_solution, mov_list, mov_list_cost,mov_list_cost_pen,  type_problem, vecinity, perc_vecinity, 
+                                penalty_capacity, zeta, alpha, table_freq, counter_i, candidate_list) 
   mov_list <- res$mov_list
   mov_list_cost <- res$mov_list_cost
+  mov_list_cost_pen <- res$mov_list_cost_pen
+  
+  #print(paste0("   exchange_vc_two_routes ", difftime(Sys.time(), start_time, units = "secs")))
+  #start_time <- Sys.time()
+  # move function
+  res <- move_tc(input, current_solution, mov_list, mov_list_cost, mov_list_cost_pen,  type_problem, vecinity, perc_vecinity, 
+                 penalty_capacity, zeta, alpha, table_freq, counter_i, candidate_list) 
+  mov_list <- res$mov_list
+  mov_list_cost <- res$mov_list_cost
+  mov_list_cost_pen <- res$mov_list_cost_pen
+  
+  # move function
+  res <- move_vc(input, current_solution, mov_list, mov_list_cost, mov_list_cost_pen,  type_problem, vecinity, perc_vecinity, 
+                 penalty_capacity, zeta, alpha, table_freq, counter_i, candidate_list) 
+  mov_list <- res$mov_list
+  mov_list_cost <- res$mov_list_cost
+  mov_list_cost_pen <- res$mov_list_cost_pen
   
   res <- list()
   res$mov_list <- mov_list
   res$mov_list_cost <- mov_list_cost 
+  res$mov_list_cost_pen <- mov_list_cost_pen 
+  
+  return(res)
+}
+
+
+movements_imp_tabu <- function(input, current_solution, type_problem, vecinity, perc_vecinity, penalty_capacity, zeta, alpha, table_freq, counter_i, candidate_list) {
+  mov_list <- list()
+  mov_list_cost <- list()
+  mov_list_cost_pen <- list()
+  
+  
+  #start_time <- Sys.time()
+  
+  # exchange moves
+  res <- exchange_movement_change_parking(input, current_solution, mov_list, mov_list_cost, mov_list_cost_pen, type_problem, vecinity, perc_vecinity ,
+                                          penalty_capacity, zeta, alpha, table_freq, counter_i, candidate_list) 
+  mov_list <- res$mov_list
+  mov_list_cost <- res$mov_list_cost
+  mov_list_cost_pen <- res$mov_list_cost_pen
+
+  res <- move_subroute(input, current_solution, mov_list, mov_list_cost, mov_list_cost_pen, type_problem, penalty_capacity, zeta, alpha, table_freq, 
+                       counter_i, candidate_list) 
+  mov_list <- res$mov_list
+  mov_list_cost <- res$mov_list_cost
+  mov_list_cost_pen <- res$mov_list_cost_pen
+  
+  res <- move_subroute_same_route(input, current_solution, mov_list, mov_list_cost, mov_list_cost_pen, type_problem, penalty_capacity, zeta, alpha, 
+                                  table_freq, counter_i, candidate_list) 
+  mov_list <- res$mov_list
+  mov_list_cost <- res$mov_list_cost
+  mov_list_cost_pen <- res$mov_list_cost_pen
+  
+  res <- exchange_tc_two_routes(input, current_solution, mov_list, mov_list_cost, mov_list_cost_pen,  type_problem, vecinity, perc_vecinity, 
+                                penalty_capacity, zeta, alpha, table_freq, counter_i, candidate_list) 
+  mov_list <- res$mov_list
+  mov_list_cost <- res$mov_list_cost
+  mov_list_cost_pen <- res$mov_list_cost_pen
+  
+  res <- exchange_vc_two_routes(input, current_solution, mov_list, mov_list_cost,mov_list_cost_pen,  type_problem, vecinity, perc_vecinity, 
+                                penalty_capacity, zeta, alpha, table_freq, counter_i, candidate_list) 
+  mov_list <- res$mov_list
+  mov_list_cost <- res$mov_list_cost
+  mov_list_cost_pen <- res$mov_list_cost_pen
+  
+  # move function
+  res <- move_tc(input, current_solution, mov_list, mov_list_cost, mov_list_cost_pen,  type_problem, vecinity, perc_vecinity, 
+                                penalty_capacity, zeta, alpha, table_freq, counter_i, candidate_list) 
+  mov_list <- res$mov_list
+  mov_list_cost <- res$mov_list_cost
+  mov_list_cost_pen <- res$mov_list_cost_pen
+  
+  # move function
+  res <- move_vc(input, current_solution, mov_list, mov_list_cost, mov_list_cost_pen,  type_problem, vecinity, perc_vecinity, 
+                 penalty_capacity, zeta, alpha, table_freq, counter_i, candidate_list) 
+  mov_list <- res$mov_list
+  mov_list_cost <- res$mov_list_cost
+  mov_list_cost_pen <- res$mov_list_cost_pen
+  
+  res <- list()
+  res$mov_list <- mov_list
+  res$mov_list_cost <- mov_list_cost 
+  res$mov_list_cost_pen <- mov_list_cost_pen 
   
   return(res)
 }
@@ -312,7 +549,8 @@ insert_element_in_solution<-function(input, new_route, pos, current_solution, ty
 }
 
 
-exchange_tc_two_routes<-function(input, result, mov_list, mov_list_cost, type_problem, vecinity, perc_vecinity, penalty_capacity, zeta, alpha, table_freq, counter_i) {
+exchange_tc_two_routes<-function(input, result, mov_list, mov_list_cost, mov_list_cost_pen, type_problem, vecinity, perc_vecinity, 
+                                 penalty_capacity, zeta, alpha, table_freq, counter_i, candidate_list) {
   
   for (i in 1:(length(result)-1)) {
     if (result[[i]]$type != "PVR") {
@@ -325,7 +563,7 @@ exchange_tc_two_routes<-function(input, result, mov_list, mov_list_cost, type_pr
                 for (t in 2:(length(result[[w]]$route)-1)) {
                   if ( sum(result[[w]]$route == result[[w]]$route[t]) == 1 ) {
                     clientw <- result[[w]]$route[t]
-                    if ((clientw > input$n1)&&(is_in_vecinity(clienti, clientw, vecinity, perc_vecinity))) {
+                    if ((clientw > input$n1)&&(is_in_vecinity(clienti, clientw, vecinity, perc_vecinity))&&(sum(candidate_list==clienti)>0)) {
                         # create routes  
                         route1 <- replace_route_client(clienti, clientw, result[[i]]$route)
                         route2 <- replace_route_client(clientw, clienti, result[[w]]$route)
@@ -336,9 +574,12 @@ exchange_tc_two_routes<-function(input, result, mov_list, mov_list_cost, type_pr
                         # add to mov list
                         if (feasible_route1 && feasible_route2) {
                           res_mov <- add_movements_to_list(input, result, i, w, c(clienti), c(clientw), "exchange_tc_two_routes", 
-                                                           route1, route2,  mov_list, mov_list_cost, zeta, alpha, table_freq, counter_i)
+                                                           route1, route2,  mov_list, mov_list_cost,  mov_list_cost_pen,
+                                                           zeta, alpha, table_freq, counter_i)
                           mov_list <- res_mov$mov_list
                           mov_list_cost <- res_mov$mov_list_cost 
+                          mov_list_cost_pen <- res_mov$mov_list_cost_pen 
+                          
                         } 
                     }
                   }
@@ -354,12 +595,159 @@ exchange_tc_two_routes<-function(input, result, mov_list, mov_list_cost, type_pr
   res <- list()
   res$mov_list <- mov_list
   res$mov_list_cost <- mov_list_cost 
+  res$mov_list_cost_pen  <- mov_list_cost_pen
+  
   return(res)
   
 }
 
 
-exchange_vc_two_routes<-function(input, result, mov_list, mov_list_cost, type_problem, vecinity, perc_vecinity, penalty_capacity, zeta, alpha, table_freq, counter_i) {
+move_tc<-function(input, result, mov_list, mov_list_cost, mov_list_cost_pen, type_problem, vecinity, perc_vecinity, 
+                                 penalty_capacity, zeta, alpha, table_freq, counter_i, candidate_list) {
+  
+  for (i in 1:(length(result)-1)) {
+    if ((result[[i]]$type != "PVR") && (length(result[[i]]$route)>3)) {
+      for (j in 2:(length(result[[i]]$route)-1)) {
+        # is not a depot and is a tc
+        if (( sum(result[[i]]$route == result[[i]]$route[j]) == 1 ) &&  (result[[i]]$route[j] > input$n1)) {
+            clienti <- result[[i]]$route[j]
+            for (w in (1:length(result))) {
+              if (i!=w) {
+                # subroute
+                if (result[[w]]$type == "CVR") {
+                  subroutes <- return_subroutes(result[[w]]$route, input$n1)
+                  for (s in 1:length(subroutes)) {
+                      for (t in 1:(length(subroutes[[s]]$tour)-1)) {
+                        # create routes 
+                        route1 <- delete_node_in_route(j, result[[i]]$route)
+                        route2 <- add_node_in_route(which(subroutes[[s]]$tour[t]==result[[w]]$route), clienti, result[[w]]$route)
+                        
+                        # feasibility
+                        feasible_route1 <- check_feasibility(result, route1, input, result[[i]]$type, type_problem, penalty_capacity) 
+                        feasible_route2 <- check_feasibility(result, route2, input, result[[w]]$type, type_problem, penalty_capacity) 
+                        # add to mov list
+                        if (feasible_route1 && feasible_route2) {
+                          res_mov <- add_movements_to_list(input, result, i, w, c(clienti), 0, "move_tc", 
+                                                           route1, route2,  mov_list, mov_list_cost,  mov_list_cost_pen,
+                                                           zeta, alpha, table_freq, counter_i)
+                          mov_list <- res_mov$mov_list
+                          mov_list_cost <- res_mov$mov_list_cost 
+                          mov_list_cost_pen <- res_mov$mov_list_cost_pen 
+                        } 
+                      }
+                  }
+                }
+                # PTR
+                else if (result[[w]]$type == "PTR") {
+                  for (t in 1:(length(result[[w]]$route)-1)) {
+                    # create routes 
+                    route1 <- delete_node_in_route(j, result[[i]]$route)
+                    route2 <- add_node_in_route(t, clienti, result[[w]]$route)
+                    
+                    # feasibility
+                    feasible_route1 <- check_feasibility(result, route1, input, result[[i]]$type, type_problem, penalty_capacity) 
+                    feasible_route2 <- check_feasibility(result, route2, input, result[[w]]$type, type_problem, penalty_capacity) 
+                    # add to mov list
+                    if (feasible_route1 && feasible_route2) {
+                      res_mov <- add_movements_to_list(input, result, i, w, c(clienti), 0, "move_tc", 
+                                                       route1, route2,  mov_list, mov_list_cost,  mov_list_cost_pen,
+                                                       zeta, alpha, table_freq, counter_i)
+                      mov_list <- res_mov$mov_list
+                      mov_list_cost <- res_mov$mov_list_cost 
+                      mov_list_cost_pen <- res_mov$mov_list_cost_pen 
+                    } 
+                  }
+                }
+                # PVR
+                else {
+                  for (t in 2:(length(result[[w]]$route)-1)) {
+                    # create routes 
+                    route1 <- delete_node_in_route(j, result[[i]]$route)
+                    route2 <- add_subroute_mov(t, clienti, result[[w]]$route)
+                    
+                    # feasibility
+                    feasible_route1 <- check_feasibility(result, route1, input, result[[i]]$type, type_problem, penalty_capacity) 
+                    feasible_route2 <- check_feasibility(result, route2, input, result[[w]]$type, type_problem, penalty_capacity) 
+                    # add to mov list
+                    if (feasible_route1 && feasible_route2) {
+                      res_mov <- add_movements_to_list(input, result, i, w, c(clienti), 0, "move_tc", 
+                                                       route1, route2,  mov_list, mov_list_cost,  mov_list_cost_pen,
+                                                       zeta, alpha, table_freq, counter_i)
+                      mov_list <- res_mov$mov_list
+                      mov_list_cost <- res_mov$mov_list_cost 
+                      mov_list_cost_pen <- res_mov$mov_list_cost_pen 
+                    } 
+                  }
+                }
+              }
+            }
+          
+        } 
+      }
+    }
+  }
+  
+  res <- list()
+  res$mov_list <- mov_list
+  res$mov_list_cost <- mov_list_cost 
+  res$mov_list_cost_pen  <- mov_list_cost_pen
+  
+  return(res)
+  
+}
+
+move_vc<-function(input, result, mov_list, mov_list_cost, mov_list_cost_pen, type_problem, vecinity, perc_vecinity, 
+                  penalty_capacity, zeta, alpha, table_freq, counter_i, candidate_list) {
+  
+  for (i in 1:(length(result)-1)) {
+    if ((length(result[[i]]$route)>3)) {
+      for (j in 2:(length(result[[i]]$route)-1)) {
+        # is not a depot and is a vc
+        if (( sum(result[[i]]$route == result[[i]]$route[j]) == 1 ) &&  (result[[i]]$route[j] <= input$n1)) {
+          clienti <- result[[i]]$route[j]
+          for (w in (1:length(result))) {
+            if (i!=w) {
+              if (result[[w]]$type == "CVR") main_root <- return_main_route(result[[w]]$route)
+              else main_root <- result[[w]]$route
+              for (t in 1:(length(main_root)-1)) {
+                if (sum(main_root[t] == result[[w]]$route)==1) {
+                    # create routes 
+                    route1 <- delete_node_in_route(j, result[[i]]$route)
+                    route2 <- add_node_in_route(which(main_root[t]==result[[w]]$route), clienti, result[[w]]$route)
+                    
+                    # feasibility
+                    feasible_route1 <- check_feasibility(result, route1, input, result[[i]]$type, type_problem, penalty_capacity) 
+                    feasible_route2 <- check_feasibility(result, route2, input, result[[w]]$type, type_problem, penalty_capacity) 
+                    # add to mov list
+                    if (feasible_route1 && feasible_route2) {
+                      res_mov <- add_movements_to_list(input, result, i, w, c(clienti), 0, "move_tc", 
+                                                       route1, route2,  mov_list, mov_list_cost,  mov_list_cost_pen,
+                                                       zeta, alpha, table_freq, counter_i)
+                      mov_list <- res_mov$mov_list
+                      mov_list_cost <- res_mov$mov_list_cost 
+                      mov_list_cost_pen <- res_mov$mov_list_cost_pen 
+                    } 
+                }
+              }
+            }
+          }
+          
+        } 
+      }
+    }
+  }
+  
+  res <- list()
+  res$mov_list <- mov_list
+  res$mov_list_cost <- mov_list_cost 
+  res$mov_list_cost_pen  <- mov_list_cost_pen
+  
+  return(res)
+  
+}
+
+exchange_vc_two_routes<-function(input, result, mov_list, mov_list_cost, mov_list_cost_pen, type_problem, vecinity,
+                                 perc_vecinity, penalty_capacity, zeta, alpha, table_freq, counter_i, candidate_list) {
   
   for (i in 1:(length(result)-1)) {
     for (j in 2:(length(result[[i]]$route)-1)) {
@@ -368,10 +756,9 @@ exchange_vc_two_routes<-function(input, result, mov_list, mov_list_cost, type_pr
           if (clienti <= input$n1) {
             for (w in (i+1):length(result)) {
               for (t in 2:(length(result[[w]]$route)-1)) {
-                  if ((i!=w)&&( sum(result[[w]]$route == result[[w]]$route[t]) == 1 )) {
+                  if ((i!=w)&&(sum(result[[w]]$route == result[[w]]$route[t]) == 1)) {
                     clientw <- result[[w]]$route[t]
-                    if ((clientw <= input$n1) && (is_in_vecinity(clienti, clientw, vecinity, perc_vecinity))) 
-                    {
+                    if ((clientw <= input$n1)&& (is_in_vecinity(clienti, clientw, vecinity, perc_vecinity)) && (sum(candidate_list==clienti)>0)) {
                       # create routes  
                       route1 <- replace_route_client(clienti, clientw, result[[i]]$route)
                       route2 <- replace_route_client(clientw, clienti, result[[w]]$route)
@@ -384,9 +771,12 @@ exchange_vc_two_routes<-function(input, result, mov_list, mov_list_cost, type_pr
                       # add to mov list
                       if (feasible_route1 && feasible_route2) {
                         res_mov <- add_movements_to_list(input, result, i, w,  c(clienti), c(clientw), 
-                                                         "exchange_vc_two_routes", route1, route2,  mov_list, mov_list_cost, zeta, alpha, table_freq, counter_i)
+                                                         "exchange_vc_two_routes", route1, route2,  mov_list, 
+                                                         mov_list_cost,  mov_list_cost_pen, zeta, alpha, table_freq, counter_i)
                         mov_list <- res_mov$mov_list
                         mov_list_cost <- res_mov$mov_list_cost 
+                        mov_list_cost_pen <- res_mov$mov_list_cost_pen 
+                        
                       } 
                     }
                   }
@@ -400,12 +790,15 @@ exchange_vc_two_routes<-function(input, result, mov_list, mov_list_cost, type_pr
   res <- list()
   res$mov_list <- mov_list
   res$mov_list_cost <- mov_list_cost 
+  res$mov_list_cost_pen  <- mov_list_cost_pen
+  
   return(res)
   
 }
 
 
-exchange_ptr_and_subtour<-function(input, result, mov_list, mov_list_cost, type_problem, penalty_capacity, zeta, alpha, table_freq, counter_i) {
+exchange_ptr_and_subtour<-function(input, result, mov_list, mov_list_cost, mov_list_cost_pen, type_problem, penalty_capacity,
+                                   zeta, alpha, table_freq, counter_i, candidate_list) {
   
   for (i in 1:length(result)) {
     if (result[[i]]$type == "PTR") {
@@ -427,9 +820,12 @@ exchange_ptr_and_subtour<-function(input, result, mov_list, mov_list_cost, type_
               if (feasible_route1 && feasible_route2) {
                 res_mov <- add_movements_to_list(input, result, i, z,  subroutei[2:(length(subroutei)-1)], 
                                                  subroutez[2:(length(subroutez)-1)], "exchange_ptr_and_subtour", 
-                                                 route1, route2,  mov_list, mov_list_cost, zeta, alpha, table_freq, counter_i)
+                                                 route1, route2,  mov_list, mov_list_cost,  mov_list_cost_pen,
+                                                 zeta, alpha, table_freq, counter_i)
                 mov_list <- res_mov$mov_list
                 mov_list_cost <- res_mov$mov_list_cost 
+                mov_list_cost_pen <- res_mov$mov_list_cost_pen 
+                
               } 
             }
           }
@@ -441,12 +837,15 @@ exchange_ptr_and_subtour<-function(input, result, mov_list, mov_list_cost, type_
   res <- list()
   res$mov_list <- mov_list
   res$mov_list_cost <- mov_list_cost 
+  res$mov_list_cost_pen  <- mov_list_cost_pen
+  
   return(res)
   
 }
 
 
-move_vc_client_subroute_to_main_tour_and_split_same_route<-function(input, result, mov_list, mov_list_cost, type_problem, penalty_capacity, zeta, alpha, table_freq, counter_i) {
+move_vc_client_subroute_to_main_tour_and_split_same_route<-function(input, result, mov_list, mov_list_cost, mov_list_cost_pen, type_problem, 
+                                                                    penalty_capacity, zeta, alpha, table_freq, counter_i, candidate_list) {
   
   for (i in 1:length(result)) {
     if (result[[i]]$type == "CVR") {
@@ -456,8 +855,7 @@ move_vc_client_subroute_to_main_tour_and_split_same_route<-function(input, resul
           clienti <- subroutes[[s]]$tour[j]
           prev <- subroutes[[s]]$tour[j-1]
           post <- subroutes[[s]]$tour[j+1]
-          if ((clienti <= input$n1) && (sum(prev==subroutes[[s]]$tour)==1) &&
-              (sum(post==subroutes[[s]]$tour)==1)){
+          if ((clienti <= input$n1) && (sum(prev==subroutes[[s]]$tour)==1) &&(sum(post==subroutes[[s]]$tour)==1)&&(sum(candidate_list==clienti)>0)){
 
             route1 <- split_subroute(clienti, result[[i]]$route)
             
@@ -467,9 +865,12 @@ move_vc_client_subroute_to_main_tour_and_split_same_route<-function(input, resul
             if (feasible_route1) {
               res_mov <- add_movements_to_list(input, result, i, 0, clienti, 0, 
                                                "move_vc_client_subroute_to_main_tour_and_split_same_route", 
-                                               route1, 0,  mov_list, mov_list_cost, zeta, alpha, table_freq, counter_i)
+                                               route1, 0,  mov_list, mov_list_cost,  mov_list_cost_pen,
+                                               zeta, alpha, table_freq, counter_i)
               mov_list <- res_mov$mov_list
               mov_list_cost <- res_mov$mov_list_cost 
+              mov_list_cost_pen <- res_mov$mov_list_cost_pen 
+              
             } 
             
           }
@@ -482,12 +883,15 @@ move_vc_client_subroute_to_main_tour_and_split_same_route<-function(input, resul
   res <- list()
   res$mov_list <- mov_list
   res$mov_list_cost <- mov_list_cost 
+  res$mov_list_cost_pen  <- mov_list_cost_pen
+  
   return(res)
   
 }
 
 
-move_subroute<-function(input, result, mov_list, mov_list_cost, type_problem,penalty_capacity, zeta, alpha, table_freq, counter_i) {
+move_subroute<-function(input, result, mov_list, mov_list_cost, mov_list_cost_pen, type_problem,penalty_capacity, 
+                        zeta, alpha, table_freq, counter_i, candidate_list) {
   
   for (i in 1:length(result)) {
     if (result[[i]]$type == "CVR") {
@@ -512,9 +916,12 @@ move_subroute<-function(input, result, mov_list, mov_list_cost, type_problem,pen
                 # add to mov list
                 if (feasible_route1 && feasible_route2) {
                   res_mov <- add_movements_to_list(input, result, i, z, subroutei[2:(length(subroutei)-1)], 0,"move_subroute", 
-                                                   route1, route2,  mov_list, mov_list_cost, zeta, alpha, table_freq, counter_i)
+                                                   route1, route2,  mov_list, mov_list_cost,  mov_list_cost_pen,
+                                                   zeta, alpha, table_freq, counter_i)
                   mov_list <- res_mov$mov_list
                   mov_list_cost <- res_mov$mov_list_cost 
+                  mov_list_cost_pen <- res_mov$mov_list_cost_pen 
+                  
                 } 
               }
             }
@@ -527,12 +934,15 @@ move_subroute<-function(input, result, mov_list, mov_list_cost, type_problem,pen
   res <- list()
   res$mov_list <- mov_list
   res$mov_list_cost <- mov_list_cost 
+  res$mov_list_cost_pen  <- mov_list_cost_pen
+  
   return(res)
   
 }
 
 
-move_subroute_same_route<-function(input, result, mov_list, mov_list_cost, type_problem, penalty_capacity, zeta, alpha, table_freq, counter_i) {
+move_subroute_same_route<-function(input, result, mov_list, mov_list_cost, mov_list_cost_pen, type_problem, 
+                                   penalty_capacity, zeta, alpha, table_freq, counter_i, candidate_list) {
   
   for (i in 1:length(result)) {
     if (result[[i]]$type == "CVR") {
@@ -553,9 +963,12 @@ move_subroute_same_route<-function(input, result, mov_list, mov_list_cost, type_
                 if (feasible_route1) {
                   res_mov <- add_movements_to_list(input, result, i, 0, subroutei[2:(length(subroutei)-1)], 0, 
                                                    "move_subroute_same_route", 
-                                                   route1, 0,  mov_list, mov_list_cost, zeta, alpha, table_freq, counter_i)
+                                                   route1, 0,  mov_list, mov_list_cost,  mov_list_cost_pen,
+                                                   zeta, alpha, table_freq, counter_i)
                   mov_list <- res_mov$mov_list
                   mov_list_cost <- res_mov$mov_list_cost 
+                  mov_list_cost_pen <- res_mov$mov_list_cost_pen 
+                  
                 } 
               }
         }
@@ -566,12 +979,15 @@ move_subroute_same_route<-function(input, result, mov_list, mov_list_cost, type_
   res <- list()
   res$mov_list <- mov_list
   res$mov_list_cost <- mov_list_cost 
+  res$mov_list_cost_pen  <- mov_list_cost_pen
+  
   return(res)
   
 }
 
 
-create_new_subtour_vc_same_route<-function(input, result, mov_list, mov_list_cost, type_problem, penalty_capacity, zeta, alpha, table_freq, counter_i) {
+create_new_subtour_vc_same_route<-function(input, result, mov_list, mov_list_cost, mov_list_cost_pen, type_problem, 
+                                           penalty_capacity, zeta, alpha, table_freq, counter_i, candidate_list) {
   
   for (i in 1:length(result)) {
     if (result[[i]]$type != "PTR") {
@@ -581,7 +997,7 @@ create_new_subtour_vc_same_route<-function(input, result, mov_list, mov_list_cos
         if ((main_root[t]<= input$n1)&&(sum(main_root[t]==result[[i]]$route)==1)){
           clienti <- main_root[t]
           for (z in 2:(length(main_root)-1)) {
-            if ((main_root[z]<= input$n1)&&(sum(main_root[z]==result[[i]]$route)==1)&&(main_root[z]!=main_root[t])){
+            if ((main_root[z]<= input$n1)&&(sum(main_root[z]==result[[i]]$route)==1)&&(main_root[z]!=main_root[t])&&(sum(candidate_list==clienti)>0)){
               
               clientz <- main_root[z]
                
@@ -594,9 +1010,12 @@ create_new_subtour_vc_same_route<-function(input, result, mov_list, mov_list_cos
               # add to mov list
               if (feasible_route1) {
                 res_mov <- add_movements_to_list(input, result, i, 0, c(clientz), 0, "create_new_subtour_vc_unique", 
-                                                 route1, 0,  mov_list, mov_list_cost, zeta, alpha, table_freq, counter_i)
+                                                 route1, 0,  mov_list, mov_list_cost,  mov_list_cost_pen,
+                                                 zeta, alpha, table_freq, counter_i)
                 mov_list <- res_mov$mov_list
                 mov_list_cost <- res_mov$mov_list_cost 
+                mov_list_cost_pen <- res_mov$mov_list_cost_pen 
+                
               } 
             }
           }
@@ -608,12 +1027,15 @@ create_new_subtour_vc_same_route<-function(input, result, mov_list, mov_list_cos
   res <- list()
   res$mov_list <- mov_list
   res$mov_list_cost <- mov_list_cost 
+  res$mov_list_cost_pen  <- mov_list_cost_pen
+  
   return(res)
   
 }
 
 
-exchange_movement_change_parking<-function(input, result, mov_list, mov_list_cost, type_problem, vecinity, perc_vecinity, penalty_capacity, zeta, alpha, table_freq, counter_i) {
+exchange_movement_change_parking<-function(input, result, mov_list, mov_list_cost, mov_list_cost_pen, type_problem, 
+                                           vecinity, perc_vecinity, penalty_capacity, zeta, alpha, table_freq, counter_i, candidate_list) {
   
   for (i in 1:length(result)) {
     if (result[[i]]$type == "CVR") {
@@ -628,7 +1050,7 @@ exchange_movement_change_parking<-function(input, result, mov_list, mov_list_cos
             for (t in 2:(length(main_root)-1)) {
               if (main_root[t] <= input$n1) {
                 clientz <- main_root[t]
-                if (( clientz <= input$n1 )&&(is_in_vecinity(clienti, clientz, vecinity, perc_vecinity))) {
+                if (( clientz <= input$n1 )&&(is_in_vecinity(clienti, clientz, vecinity, perc_vecinity))&&(sum(candidate_list==clienti)>0)) {
                   
                   route1 <- replace_subroute_vc(subroutes[[s]], clientz, result[[i]]$route)
                   route2 <- replace_route_client(clientz, clienti, result[[z]]$route)
@@ -644,9 +1066,12 @@ exchange_movement_change_parking<-function(input, result, mov_list, mov_list_cos
                     
                     res_mov <- add_movements_to_list(input, result, i, z, subroutei[2:(length(subroutei)-1)], 0,
                                                      "exchange_movement_change_parking", 
-                                                     route1, route2,  mov_list, mov_list_cost, zeta, alpha, table_freq, counter_i)
+                                                     route1, route2,  mov_list, mov_list_cost,  mov_list_cost_pen,
+                                                     zeta, alpha, table_freq, counter_i)
                     mov_list <- res_mov$mov_list
                     mov_list_cost <- res_mov$mov_list_cost 
+                    mov_list_cost_pen <- res_mov$mov_list_cost_pen 
+                    
                   }   
                 }
               }
@@ -661,19 +1086,23 @@ exchange_movement_change_parking<-function(input, result, mov_list, mov_list_cos
   res <- list()
   res$mov_list <- mov_list
   res$mov_list_cost <- mov_list_cost
+  res$mov_list_cost_pen  <- mov_list_cost_pen
+  
   return(res)
   
 }
 
 
-exchange_movement_vc_main_tour_tc_subtour<-function(input, result, mov_list, mov_list_cost, type_problem, vecinity, perc_vecinity, penalty_capacity, 
-                                                    zeta, alpha, table_freq, counter_i) {
+exchange_movement_vc_main_tour_tc_subtour<-function(input, result, mov_list, mov_list_cost, mov_list_cost_pen, 
+                                                    type_problem, vecinity, perc_vecinity, penalty_capacity, 
+                                                    zeta, alpha, table_freq, counter_i, candidate_list) {
   for (i in 1:length(result)) {
     if ((result[[i]]$type != "PTR")) {
         if (result[[i]]$type == "CVR") main_root <- return_main_route(result[[i]]$route)
         else main_root <- result[[i]]$route
         for (j in 2:(length(main_root)-1)) {
           clienti <- main_root[j]
+          # vc
           if (clienti <= input$n1) {
               for ( z in 1:length(result)) {
                 if ((result[[z]]$type == "CVR") && (i!=z)) {
@@ -681,30 +1110,33 @@ exchange_movement_vc_main_tour_tc_subtour<-function(input, result, mov_list, mov
                   for (s in 1:length(subroutes))  {
                     for (t in 2:(length(subroutes[[s]]$tour)-1)) {
                       clientz <- subroutes[[s]]$tour[t]
-                      if ((clientz > input$n1)&&(is_in_vecinity(clienti, clientz, vecinity, perc_vecinity))) {
+                      # tc
+                      if ((clientz > input$n1)&&(is_in_vecinity(clienti, clientz, vecinity, perc_vecinity))&&(sum(candidate_list==clienti)>0)) {
                         if (result[[i]]$type == "CVR") main_root2 <- return_main_route(result[[i]]$route)
                         else main_root2 <- result[[i]]$route
-                        for (w in 2:(length(main_root2)-1)) {
-                          clientw <- main_root2[w]
-                          if ((clientw <= input$n1)&&(clientw != clienti)&&(clienti != subroutes[[s]]$root)&&(i!=z)&&(sum(result[[i]]$route==clienti)==1)) {
-                            # new routes
-                            #print(paste0("add ", clienti, " ", clientz," ", clientw  ))
-                            route1 <- replace_route_client_subroute(clienti, clientz, clientw, result[[i]]$route)
-                            route2 <- replace_route_client(clientz, clienti, result[[z]]$route)
-                            #print(route1)
-                            #print(route2)
-                            # feasibility
-                            feasible_route1 <- check_feasibility(result, route1, input, result[[i]]$type, type_problem, penalty_capacity) 
-                            feasible_route2 <- check_feasibility(result, route2, input, result[[z]]$type, type_problem, penalty_capacity) 
-                            # add to mov list
-                            if (feasible_route1 && feasible_route2) {
-                              res_mov <- add_movements_to_list(input, result, i, z, c(clienti), c(clientz), 
-                                                               "exchange_movement_vc_main_tour_tc_subtour", 
-                                                               route1, route2,  mov_list, mov_list_cost, zeta, alpha, table_freq, counter_i)
-                              mov_list <- res_mov$mov_list
-                              mov_list_cost <- res_mov$mov_list_cost 
-                            }                        
-                          }
+                        clientw <- return_close_client(clienti, main_root2, vecinity) #main_root2[w]
+                        if ((clientw <= input$n1)&&(clientw != clienti)&&
+                              (clienti != subroutes[[s]]$root)&&(i!=z)&&(sum(result[[i]]$route==clienti)==1)) {
+                                # new routes
+                                #print(paste0("add ", clienti, " ", clientz," ", clientw  ))
+                                route1 <- replace_route_client_subroute(clienti, clientz, clientw, result[[i]]$route)
+                                route2 <- replace_route_client(clientz, clienti, result[[z]]$route)
+                                #print(route1)
+                                #print(route2)
+                                # feasibility
+                                feasible_route1 <- check_feasibility(result, route1, input, result[[i]]$type, type_problem, penalty_capacity) 
+                                feasible_route2 <- check_feasibility(result, route2, input, result[[z]]$type, type_problem, penalty_capacity) 
+                                # add to mov list
+                                if (feasible_route1 && feasible_route2) {
+                                  res_mov <- add_movements_to_list(input, result, i, z, c(clienti), c(clientz), 
+                                                                   "exchange_movement_vc_main_tour_tc_subtour", 
+                                                                   route1, route2,  mov_list, mov_list_cost,  mov_list_cost_pen,
+                                                                   zeta, alpha, table_freq, counter_i)
+                                  mov_list <- res_mov$mov_list
+                                  mov_list_cost <- res_mov$mov_list_cost 
+                                  mov_list_cost_pen <- res_mov$mov_list_cost_pen 
+                                  
+                                }                        
                         }
                       }
                     }
@@ -719,14 +1151,16 @@ exchange_movement_vc_main_tour_tc_subtour<-function(input, result, mov_list, mov
   res <- list()
   res$mov_list <- mov_list
   res$mov_list_cost <- mov_list_cost 
+  res$mov_list_cost_pen  <- mov_list_cost_pen
+  
   return(res)
   
 }
 
 
 
-exchange_movement_tc_PTR_and_vc_in_main_tour<-function(input, result, mov_list, mov_list_cost, type_problem, vecinity, perc_vecinity, 
-                                                       penalty_capacity, zeta, alpha, table_freq, counter_i) {
+exchange_movement_tc_PTR_and_vc_in_main_tour<-function(input, result, mov_list, mov_list_cost, mov_list_cost_pen, type_problem, vecinity, perc_vecinity, 
+                                                       penalty_capacity, zeta, alpha, table_freq, counter_i, candidate_list) {
   for (i in 1:length(result)) {
     if ((result[[i]]$type == "PTR")) {
       for (j in 2:(length(result[[i]]$route)-1)) {
@@ -738,11 +1172,13 @@ exchange_movement_tc_PTR_and_vc_in_main_tour<-function(input, result, mov_list, 
               else main_root <- result[[z]]$route
               for (t in 2:(length(main_root)-1)) {
                   clientz <- main_root[t]
-                  if ((clientz <= input$n1)&&(sum(clientz==result[[z]]$route)==1)&&(is_in_vecinity(clienti, clientz, vecinity, perc_vecinity))) {
+                  if ((clientz <= input$n1)&&(sum(clientz==result[[z]]$route)==1)&&(is_in_vecinity(clienti, clientz, vecinity, perc_vecinity))&&(sum(candidate_list==clienti)>0)) {
                     if (result[[z]]$type == "CVR") main_root2 <- return_main_route(result[[z]]$route)
                     else main_root2 <- result[[z]]$route
-                    for (w in 2:(length(main_root2)-1)) {
-                      clientw <- main_root2[w]
+                    
+                    #for (w in 2:(length(main_root2)-1)) {
+                    #  clientw <- main_root2[w]
+                    clientw <- return_close_client(clienti, main_root2, vecinity)
                       if ((clientw <= input$n1)&&(clientw != clientz)) {
                         # new routes
                         route1 <- replace_route_client(clienti, clientz, result[[i]]$route)
@@ -757,12 +1193,15 @@ exchange_movement_tc_PTR_and_vc_in_main_tour<-function(input, result, mov_list, 
                           
                           res_mov <- add_movements_to_list(input, result, i, z,  c(clienti), c(clientz), 
                                                            "exchange_movement_tc_PTR_and_vc_in_main_tour", 
-                                                           route1, route2,  mov_list, mov_list_cost, zeta, alpha, table_freq, counter_i)
+                                                           route1, route2,  mov_list, mov_list_cost,  mov_list_cost_pen,
+                                                           zeta, alpha, table_freq, counter_i)
                           mov_list <- res_mov$mov_list
                           mov_list_cost <- res_mov$mov_list_cost 
+                          mov_list_cost_pen <- res_mov$mov_list_cost_pen 
+                          
                         }   
                       }
-                    }
+                    #}
                   }
               }
             }
@@ -775,20 +1214,21 @@ exchange_movement_tc_PTR_and_vc_in_main_tour<-function(input, result, mov_list, 
   res <- list()
   res$mov_list <- mov_list
   res$mov_list_cost <- mov_list_cost 
+  res$mov_list_cost_pen  <- mov_list_cost_pen
+  
   return(res)
   
 }
 
 
-exchange_movement_client_short_subtour_and_client_in_main_tour<-function(input, result, mov_list, mov_list_cost, type_problem, 
-                                                                         vecinity, perc_vecinity, penalty_capacity, zeta, alpha, table_freq, counter_i) {
+exchange_movement_client_short_subtour_and_client_in_main_tour<-function(input, result, mov_list, mov_list_cost, mov_list_cost_pen, type_problem, 
+                                                                         vecinity, perc_vecinity, penalty_capacity, zeta, alpha, table_freq, counter_i, candidate_list) {
 
   for (i in 1:length(result)) {
     if (result[[i]]$type == "CVR") {
       subroutes <- return_subroutes(result[[i]]$route, input$n1)
       for (s in 1:length(subroutes))  {
         if (length(subroutes[[s]]$tour)==3) {
-            
             clienti <- subroutes[[s]]$tour[2]
               for (z in 1:length(result)) {
                 if (i!=z) {
@@ -796,7 +1236,9 @@ exchange_movement_client_short_subtour_and_client_in_main_tour<-function(input, 
                     else route_z <- result[[z]]$route
                     for (t in 2:(length(route_z)-1)) {
                       clientz <- route_z[t]
-                      if ((clientz <= input$n1)&&(sum(clientz==result[[z]]$route)==1)&&(is_in_vecinity(clienti, clientz, vecinity, perc_vecinity))) {
+                      if ((clientz <= input$n1)&&(sum(clientz==result[[z]]$route)==1)
+                        &&(is_in_vecinity(clienti, clientz, vecinity, perc_vecinity))&&
+                          (sum(candidate_list==clienti)>0)&&(sum(candidate_list==clientz)>0)) {
                         if (result[[z]]$type == "PTR") {
                           # new routes
                           route1 <- replace_subroute_vc_2(subroutes[[s]], clientz, result[[i]]$route)
@@ -809,14 +1251,18 @@ exchange_movement_client_short_subtour_and_client_in_main_tour<-function(input, 
                           if (feasible_route1 && feasible_route2) {
                             res_mov <- add_movements_to_list(input, result, i, z,  c(clienti), c(clientz), 
                                                              "exchange_movement_client_short_subtour_and_client_in_main_tour", 
-                                                             route1, route2,  mov_list, mov_list_cost, zeta, alpha, table_freq, counter_i)
+                                                             route1, route2,  mov_list, mov_list_cost,  mov_list_cost_pen,
+                                                             zeta, alpha, table_freq, counter_i)
                             mov_list <- res_mov$mov_list
                             mov_list_cost <- res_mov$mov_list_cost 
+                            mov_list_cost_pen <- res_mov$mov_list_cost_pen 
+                            
                           }
                         }
                         else {
-                          for (w in 2:(length(route_z)-1)) {
-                            clientw <- route_z[w]
+                          #for (w in 2:(length(route_z)-1)) {
+                          #  clientw <- route_z[w]
+                            clientw <- return_close_client(clienti, route_z, vecinity)
                             if ((clientw <= input$n1)&&(clientw != clientz)) {
                                 # new routes
                                 #route1 <- replace_route_client_vc_subroute(clienti, clientz, result[[i]]$route)
@@ -831,12 +1277,15 @@ exchange_movement_client_short_subtour_and_client_in_main_tour<-function(input, 
 
                                   res_mov <- add_movements_to_list(input, result, i, z,  c(clienti), c(clientz),
                                                                    "exchange_movement_client_short_subtour_and_client_in_main_tour", 
-                                                                   route1, route2,  mov_list, mov_list_cost, zeta, alpha, table_freq, counter_i)
+                                                                   route1, route2,  mov_list, mov_list_cost,  mov_list_cost_pen,
+                                                                   zeta, alpha, table_freq, counter_i)
                                   mov_list <- res_mov$mov_list
                                   mov_list_cost <- res_mov$mov_list_cost 
+                                  mov_list_cost_pen <- res_mov$mov_list_cost_pen 
+                                  
                                 }
                             }
-                          } 
+                          #} 
                         }
                       }
                     }
@@ -851,13 +1300,14 @@ exchange_movement_client_short_subtour_and_client_in_main_tour<-function(input, 
   res <- list()
   res$mov_list <- mov_list
   res$mov_list_cost <- mov_list_cost
+  res$mov_list_cost_pen  <- mov_list_cost_pen
   
   return(res)
 }
 
 
-exchange_movement_client_subtour_and_vc_creating_subtour<-function(input, result, mov_list, mov_list_cost, type_problem, 
-                                                                   vecinity, perc_vecinity, penalty_capacity, zeta, alpha, table_freq, counter_i) {
+exchange_movement_client_subtour_and_vc_creating_subtour<-function(input, result, mov_list, mov_list_cost, mov_list_cost_pen, type_problem, 
+                                                                   vecinity, perc_vecinity, penalty_capacity, zeta, alpha, table_freq, counter_i, candidate_list) {
   
   for (i in 1:length(result)) {
     if (result[[i]]$type == "CVR") {
@@ -872,7 +1322,8 @@ exchange_movement_client_subtour_and_vc_creating_subtour<-function(input, result
                 for (ss in 1:length(subroutes2))  {
                   for (t in 2:(length(subroutes2[[ss]]$tour)-1)) {
                     clientz <- subroutes2[[ss]]$tour[t]
-                    if (( clientz <= input$n1)&&(is_in_vecinity(clienti, clientz, vecinity, perc_vecinity))) {
+                    if ((clientz <= input$n1) &&(is_in_vecinity(clienti, clientz, vecinity, perc_vecinity))&&
+                        (sum(candidate_list==clienti)>0)&&(sum(candidate_list==clientz)>0)) {
 
                           # new routes
                           route1 <- replace_route_client_vc_subroute(clienti, clientz, result[[i]]$route)
@@ -885,9 +1336,12 @@ exchange_movement_client_subtour_and_vc_creating_subtour<-function(input, result
                           if (feasible_route1 && feasible_route2) {
                             res_mov <- add_movements_to_list(input, result, i, z,  c(clienti), c(clientz),
                                                              "exchange_movement_client_subtour_and_vc_creating_subtour", 
-                                                             route1, route2,  mov_list, mov_list_cost, zeta, alpha, table_freq, counter_i)
+                                                             route1, route2,  mov_list, mov_list_cost, mov_list_cost_pen,
+                                                             zeta, alpha, table_freq, counter_i)
                             mov_list <- res_mov$mov_list
                             mov_list_cost <- res_mov$mov_list_cost 
+                            mov_list_cost_pen <- res_mov$mov_list_cost_pen 
+                            
                           }
                         
                     }
@@ -904,8 +1358,39 @@ exchange_movement_client_subtour_and_vc_creating_subtour<-function(input, result
   res <- list()
   res$mov_list <- mov_list
   res$mov_list_cost <- mov_list_cost 
-  
+  res$mov_list_cost_pen  <- mov_list_cost_pen
   return(res)
+}
+
+
+delete_node_in_route<-function(j, route) {
+  
+  delete_subtour <- 0
+  if ((j>2)&&(j<(length(route)-1))&&(route[j-1]==route[j+1])) delete_subtour <- 1
+  
+  if (!delete_subtour) {
+    route <- c(route[1:(j-1)], route[(j+1):length(route)])
+  }
+  else {
+    route <- c(route[1:(j-1)], route[(j+2):length(route)])
+  }
+  
+  return(route)
+}
+
+add_node_in_route<-function(pos, client, route) {
+  
+  route <- c(route[1:pos[1]], client, route[(pos[1]+1):length(route)])
+  
+  return(route)
+}
+
+
+add_subroute_mov<-function(pos, client, route) {
+  
+  route <- c(route[1:pos[1]], client, route[(pos[1]):length(route)])
+  
+  return(route)
 }
 
 
@@ -1127,69 +1612,58 @@ split_subroute<-function(clienti, route){
 
 
 add_movements_to_list<-function(input, result, indexr1, indexr2, client1, client2, string, 
-                                route1, route2, mov_list, mov_list_cost, zeta, alpha, table_freq, counter_i) {
+                                route1, route2, mov_list, mov_list_cost, mov_list_cost_pen, zeta, alpha, table_freq, counter_i) {
   
   if ((length(route2)>1))  {
     # type
     new_type1 <- check_new_type(result[[indexr1]]$type, route1, input)
-    # penalty_inf
-    penalty_inf <- alpha * calc_penalty_unique(input, new_type1, route1)
     # penalty_freq
-    penalty_freq <- 0
-    #if ((zeta!=0)&&(alpha!=0)) {
-    #    for (i in 1:length(client1)) {
-    #      penalty_freq <- penalty_freq + return_table_freq(table_freq, client1[i], indexr1)
-    #    }
-    #    penalty_freq <- 1 + zeta * penalty_freq / counter_i
-    #    # cost
-    #    cost1 <-  (local_cost(route1, input$matriz.distancia) + penalty_inf) * penalty_freq
-    #} else {
+    if ((zeta!=0)&&(alpha!=0)) {
+        penalty_freq <- 0
+        for (i in 1:length(client1)) {
+          penalty_freq <- penalty_freq + return_table_freq(table_freq, client1[i], indexr1)
+        }
+        if (length(client2)&&(client2!=0)) {
+          for (i in 1:length(client2)) {
+            penalty_freq <- penalty_freq + return_table_freq(table_freq, client2[i], indexr2)
+          }
+        }
+        penalty_freq <- 1 + zeta * penalty_freq / counter_i
         # cost
-     #   cost1 <-  (local_cost(route1, input$matriz.distancia) + penalty_inf) 
-    #}
-    
-    # type
-    new_type2 <- check_new_type(result[[indexr2]]$type, route2, input)
-    # penalty_inf
-    penalty_inf <- alpha * calc_penalty_unique(input, new_type2, route2)
-    # penalty_freq
-    #penalty_freq <- 0
-    #if ((zeta!=0)&&(alpha!=0)) {
-      
-    #    for (i in 1:length(client2)) {
-    #      penalty_freq <- penalty_freq + return_table_freq(table_freq, client2[i], indexr2)
-    #    }
-    #    penalty_freq <- 1 + zeta * penalty_freq / counter_i
+        result[[indexr1]]$route <- route1
+        result[[indexr2]]$route <- route2
+        new_cost <- calculateTotalDistanceTS(input, alpha, result)
+        new_cost_pen <- calculateTotalDistanceTS(input, alpha, result) * penalty_freq
+    } else {
         # cost
-    #    cost2 <-  (local_cost(route2, input$matriz.distancia) + penalty_inf) * penalty_freq
-    #} else {
-        # cost
-        cost2 <-  (local_cost(route2, input$matriz.distancia) + penalty_inf)
-    #}
-    
-    result[[indexr1]]$route <- route1
-    result[[indexr2]]$route <- route2
-    new_cost <- calculateTotalDistanceTS(input, alpha, result)
+        result[[indexr1]]$route <- route1
+        result[[indexr2]]$route <- route2
+        new_cost <- calculateTotalDistanceTS(input, alpha, result)  
+        new_cost_pen <- 0
+    }
+
   }
   else {
     
     # type
     new_type1 <- check_new_type(result[[indexr1]]$type, route1, input)
-    # penalty_inf
-    penalty_inf <- alpha * calc_penalty_unique(input, new_type1, route1)
     # penalty_freq
-    #penalty_freq <- 0
-    #if ((zeta!=0)&&(alpha!=0)) {
-    #  for (i in 1:length(client1)) {
-    #    penalty_freq <- penalty_freq + return_table_freq(table_freq, client1[i], indexr1)
-    #  }
-    #  penalty_freq <- 1 + zeta * penalty_freq / counter_i
+    if ((zeta!=0)&&(alpha!=0)) {
+      penalty_freq <- 0
+      for (i in 1:length(client1)) {
+        penalty_freq <- penalty_freq + return_table_freq(table_freq, client1[i], indexr1)
+      }
+      penalty_freq <- 1 + zeta * penalty_freq / counter_i
       # cost
-    #  cost1 <-  (local_cost(route1, input$matriz.distancia) + penalty_inf) * penalty_freq
-    #} else {
+      result[[indexr1]]$route <- route1
+      new_cost <- calculateTotalDistanceTS(input, alpha, result)
+      new_cost_pen <- calculateTotalDistanceTS(input, alpha, result) * penalty_freq
+    } else {
       # cost
-    #  cost1 <-  (local_cost(route1, input$matriz.distancia) + penalty_inf) 
-    #}
+      result[[indexr1]]$route <- route1
+      new_cost <- calculateTotalDistanceTS(input, alpha, result)    
+      new_cost_pen <-0  
+    }
 
     result[[indexr1]]$route <- route1
     new_cost <- calculateTotalDistanceTS(input, alpha, result)
@@ -1206,10 +1680,12 @@ add_movements_to_list<-function(input, result, indexr1, indexr2, client1, client
   mov_list[[counter]]$client1 <- client1
   mov_list[[counter]]$client2 <- client2
   mov_list_cost[[counter]] <- new_cost
+  mov_list_cost_pen[[counter]] <- new_cost_pen
 
   res <- list()
   res$mov_list <- mov_list
   res$mov_list_cost <- mov_list_cost
+  res$mov_list_cost_pen <- mov_list_cost_pen
   
   return(res)
 }
@@ -1235,4 +1711,18 @@ is_in_vecinity<-function(clienti, clientw, vecinity, perc_vecinity){
   
   if (sum(clientw %in% local_vecinity)) return (1)
   else return (0)
+}
+
+
+return_close_client<-function(clienti, route, vecinity) {
+  
+  index <- Inf
+  for (i in 2:(length(route)-1)) {
+    index_i <- which(vecinity[[clienti]] == route[i])
+    if (index_i < index) {
+      index <- index_i
+    }
+  }
+  
+  return(vecinity[[clienti]][index])
 }

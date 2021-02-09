@@ -42,6 +42,7 @@ check_feasibility<-function(routes_res, route, input, type_root, type_problem, p
     
   if (type_problem == "TTRP") {
     load1 <- calc_load2(route, input$vector.demandas)
+    
     if (type_root == "PTR") total_capacity <- input$capacidad.truck + penalty_capacity
     else total_capacity <- input$capacidad.vehiculo + penalty_capacity
     subroute_total_capacity <- input$capacidad.truck + penalty_capacity
@@ -94,7 +95,7 @@ check_capacity_TTRP_total_routes_res<-function(routes_res_i, routes_res_j, input
   return(check_capacity_TTRP_total_routes(route_i, route_j, input, total_capacity))
 }
 
-check_capacity_total_routes<-function(route_i, route_j, input, total_capacity, type_problem) {
+check_capacity_total_routes<-function(route_i, route_j, input, total_capacity, penalty_max, type_problem) {
   
   if (type_problem == "TTRP") {
     load1 <- calc_load2(route_i, input$vector.demandas)
@@ -109,7 +110,7 @@ check_capacity_total_routes<-function(route_i, route_j, input, total_capacity, t
     
   new_load <- load1 + load2
   
-  if (new_load <= total_capacity) {
+  if (new_load <= (total_capacity+penalty_max)) {
     
     return(1)
     

@@ -2,64 +2,82 @@ MCTTRP_opt_method<-function(result, initial_solution, input, init_time, type_pro
   
     # init parameters
     stopping_conditions <- 0
+    penalty_max <- 100
     iter <- 1
-    perc_v <- 1 #0.25
     alpha <- 1
-
+    
+    # tabu search
+    current_cost <- calculateTotalDistanceTS(input, alpha, initial_solution)
+    res_tabu <- tabu_search (input, initial_solution, current_cost, current_cost, 
+                             type_problem, input$max_iter, iter, 1, penalty_max)
+    current_solution <- res_tabu$current_solution
+    current_cost <- res_tabu$current_cost
     # init best solution
-    bestsolution <- initial_solution 
-    bestcost <- calculateTotalDistanceTS(input, alpha, initial_solution)
-    
-    # init current solution
-    current_solution <- bestsolution
-    current_cost <- bestcost
-    
+    bestsolution <- current_solution 
+    bestcost <- current_cost
+    bestcost_f <- Inf
     # print init output
     print(paste0("fobj ", bestcost, " iter ", 0, " time ", difftime(Sys.time(), init_time, units = "secs")))
     
+    no_improv_counter <- 0
     
     while (!stopping_conditions) {
 
       start_time <- Sys.time()
       
       # perturbation
-      res_p <- perturbation_core(input, current_solution, type_problem)
+      res_p <- perturbation_core(input, current_solution, penalty_max, type_problem)
       current_solution <- res_p$current_solution
       phi <- res_p$phi
       
       # improvement
-      current_solution <- result_improvement(input, current_solution)
+      current_solution <- result_improvement(input, current_solution, type_problem)
       current_cost <- calculateTotalDistanceTS(input, alpha, current_solution)
       
       # tabu search
-      res_tabu <- tabu_search (input, current_solution, current_cost, type_problem, perc_v, input$max_iter, iter, phi)
+      res_tabu <- tabu_search (input, current_solution, current_cost, bestcost, type_problem, input$max_iter, iter, phi, penalty_max)
       current_solution <- res_tabu$current_solution
       current_cost <- res_tabu$current_cost
+      candidate_best_f_solution <- res_tabu$best_f_solution
+      candidate_best_f_cost <- res_tabu$best_f_cost
       
+      print("output")
+      print(current_cost)
+      print(bestcost_f)
+      print(candidate_best_f_cost)
       # best solution
       newcost <- calculateTotalDistanceTS(input, alpha, current_solution)
-      if (bestcost >  newcost) {
-            bestsolution <- current_solution 
-            bestcost <- newcost
+      if ((bestcost_f >  candidate_best_f_cost)) {
+                bestsolution_f <- candidate_best_f_solution 
+                bestcost_f <- candidate_best_f_cost
       }
+      
+      if ((bestcost >  current_cost)) {
+        bestsolution <- current_solution 
+        bestcost <- current_cost
+      }
+      else no_improv_counter <- no_improv_counter + 1
       
       # return to the best solution
-      if (runif(1) < (iter/input$max_iter)^2) {
+      if ((runif(1) < (iter/input$max_iter)^2)&&(no_improv_counter > 10)) {
             current_solution <- bestsolution
             current_cost <- bestcost
-      }
+            no_improv_counter <- 0
+      } 
       
-      print(paste0("fobj ", newcost, " infea ", calc_penalty(input, current_solution), " iter ", iter, " (best fobj ", bestcost , ") perc_v ", perc_v , " time ", difftime(Sys.time(), init_time, units = "secs"), " s"))
-      
+      print("")
+      print(paste0("fobj ", current_cost, " infea ", calc_penalty(input, current_solution), " iter ", iter, " (best fobj ", bestcost_f ,
+                   " unfea ", calc_penalty(input, bestsolution_f) , " ) time ", difftime(Sys.time(), init_time, units = "secs"), " s"))
+      #readline()
 
       # check stopping conditions
-      stopping_conditions <- check_stoppping_conditions(iter, init_time, newcost, input)
+      stopping_conditions <- check_stoppping_conditions(iter, init_time, bestcost, input)
     
       iter <- iter + 1
     }
     
     
-    return(bestsolution)
+    return(bestsolution_f)
 }
 
 
@@ -135,18 +153,20 @@ calculateTotalDistanceTS <- function(input, alpha, routes_res){
   return(FS)
 }
 
-update_penalties <- function(input, alpha, gamma, current_solution){
 
+update_penalties <- function(input, alpha, gamma, current_solution){
+  
   feasibility <- calc_penalty(input, current_solution)
   
   #print(paste0("CALIBRATE PENALTIES: current solution pen -> ", feasibility, " gamma ", gamma, " alpha ", alpha))
   if (feasibility > 0) {
-    alpha <- ( 1 + gamma) * alpha
+    alpha <- min(( 1 + gamma) * alpha, 100)
   }
   else {
-    alpha <- ( 1 + gamma) / alpha
+    alpha <- max(( 1 + gamma) / alpha, 0.01)
   }
   
   return(alpha)
 }
+
 

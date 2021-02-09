@@ -6,6 +6,8 @@ boolean_available_compartments_destination_route <- function(input, result, inte
   total_truck_hoppers <- dim(result$H.camion_res)[2]
   total_trailer_hoppers <- dim(result$H.trailer_res)[2]
   
+  # penalizacion
+  
   capacity_trailer_hoppers <- input$h.trailer[1]
   capacity_truck_hoppers <- input$h.camion[1]
   

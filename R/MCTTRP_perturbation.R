@@ -1,24 +1,26 @@
 #perturbacion
-perturbation_core<-function(input, current_solution, type_problem) {
+perturbation_core<-function(input, current_solution, penalty_max, type_problem) {
   
   perturbation_not_obtained <- TRUE
   counter_p <- 1
-  while ((perturbation_not_obtained) && (counter_p < 5)) {
-    print("perturbation_core")
-    perturbed_solution <-  perturbation(input, current_solution, type_problem)
+  
+  while ((perturbation_not_obtained)&&(counter_p < 5)) {
+    perturbed_solution <-  perturbation(input, current_solution, 0, type_problem)
     current_solution <- perturbed_solution[["perturbed_solution"]]
     perturbation_not_obtained <- perturbed_solution$perturbation_not_obtained
     phi <- perturbed_solution$phi
     counter_p <- counter_p + 1
   }
-  
-  if (perturbation_not_obtained) {
-    print("full_random_perturbation")
-    res_perturb <- full_random_perturbation(input, current_solution, type_problem, 0.5)
-    current_solution <- res_perturb$current_solution
-    phi <- res_perturb$phi
-  }
 
+  if (perturbation_not_obtained) {
+    while ((perturbation_not_obtained)) {
+      perturbed_solution <-  perturbation(input, current_solution, penalty_max, type_problem)
+      current_solution <- perturbed_solution[["perturbed_solution"]]
+      perturbation_not_obtained <- perturbed_solution$perturbation_not_obtained
+      phi <- perturbed_solution$phi
+      counter_p <- counter_p + 1
+    }
+  }
   current_solution <- update_solution(current_solution, input, type_problem)
   
   res_p <- list()
@@ -30,30 +32,38 @@ perturbation_core<-function(input, current_solution, type_problem) {
 
 # Aqui como argumento de entrada le habr?a que pasar una soluci?n "rutas_des" por ejemplo
 # y la salida debe ser una soluci?n perturbada: "rutas_des_perturb"
-full_random_perturbation<-function(input, current_solution, type_problem, perc_v)  {
+full_random_perturbation<-function(input, current_solution, type_problem, perc_v, penalty_capacity)  {
   
-  n_random_of_movs <- sample(1:5,1)
+  n_random_of_movs <- sample(2:5,1)
+  alpha <- 1
+  gamma <- runif(1)
   
   counter_movs <- 0
+  candidate_list <- sample(1:input$n, sample(ceiling(input$n/10):input$n, 1))
+  current_cost <- calculateTotalDistanceTS(input, alpha, current_solution)
+  
   while (counter_movs < n_random_of_movs) {
     
-    res <- movements_imp(input, current_solution, type_problem, input$vecinity, perc_v, 0, 0, 0, list(), 1)
+    prev_cost  <- current_cost
+    
+    res <- movements_imp(input, current_solution, type_problem, input$vecinity, perc_v, penalty_capacity, 0, 0, list(), 1, candidate_list)
     mov_list <- res$mov_list
     mov_list_cost <- res$mov_list_cost
+    mov_list_cost_pen <- res$mov_list_cost_pen
     
     if (length(mov_list_cost)) {
 
-      mov_list_cost_vect <- c(mov_list_cost[[1]])
-      for (i in 2:length(mov_list_cost)) mov_list_cost_vect <- c(mov_list_cost_vect ,mov_list_cost[[i]] )
-      index_order <- order(mov_list_cost_vect, decreasing = FALSE)
-      index_r <- sample(1:(length(index_order/4)), (length(index_order/4)))
+      index_order <- order_movs(mov_list_cost_pen)
       
+      index_r <- sample(1:(length(index_order)), (length(index_order)))
       
       current_solution <- insert_selected_mov(input, mov_list[[index_order[index_r[1]]]] , current_solution, type_problem)
 
-      #print(paste0("ADD ", mov_list[[index_order[index_r[1]]]]$mov_name))
-        
-      counter_movs <- counter_movs + 1
+      alpha <- update_penalties(input,  alpha, gamma, current_solution)
+      current_solution <- result_improvement(input, current_solution, type_problem)
+      current_cost <- calculateTotalDistanceTS(input, alpha, current_solution)
+      
+      if (prev_cost != current_cost) counter_movs <- counter_movs + 1
     }
     else counter_movs <- n_random_of_movs
   }
@@ -68,7 +78,7 @@ full_random_perturbation<-function(input, current_solution, type_problem, perc_v
 
 
 
-perturbation <- function(input, initial_solution, problem_type){
+perturbation <- function(input, initial_solution,penalty_max, problem_type){
 
   initial_solution <- update_solution(initial_solution, input, problem_type)
   intermediate_solution <- initial_solution
@@ -214,7 +224,7 @@ perturbation <- function(input, initial_solution, problem_type){
               res <- return_cap_and_route_permutation(candidate_destination_route, input, "MCTTRP")
               tcap <- res$tcap
               route <- res$route
-              if (check_capacity_total_routes(inserting_client, route, input, tcap, "MCTTRP"))
+              if (check_capacity_total_routes(inserting_client, route, input, tcap, penalty_max, "MCTTRP"))
                 avail <- boolean_available_compartments_destination_route(input, result, intermediate_solution, 
                                                                           inserting_client, candidate_destination_route, initial_solution)
             }
@@ -222,7 +232,7 @@ perturbation <- function(input, initial_solution, problem_type){
               res <- return_cap_and_route_permutation(candidate_destination_route, input, "TTRP")
               tcap <- res$tcap
               route <- res$route
-              avail <- check_capacity_total_routes(c(inserting_client), route, input, tcap, "TTRP")
+              avail <- check_capacity_total_routes(c(inserting_client), route, input, tcap,penalty_max, "TTRP")
             }
             
             if(avail){ 
@@ -254,7 +264,8 @@ perturbation <- function(input, initial_solution, problem_type){
                 res <- return_cap_and_route_permutation(candidate_destination_route, input, "MCTTRP")
                 tcap <- res$tcap
                 route <- res$route
-                if (check_capacity_total_routes(inserting_client, route, input, tcap, "MCTTRP"))
+                # meter penalizacion
+                if (check_capacity_total_routes(inserting_client, route, input, tcap, penalty_max, "MCTTRP"))
                   avail <- boolean_available_compartments_destination_route(input, result, intermediate_solution, 
                                                                             inserting_client, candidate_destination_route, initial_solution)
               }
@@ -262,7 +273,8 @@ perturbation <- function(input, initial_solution, problem_type){
                 res <- return_cap_and_route_permutation(candidate_destination_route, input, "TTRP")
                 tcap <- res$tcap
                 route <- res$route
-                avail <- check_capacity_total_routes(inserting_client, route, input, tcap, "TTRP")
+                # meter penalizacion
+                avail <- check_capacity_total_routes(inserting_client, route, input, tcap, penalty_max, "TTRP")
               }
               
               if(avail){ 
