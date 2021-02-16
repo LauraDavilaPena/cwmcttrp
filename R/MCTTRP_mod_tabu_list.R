@@ -107,7 +107,7 @@ print_tabu_list<-function(tabulist){
 # create_tabu_list
 create_tabu_list<-function(){
   tabulist <- list()
-  tabulist$max_size_tabu_list <- 1000
+  tabulist$max_size_tabu_list <- 100
   tabulist$tabu_list_clients<- list()
   tabulist$tabu_list_routes<- list()
   tabulist$tabu_list_counters<- list()

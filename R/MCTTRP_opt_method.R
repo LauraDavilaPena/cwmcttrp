@@ -8,16 +8,34 @@ MCTTRP_opt_method<-function(result, initial_solution, input, init_time, type_pro
     
     # tabu search
     current_cost <- calculateTotalDistanceTS(input, alpha, initial_solution)
+    
+    # best options
+    bestsolution <- initial_solution 
+    bestcost <- current_cost
+    bestsolution_f <- initial_solution
+    bestcost_f <- current_cost    
+    
     res_tabu <- tabu_search (input, initial_solution, current_cost, current_cost, 
                              type_problem, input$max_iter, iter, 1, penalty_max)
     current_solution <- res_tabu$current_solution
     current_cost <- res_tabu$current_cost
-    # init best solution
-    bestsolution <- current_solution 
-    bestcost <- current_cost
-    bestcost_f <- Inf
+    candidate_best_f_solution <- res_tabu$best_f_solution
+    candidate_best_f_cost <- res_tabu$best_f_cost
+    
+    # best solution
+    newcost <- calculateTotalDistanceTS(input, alpha, current_solution)
+    if ((bestcost_f >  candidate_best_f_cost)) {
+      bestsolution_f <- candidate_best_f_solution 
+      bestcost_f <- candidate_best_f_cost
+    }
+    
+    if ((bestcost >  current_cost)) {
+      bestsolution <- current_solution 
+      bestcost <- current_cost
+    }
+    
     # print init output
-    print(paste0("fobj ", bestcost, " iter ", 0, " time ", difftime(Sys.time(), init_time, units = "secs")))
+    print(paste0("fobj ", bestcost_f, " iter ", 0, " time ", difftime(Sys.time(), init_time, units = "secs")))
     
     no_improv_counter <- 0
     
@@ -41,10 +59,6 @@ MCTTRP_opt_method<-function(result, initial_solution, input, init_time, type_pro
       candidate_best_f_solution <- res_tabu$best_f_solution
       candidate_best_f_cost <- res_tabu$best_f_cost
       
-      print("output")
-      print(current_cost)
-      print(bestcost_f)
-      print(candidate_best_f_cost)
       # best solution
       newcost <- calculateTotalDistanceTS(input, alpha, current_solution)
       if ((bestcost_f >  candidate_best_f_cost)) {
@@ -65,7 +79,7 @@ MCTTRP_opt_method<-function(result, initial_solution, input, init_time, type_pro
             no_improv_counter <- 0
       } 
       
-      print("")
+      #print("")
       print(paste0("fobj ", current_cost, " infea ", calc_penalty(input, current_solution), " iter ", iter, " (best fobj ", bestcost_f ,
                    " unfea ", calc_penalty(input, bestsolution_f) , " ) time ", difftime(Sys.time(), init_time, units = "secs"), " s"))
       #readline()
@@ -151,6 +165,17 @@ calculateTotalDistanceTS <- function(input, alpha, routes_res){
   FS  <- cost+alpha*calc_penalty(input, routes_res)
   
   return(FS)
+}
+
+calculateTotalDistanceTS_nopen <- function(input, routes_res){
+  route <- all_routes(routes_res)
+  
+  cost <- 0
+  for (i in 1:(length(route)-1)){
+    cost <- cost + input$matriz.distancia[route[i]+1, route[i+1]+1]
+  }
+  
+  return(cost)
 }
 
 

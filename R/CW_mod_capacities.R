@@ -1,12 +1,23 @@
 calc_penalty<-function(input, routes_res) {
   
   exc <- 0
+  # CARGA TOTAL
   for (i in 1:length(routes_res)) {
     if (routes_res[[i]]$type != "PTR") {
       exc <- exc +  max(0, calc_load2(routes_res[[i]]$route, input$vector.demandas) - input$capacidad.vehiculo)
     }
     else {
       exc <- exc + max(0, calc_load2(routes_res[[i]]$route, input$vector.demandas) - input$capacidad.truck)
+    }
+  }
+  
+  for (i in 1:length(routes_res)) {
+    if ((sum(duplicated(routes_res[[i]]$route[2:(length(routes_res[[i]]$route)-1)])))) {
+      subroutes <- return_subroutes(routes_res[[i]]$route, input$n1)
+      for (s in 1:length(subroutes)) {
+        subroute_i <- subroutes[[s]]$tour[2:(length(subroutes[[s]]$tour)-1)]
+        exc <- exc + max(0, calc_load2(subroute_i, input$vector.demandas) - input$capacidad.truck)
+      }
     }
   }
   
@@ -29,10 +40,8 @@ check_feasibility<-function(routes_res, route, input, type_root, type_problem, p
   all_vc <- 1
   subroutes <- 0
 
-  for (i in 2:(length(route)-1)) {
-    if (route[i] >  input$n1) all_vc <- 0
-    if (sum(route==route[i])>1) subroutes <- 1
-  }
+  all_vc <- sum(route[2:(length(route)-1)]>input$n1) == length(route)
+  subroutes <- sum(duplicated(route[2:(length(route)-1)]))
 
   # determine new type
   if ((all_vc)&&(!subroutes)&&(type_root == "CVR")) type_root <- "PVR"
@@ -52,7 +61,7 @@ check_feasibility<-function(routes_res, route, input, type_root, type_problem, p
     load1 <- calc_load2_MC(route, input$matriz.demandas)
     if (type_root == "PTR") total_capacity <- input$capacidad.truck[1] + penalty_capacity
     else total_capacity <- input$capacidad.vehiculo[1] + penalty_capacity
-    subroute_total_capacity <- input$capacidad.truck[1] + penalty_capacity
+    subroute_total_capacity <- input$capacidad.truck[1]  + penalty_capacity
   }
 
   # check total load

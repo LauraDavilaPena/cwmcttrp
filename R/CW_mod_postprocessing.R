@@ -2379,44 +2379,38 @@ add_to_route_TTRP<-function(R, rutas, ruta_origin, position, newclient) {
 }
 
 
-improvement_CW <- function(input, current_solution, type_problem){
+descent_search <- function(input, current_solution, type_problem){
   
   current_solution <- update_solution(current_solution, input, type_problem)
   
   # Partimos de una solucion perturbada
   counter <- 1
-  
-  n_movs <- 100
-  
+  changed_list <- 1:length(current_solution)
   # improvement
-  exist <- 0
+  no_more_imp <- 0
   
-  for (nn in 1:n_movs) {
+  while (!no_more_imp) {
     
     current_solution <- result_improvement(input, current_solution, type_problem)
     current_cost <- calculateTotalDistanceTS(input, 0, current_solution)
     
-    
-    res <- movements_imp(input, current_solution, type_problem, input$vecinity, 1, 0, 0, 0, list(), 1, 1:input$n)
-    mov_list <- res$mov_list
-    mov_list_cost <- res$mov_list_cost
-    
-    
+    mov_list <- list()
+      
+    mov_list <- movements_imp(mov_list, input, current_solution, type_problem, input$vecinity, 1, 0, changed_list, 1)
+    mov_list <- evaluate_cost_mov_list(input, mov_list, changed_list, current_solution, 0)
+      
     #concert list to vector
-    if (length(mov_list_cost)) {
-      mov_list_cost_vect <- c(mov_list_cost[[1]])
-      for (i in 2:length(mov_list_cost)) mov_list_cost_vect <- c(mov_list_cost_vect ,mov_list_cost[[i]] )
+    if (length(mov_list)) {
       
-      index_order <- order(mov_list_cost_vect, decreasing = FALSE)
-      
-      print(mov_list_cost_vect[index_order[1]])
-      if ((mov_list_cost_vect[index_order[1]]<current_cost)) {
-          current_solution <- insert_selected_mov(input, mov_list[[index_order[1]]] , current_solution, type_problem)
-      } else break
+      index_order <- order_movs(mov_list, "cost")
+
+      if ((mov_list[[index_order[1]]]$mov_list_cost < current_cost)) {
         
-    } else break
-    
-    counter <- counter + 1
+          current_solution <- insert_selected_mov(input, mov_list[[index_order[1]]] , current_solution, type_problem)
+      
+      } else no_more_imp <- 1
+        
+    } else no_more_imp <- 1
   }
   
   return(current_solution)

@@ -204,7 +204,7 @@ coste.total<-0
 for(i in 1:(length(rutas)-1)){ coste.total<-coste.total+matriz.distancia[rutas[i]+1,rutas[i+1]+1] }
 result <- createFinalResult_TTRP(rutas,  coste.total, matriz.distancia, rutas_res, vector.demandas, input)
 
-rutas_res <- improvement_CW(input, result$result_res, "TTRP")
+rutas_res <- descent_search(input, result$result_res, "TTRP")
 rutas <- all_routes(rutas_res)
 
 coste.total<-0
