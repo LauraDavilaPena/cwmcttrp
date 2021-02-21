@@ -25,9 +25,10 @@ tabu_search <- function(input, current_solution, current_cost, best_cost, type_p
   perc_v <- 1 #max (min (rnorm(1, mean = 0.3, sd = 0.1), 1.0), 0.1)
   mov_list <- list()
   
+
   while ( counter_not_improve < stop_tabu) {
 
-        
+      start_time <- Sys.time()
       if (real_iterations %% num_imp_iter == (num_imp_iter-1)) {
         current_solution <- result_improvement(input, current_solution, type_problem)
         #current_solution <- descending_search(input, current_solution, type_problem)
@@ -35,26 +36,36 @@ tabu_search <- function(input, current_solution, current_cost, best_cost, type_p
       current_solution <- update_solution(current_solution, input, type_problem)
       current_cost <- calculateTotalDistanceTS(input, alpha, current_solution)
       
-      start_time <- Sys.time()
+      #print(paste0("   improvement state ", difftime(Sys.time(), start_time, units = "secs")))
+      #start_time <- Sys.time()
       
-      print("init")
-      print(length(mov_list))
-      readline()
       mov_list <- movements_imp(mov_list, input, current_solution, type_problem, vecinity, perc_v, 
                                 tabulist_data$penalty_capacity, changed_routes, 0)
       
-      print(paste0("   movements_imp ", difftime(Sys.time(), start_time, units = "secs")))
-      start_time <- Sys.time()
+      #print(paste0("   movements_imp ", difftime(Sys.time(), start_time, units = "secs")))
+      #start_time <- Sys.time()
+      
       mov_list <- evaluate_cost_mov_list(input, mov_list, changed_routes, current_solution, alpha)
       
-      print(paste0("   evaluate_cost_mov_list ", difftime(Sys.time(), start_time, units = "secs")))
-      print(length(mov_list))
-      readline()
+      #print(paste0("   evaluate_cost_mov_list ", difftime(Sys.time(), start_time, units = "secs")))
+      #start_time <- Sys.time()
       
       #concert list to vector
+      
       if (length(mov_list)) {
           
           index_order <- order_movs(mov_list, "cost")
+          
+          
+          mov_list_cost_vect <- c(mov_list[[1]]$mov_list_cost)
+          if (length(mov_list)>1) {
+            for (i in 2:length(mov_list)) {
+              mov_list_cost_vect <- c(mov_list_cost_vect, mov_list[[i]]$mov_list_cost)
+            }
+          }
+
+          
+          
           counter_index_order <- 1
           not_in_tabu_list <- 0
           enter_penalty_loop <- 0
@@ -66,8 +77,6 @@ tabu_search <- function(input, current_solution, current_cost, best_cost, type_p
               not_in_tabu_list <- 1
               if ( mov_list[[index_order[counter_index_order]]]$mov_list_cost < current_cost ) {
                   
-                  print(paste0(" mov_list_cost ", length(mov_list), " ", mov_list[[index_order[counter_index_order]]]$indexr1 , 
-                             " ", mov_list[[index_order[counter_index_order]]]$indexr2))
                 
                   changed_routes <- modified_changed_list(changed_routes, mov_list[[index_order[counter_index_order]]]$indexr1 , 
                                                                           mov_list[[index_order[counter_index_order]]]$indexr2 )
@@ -87,7 +96,9 @@ tabu_search <- function(input, current_solution, current_cost, best_cost, type_p
           }
           
           if (enter_penalty_loop){
+
                 mov_list <- update_cost_pen(mov_list, tabulist_data$table_freq, zeta, alpha, counter_i)
+                
                 index_order2 <- order_movs(mov_list, "cost_pen")
 
                 counter_index_order2 <- 1
@@ -96,8 +107,6 @@ tabu_search <- function(input, current_solution, current_cost, best_cost, type_p
               while((enter_penalty_loop)&&(!not_in_tabu_list)&&(counter_index_order2 <= length(index_order2)))  {
                 if ((!check_result_in_tabu_list(tabulist_data$tabulist, mov_list, index_order2, counter_index_order2, best_local_cost))) {
                       
-                      print(paste0(" mov_list_pen ", length(mov_list), " ", mov_list[[index_order2[counter_index_order2]]]$indexr1 , 
-                               " ", mov_list[[index_order2[counter_index_order2]]]$indexr2))
                   
                       not_in_tabu_list <- 1
                       changed_routes <- modified_changed_list(changed_routes, 
@@ -120,6 +129,9 @@ tabu_search <- function(input, current_solution, current_cost, best_cost, type_p
           
       } else stop <- 1
 
+      #print(paste0("   loop_cost ", difftime(Sys.time(), start_time, units = "secs")))
+      #start_time <- Sys.time()
+      
       current_solution <- update_solution(current_solution, input, type_problem)
       current_cost <- calculateTotalDistanceTS(input, alpha, current_solution)
       if ((current_cost < best_local_cost)) { #&&(!calc_penalty(input, current_solution))) {
@@ -140,6 +152,9 @@ tabu_search <- function(input, current_solution, current_cost, best_cost, type_p
         
       alpha <- update_penalties(input,  alpha, gamma, current_solution)
       tabulist_data$tabulist <- update_counters_tabu_list(tabulist_data$tabulist)
+      
+      #print(paste0("   end iteration ", difftime(Sys.time(), start_time, units = "secs")))
+      #print("")
   }
   
   result <- list()
@@ -148,6 +163,7 @@ tabu_search <- function(input, current_solution, current_cost, best_cost, type_p
   result$best_f_solution <- best_f_solution
   result$best_f_cost <- best_f_cost
   
+
   return(result)
 }
 
@@ -364,6 +380,19 @@ movements_imp <- function(mov_list, input, current_solution, type_problem, vecin
 }
 
 
+movements_imp_move <- function(mov_list, input, current_solution, type_problem, vecinity, perc_vecinity, penalty_capacity, changed_routes, check_feas) {
+
+  # move function
+  mov_list <- move_tc(input, current_solution, mov_list, changed_routes, type_problem, vecinity, perc_vecinity, 
+                      penalty_capacity, check_feas)  
+
+  # move function
+  mov_list <- move_vc(input, current_solution, mov_list, changed_routes, type_problem, vecinity, perc_vecinity, 
+                      penalty_capacity, check_feas) 
+  
+  return(mov_list)
+}
+
 
 insert_selected_mov<-function(input, mov, current_solution, type_problem){
 
@@ -442,7 +471,7 @@ exchange_tc_two_routes<-function(input, result, mov_list, changed_routes, type_p
           clienti <- result[[i]]$route[j]
           if (clienti > input$n1) {
             for (w in (i+1):length(result)) {
-              if ((result[[w]]$type != "PVR")&&((w %in% changed_routes)||(i %in% changed_routes))) {
+              if ((result[[w]]$type != "PVR")&&(i!=w)&&((w %in% changed_routes)||(i %in% changed_routes))) {
                 for (t in 2:(length(result[[w]]$route)-1)) {
                   if ( sum(result[[w]]$route == result[[w]]$route[t]) == 1 ) {
                     clientw <- result[[w]]$route[t]
@@ -763,12 +792,12 @@ move_vc_client_subroute_to_main_tour_and_split_same_route<-function(input, resul
 move_subroute<-function(input, result, mov_list, changed_routes, type_problem, penalty_capacity, check_feas) {
   
   for (i in 1:length(result)) {
-    if ((result[[i]]$type == "CVR")&&(i %in% changed_routes)) {
+    if (result[[i]]$type == "CVR") {
       subroutes <- return_subroutes(result[[i]]$route, input$n1)
       for (s in 1:length(subroutes))  {
         subroutei <- subroutes[[s]]$tour
         for (z in 1:length(result)) {
-          if ((i!=z)&&(result[[z]]$type != "PTR")) {
+          if ((i!=z)&&(result[[z]]$type != "PTR")&&((i %in% changed_routes)||(z %in% changed_routes))) {
             if (result[[z]]$type == "CVR") main_root <- return_main_route(result[[z]]$route)
             else main_root <- result[[z]]$route
             for (t in 2:(length(main_root)-1)) {
@@ -1419,21 +1448,6 @@ split_subroute<-function(clienti, route){
 add_movements_to_list<-function(input, indexr1, indexr2, client1, client2, string, 
                                 route1, route2, mov_list) {
   
-  #if ((length(route2)>1))  {
-
-  #      result[[indexr1]]$route <- route1
-  #      result[[indexr2]]$route <- route2
-  #      new_cost <- calculateTotalDistanceTS(input, alpha, result)
-  #      new_cost_pen <- 0 #calculateTotalDistanceTS(input, alpha, result) * penalty_freq
-
-  #}
-  #else {
-
-  #    result[[indexr1]]$route <- route1
-  #    new_cost <- calculateTotalDistanceTS(input, alpha, result)
-  #    new_cost_pen <- 0 #calculateTotalDistanceTS(input, alpha, result) * penalty_freq
-
-  #}
   counter <- length(mov_list) + 1
       
   mov_list[[counter]] <- list()
@@ -1578,23 +1592,65 @@ modified_mov_list_using_changed_list <- function (changed_list, mov_list) {
 # evaluate_cost_mov_list
 evaluate_cost_mov_list<-function(input, mov_list, changed_list, solution, alpha) {
   
+    
+  #.Call("evaluate_cost_mov_list", input, mov_list, changed_list, solution, alpha, PACKAGE = "mcttrpcw")
+  
   if ((length(mov_list)>0)&&(length(changed_list)>0)) {
+    #static unfeasibility
+    #static cost
+    static_feas <- c(0)
+    static_cost <- c(0)
+    for (index in 1:length(solution)){
+      cap <- input$capacidad.truck
+      if (solution[[index]]$type != "PTR") cap <- input$capacidad.vehiculo
+      static_feas <- c(static_feas, calc_penalty_route(input, solution[[index]]$route, cap))
+      static_cost <- c(static_cost, local_cost(solution[[index]]$route, input$matriz.distancia))
+    }
+    static_feas <- static_feas[2:length(static_feas)]
+    static_cost <- static_cost[2:length(static_cost)]
+    
     for (i in 1:length(mov_list)) {
-        new_solution <- solution
-        
+      new_solution <- solution
+      
         if ((mov_list[[i]]$indexr1 %in% changed_list) || (mov_list[[i]]$indexr2 %in% changed_list)) {
 
-              new_solution[[mov_list[[i]]$indexr1]]$route <- mov_list[[i]]$route1
-              if ((length(mov_list[[i]]$route2)>1))   new_solution[[mov_list[[i]]$indexr2]]$route <- mov_list[[i]]$route2
-              mov_list[[i]]$mov_list_cost_feas <- calc_penalty(input, new_solution)
-              mov_list[[i]]$mov_list_cost_nopen <- calculateTotalDistanceTS_nopen(input, new_solution)
-              mov_list[[i]]$mov_list_cost <-  mov_list[[i]]$mov_list_cost_nopen + alpha * mov_list[[i]]$mov_list_cost_feas
-              mov_list[[i]]$mov_list_cost_pen <- 0 
+              # calc feasibility and cost
+              feas <- 0
+              cost <- 0
+              mov_list[[i]]$mov_list_cost_feas <- 0
+              mov_list[[i]]$mov_list_cost_nopen <- 0
+              for (j in 1:length(solution)){
+                  cap <- input$capacidad.truck
+                  if (solution[[j]]$type != "PTR") cap <- input$capacidad.vehiculo
+                  
+                  if (j %in% c(mov_list[[i]]$indexr1, mov_list[[i]]$indexr2)) {
+                    if (j == mov_list[[i]]$indexr1) route <- mov_list[[i]]$route1
+                    if (j == mov_list[[i]]$indexr2) route <- mov_list[[i]]$route2
+                    mov_list[[i]]$mov_list_cost_feas <- mov_list[[i]]$mov_list_cost_feas + calc_penalty_route(input, route, cap)   
+                    mov_list[[i]]$mov_list_cost_nopen <- mov_list[[i]]$mov_list_cost_nopen + local_cost(route, input$matriz.distancia) 
+                  } 
+                  else {
+                    feas <- feas + static_feas[j]
+                    cost <- cost + static_cost[j]
+                  }
+                  
+              }
+             
+              mov_list[[i]]$mov_list_cost <-  (mov_list[[i]]$mov_list_cost_nopen + cost) + alpha * (mov_list[[i]]$mov_list_cost_feas + feas)
+              mov_list[[i]]$mov_list_cost_pen <- 0               
         
         } else {
-              mov_list[[i]]$mov_list_cost <-  mov_list[[i]]$mov_list_cost_nopen + alpha * mov_list[[i]]$mov_list_cost_feas
+              cost <- 0
+              feas <- 0
+              for (j in 1:length(solution)){
+                if (!(j %in% c(mov_list[[i]]$indexr1, mov_list[[i]]$indexr2))) {
+                  cost <- cost + static_cost[j]
+                  feas <- feas + static_feas[j]
+                }
+              }
+              mov_list[[i]]$mov_list_cost <-  (mov_list[[i]]$mov_list_cost_nopen + cost) + alpha * (mov_list[[i]]$mov_list_cost_feas + feas)
+              mov_list[[i]]$mov_list_cost_pen <- 0  
         }
-        
 
       }
   }

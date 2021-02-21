@@ -24,6 +24,22 @@ calc_penalty<-function(input, routes_res) {
   return(exc)
 }
 
+calc_penalty_route<-function(input, route, capacity) {
+  
+  # CARGA TOTAL
+  exc <- max(0, calc_load2(route, input$vector.demandas) - capacity)
+  
+  if ((sum(duplicated(route[2:(length(route)-1)])))) {
+      subroutes <- return_subroutes(route, input$n1)
+      for (s in 1:length(subroutes)) {
+        subroute_i <- subroutes[[s]]$tour[2:(length(subroutes[[s]]$tour)-1)]
+        exc <- exc + max(0, calc_load2(subroute_i, input$vector.demandas) - input$capacidad.truck)
+      }
+  }
+  
+  return(exc)
+}
+
 
 calc_penalty_unique<-function(input, type, route) {
   

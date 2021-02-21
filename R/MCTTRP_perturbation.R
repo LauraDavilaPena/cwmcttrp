@@ -4,14 +4,14 @@ perturbation_core<-function(input, current_solution, penalty_max, type_problem) 
   perturbation_not_obtained <- TRUE
   counter_p <- 1
   
-  while ((perturbation_not_obtained)&&(counter_p < 5)) {
+  while ((perturbation_not_obtained)&&(counter_p < 2)) {
     perturbed_solution <-  perturbation(input, current_solution, 0, type_problem)
     current_solution <- perturbed_solution[["perturbed_solution"]]
     perturbation_not_obtained <- perturbed_solution$perturbation_not_obtained
     phi <- perturbed_solution$phi
     counter_p <- counter_p + 1
   }
-
+  
   if (perturbation_not_obtained) {
     while ((perturbation_not_obtained)) {
       perturbed_solution <-  perturbation(input, current_solution, penalty_max, type_problem)
@@ -78,14 +78,15 @@ full_random_perturbation<-function(input, current_solution, type_problem, perc_v
 
 
 
-perturbation <- function(input, initial_solution,penalty_max, problem_type){
 
+perturbation <- function(input, initial_solution,penalty_max, problem_type){
+  
   initial_solution <- update_solution(initial_solution, input, problem_type)
   intermediate_solution <- initial_solution
   perturbation_not_obtained <- FALSE
   
   n <- input$n - 1
-
+  
   # Nuestros clientes candidatos a ser eliminados deben estar en PTR, PVR, o main.tour de CVR y no ser parking
   removed_candidates <- numeric()
   for(i in 1:n){ #numero total de clientes
@@ -122,19 +123,19 @@ perturbation <- function(input, initial_solution,penalty_max, problem_type){
   for(i in 1:length(aggregated_clients)){
     aggregated_routes[[i]] <- route_of_client(aggregated_clients[[i]][1], initial_solution)$route
   }
-
+  
   aggregated_routes_index <- list()
   for(i in 1:length(aggregated_clients)){
     aggregated_routes_index[[i]] <- route_of_client(aggregated_clients[[i]][1], initial_solution)$index
   }
-
+  
   aggregated_list_info <- list(aggregated_clients = aggregated_clients, aggregated_routes = aggregated_routes, aggregated_routes_index = aggregated_routes_index)
   
   
   # Vamos eliminando secuencialmente a los clientes removed_clients de la ruta en la que estan
   aggregated_list_info_after_removal <- aggregated_list_info
   new_routes_after_removal <- list()
-
+  
   for(i in 1:length(aggregated_list_info_after_removal$aggregated_routes)){
     for (j in 1:length(aggregated_list_info_after_removal$aggregated_clients[[i]])){
       if(intermediate_solution[[aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$type == "CVR"){
@@ -150,7 +151,7 @@ perturbation <- function(input, initial_solution,penalty_max, problem_type){
             kk <- sum(new_routes_after_removal[[i]]  == subtours[[k]]$root)
           }
           new_routes_after_removal[[i]] <- c(new_routes_after_removal[[i]][1:which(new_routes_after_removal[[i]]==subtours[[k]]$root)[kk] ], subtours[[k]]$tour[2:(length(subtours[[k]]$tour))], 
-                                            new_routes_after_removal[[i]][(which(new_routes_after_removal[[i]]==subtours[[k]]$root)[kk]+1): length(new_routes_after_removal[[i]])] ) 
+                                             new_routes_after_removal[[i]][(which(new_routes_after_removal[[i]]==subtours[[k]]$root)[kk]+1): length(new_routes_after_removal[[i]])] ) 
           
         }
       }
@@ -199,7 +200,7 @@ perturbation <- function(input, initial_solution,penalty_max, problem_type){
   
   # Ahora lo que tengo que hacer es, esos clientes que he eliminado de sus rutas originales, insertarlos en una
   # ruta distinta (donde sea factible; la idea es que tengo que intentar insertar todos)
-
+  
   # Basicamente, para cada uno de los clientes que debo insertar (que son los que he eliminado), tengo que crearme 
   # una lista con sus posibles "destination_routes"
   
@@ -296,13 +297,13 @@ perturbation <- function(input, initial_solution,penalty_max, problem_type){
         }
       }
       
-     
+      
       if(length(delta_ins) == 0){
         perturbation_not_obtained <- TRUE
         break
         
       }else{
-
+        
         delta_min_positions <- which(delta_ins == min(unlist(delta_ins)))
         if(length(delta_min_positions) == 1){
           delta_chosen_position <- delta_min_positions
@@ -320,7 +321,7 @@ perturbation <- function(input, initial_solution,penalty_max, problem_type){
         if (intermediate_solution[[index_route_insertion]]$type == "CVR") {
           intermediate_solution[[index_route_insertion]]$main_tour <- best_route_ins
           intermediate_solution[[index_route_insertion]]$route <- create_route_from_main_route_and_subroutes(intermediate_solution[[index_route_insertion]]$subtours, best_route_ins)
-                    
+          
         } else {
           intermediate_solution[[index_route_insertion]]$route <- best_route_ins
         }
@@ -329,7 +330,7 @@ perturbation <- function(input, initial_solution,penalty_max, problem_type){
         if (problem_type == "MCTTRP") {
           destination_route <- check_available_compartments(input, result, intermediate_solution, inserting_client, 
                                                             intermediate_solution[[index_route_insertion]], initial_solution)$destination_route
-        
+          
           intermediate_solution[[index_route_insertion]] <- destination_route
         }
       }
@@ -341,21 +342,20 @@ perturbation <- function(input, initial_solution,penalty_max, problem_type){
     }
   }
   
-    if(perturbation_not_obtained){
-      perturbed_solution <- initial_solution
-      
-    }else{
-      intermediate_solution <- update_solution(intermediate_solution, input, problem_type)
-      perturbed_solution <- intermediate_solution
-      
-    }
+  if(perturbation_not_obtained){
+    perturbed_solution <- initial_solution
+    
+  }else{
+    intermediate_solution <- update_solution(intermediate_solution, input, problem_type)
+    perturbed_solution <- intermediate_solution
+    
+  }
   
   
   
   return(list(perturbation_not_obtained = perturbation_not_obtained, perturbed_solution = perturbed_solution, phi = phi))
   
 }
-
 
 return_cap_and_route_permutation<-function(intermediate_solution, input, type) {
   if (intermediate_solution$type == "CVR")  {

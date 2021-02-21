@@ -44,6 +44,7 @@ MCTTRP_opt_method<-function(result, initial_solution, input, init_time, type_pro
       start_time <- Sys.time()
       
       # perturbation
+      save(current_solution, file = "current_solution")
       res_p <- perturbation_core(input, current_solution, penalty_max, type_problem)
       current_solution <- res_p$current_solution
       phi <- res_p$phi
@@ -73,7 +74,8 @@ MCTTRP_opt_method<-function(result, initial_solution, input, init_time, type_pro
       else no_improv_counter <- no_improv_counter + 1
       
       # return to the best solution
-      if ((runif(1) < (iter/input$max_iter)^2)&&(no_improv_counter > 10)) {
+      #if ((runif(1) < (iter/input$max_iter)^2)&&(no_improv_counter > 10)) {
+      if ((runif(1) < (iter/input$max_iter)^2)) {
             current_solution <- bestsolution
             current_cost <- bestcost
             no_improv_counter <- 0
