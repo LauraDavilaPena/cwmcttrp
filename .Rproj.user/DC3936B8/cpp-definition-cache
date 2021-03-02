@@ -1,1 +1,35 @@
-[]
+[
+    {
+        "file": "C:/Users/david/OneDrive - Universidade de Santiago de Compostela/Documentos/GitHub/cwmcttrp/src/movlist.cpp",
+        "file_last_write": 1614698160.0,
+        "definitions": [
+            {
+                "usr": "c:@S@MovsList",
+                "kind": 3,
+                "parent_name": "",
+                "name": "MovsList",
+                "file": "C:/Users/david/OneDrive - Universidade de Santiago de Compostela/Documentos/GitHub/cwmcttrp/src/movlist.cpp",
+                "line": 14,
+                "column": 8
+            },
+            {
+                "usr": "c:@F@local_cost#I#$@N@Rcpp@S@Matrix>#VI14#@N@Rcpp@ST>1#T@PreserveStorage#",
+                "kind": 6,
+                "parent_name": "",
+                "name": "local_cost(int, Rcpp::NumericMatrix)",
+                "file": "C:/Users/david/OneDrive - Universidade de Santiago de Compostela/Documentos/GitHub/cwmcttrp/src/movlist.cpp",
+                "line": 358,
+                "column": 8
+            },
+            {
+                "usr": "c:@F@calc_penalty_route#I#$@N@Rcpp@S@Vector>#VI14#@N@Rcpp@ST>1#T@PreserveStorage#d#I#",
+                "kind": 6,
+                "parent_name": "",
+                "name": "calc_penalty_route(int, Rcpp::NumericVector, double, int)",
+                "file": "C:/Users/david/OneDrive - Universidade de Santiago de Compostela/Documentos/GitHub/cwmcttrp/src/movlist.cpp",
+                "line": 373,
+                "column": 8
+            }
+        ]
+    }
+]

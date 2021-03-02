@@ -139,14 +139,8 @@ delete_tabu_list_element<-function(tabulist, index_to_delete) {
 
 # create_table_freq
 create_table_freq<-function(size_clients, n_routes){
-  table_frec <- list()
-  for (i in 1:(size_clients-1)) {
-    clients_v <- c(0)
-    for (j in 2:n_routes) {
-      clients_v <- c(clients_v, 0)
-    }
-    table_frec[[i]] <- clients_v
-  }
+  table_frec <- matrix(0, ncol = n_routes, nrow = (size_clients-1)) 
+
   return(table_frec)
 }
 
@@ -155,13 +149,13 @@ update_table_freq<-function(table_frec, client, id_route){
   #print("UPDATE -> ")
   #print(client)
   #print(id_route)
-  table_frec[[as.numeric(client)]][as.numeric(id_route)] <- table_frec[[as.numeric(client)]][as.numeric(id_route)] + 1
+  table_frec[as.numeric(client), as.numeric(id_route)] <- table_frec[as.numeric(client), as.numeric(id_route)] + 1
   return(table_frec)
 }
 
 # return_table_freq
 return_table_freq<-function(table_frec, client, id_route){
-  return(table_frec[[as.numeric(client)]][as.numeric(id_route)] )
+  return(table_frec[as.numeric(client), as.numeric(id_route)])
 }
 
 # init_tabulist_data

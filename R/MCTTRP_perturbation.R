@@ -76,9 +76,6 @@ full_random_perturbation<-function(input, current_solution, type_problem, perc_v
 }
 
 
-
-
-
 perturbation <- function(input, initial_solution,penalty_max, problem_type){
   
   initial_solution <- update_solution(initial_solution, input, problem_type)
@@ -87,16 +84,16 @@ perturbation <- function(input, initial_solution,penalty_max, problem_type){
   
   n <- input$n - 1
   
-  # Nuestros clientes candidatos a ser eliminados deben estar en PTR, PVR, o main.tour de CVR y no ser parking
+  # Nuestros clientes candidatos a ser eliminados deben estar en PTR, PVR, o CVR y no ser parking
   removed_candidates <- numeric()
   for(i in 1:n){ #numero total de clientes
-    if(client_in_main_tour(i, initial_solution)==1 && client_is_parking(i, initial_solution)==0){
+    if(client_is_parking(i, initial_solution)==0){
       removed_candidates <- c(removed_candidates,i) 
     }
   }
   
   # De esos candidatos, elijo entre un 5% y un 15% aleatoriamente 
-  phi <- sample(ceiling(0.05*length(removed_candidates)):ceiling(0.15*length(removed_candidates)),1)
+  phi <- sample(ceiling(0.01*length(removed_candidates)):ceiling(0.05*length(removed_candidates)),1)
   
   # Ahora que ya sabemos que vamos a eliminar phi clientes, escogemos cuales 
   removed_clients <- sample(removed_candidates, phi)
@@ -135,28 +132,79 @@ perturbation <- function(input, initial_solution,penalty_max, problem_type){
   # Vamos eliminando secuencialmente a los clientes removed_clients de la ruta en la que estan
   aggregated_list_info_after_removal <- aggregated_list_info
   new_routes_after_removal <- list()
+  no_route_left <- numeric()
+  nr <- 1
   
   for(i in 1:length(aggregated_list_info_after_removal$aggregated_routes)){
     for (j in 1:length(aggregated_list_info_after_removal$aggregated_clients[[i]])){
       if(intermediate_solution[[aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$type == "CVR"){
-        # Basicamente aqui lo que hago es: si la ruta es de tipo CVR, entonces el "GENI_US" se lo voy a aplicar solo al main_tour. Pero luego tengo que reconstruir
-        # la ruta completa, añadiendo los subtours en el orden en que estaban
-        new_routes_after_removal[[i]] <- GENI_US(input, intermediate_solution[[aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$main_tour, 
-                                                 aggregated_list_info_after_removal$aggregated_clients[[i]][j])
-        intermediate_solution[[aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$main_tour <- new_routes_after_removal[[i]]
-        subtours <- intermediate_solution[[aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$subtours
-        for(k in 1:length(subtours)){
-          kk <- 1
-          if(length(which(new_routes_after_removal[[i]]==subtours[[k]]$root)) > 1){
-            kk <- sum(new_routes_after_removal[[i]]  == subtours[[k]]$root)
+        if(client_in_main_tour(aggregated_list_info_after_removal$aggregated_clients[[i]][j], initial_solution)==1){ #si el cliente esta en el main tour, hago lo que tenia 
+          # Basicamente aqui lo que hago es: si la ruta es de tipo CVR y el cliente a eliminar esta en el main tour, entonces el "GENI_US" se lo voy a aplicar 
+          # solo al main_tour. Pero luego tengo que reconstruir
+          # la ruta completa, añadiendo los subtours en el orden en que estaban
+          new_routes_after_removal[[i]] <- GENI_US(input, intermediate_solution[[aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$main_tour, 
+                                                   aggregated_list_info_after_removal$aggregated_clients[[i]][j])
+          intermediate_solution[[aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$main_tour <- new_routes_after_removal[[i]]
+          subtours <- intermediate_solution[[aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$subtours
+          for(k in 1:length(subtours)){
+            kk <- 1
+            if(length(which(new_routes_after_removal[[i]]==subtours[[k]]$root)) > 1){
+              kk <- sum(new_routes_after_removal[[i]]  == subtours[[k]]$root)
+            }
+            new_routes_after_removal[[i]] <- c(new_routes_after_removal[[i]][1:which(new_routes_after_removal[[i]]==subtours[[k]]$root)[kk] ], subtours[[k]]$tour[2:(length(subtours[[k]]$tour))], 
+                                               new_routes_after_removal[[i]][(which(new_routes_after_removal[[i]]==subtours[[k]]$root)[kk]+1): length(new_routes_after_removal[[i]])] ) 
+            
           }
-          new_routes_after_removal[[i]] <- c(new_routes_after_removal[[i]][1:which(new_routes_after_removal[[i]]==subtours[[k]]$root)[kk] ], subtours[[k]]$tour[2:(length(subtours[[k]]$tour))], 
-                                             new_routes_after_removal[[i]][(which(new_routes_after_removal[[i]]==subtours[[k]]$root)[kk]+1): length(new_routes_after_removal[[i]])] ) 
+        }else{ # en cambio, si el cliente esta en el subtour, procedo asi:
+          # primero debo mirar cual es el subtour en el que se encuentra
+          subtours <- intermediate_solution[[aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$subtours
+          for(k in 1:length(subtours)){
+            if(sum(subtours[[k]]$tour == aggregated_list_info_after_removal$aggregated_clients[[i]][j])>0){
+              subtour_origin <- subtours[[k]]
+              subtour_index <- k
+            }
+          }
+          tour_origin <- subtour_origin$tour
+          if(length(tour_origin) == 3){ # si el subtour tuviese un unico cliente, entonces despues de eliminarlo nos quedamos sin subtour
+            intermediate_solution[[aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$subtours <-  intermediate_solution[[aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$subtours[-subtour_index] 
+            rclient_index <- which(intermediate_solution[[aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$route == aggregated_list_info_after_removal$aggregated_clients[[i]][j])
+            new_routes_after_removal[[i]] <- intermediate_solution[[aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$route[-c(rclient_index,rclient_index+1)]
+            if(length(subtours)==1){ # si ademas ese fuese el unico subtour de nuestra CVR, despues de eliminarlo tendriamos una PVR
+              intermediate_solution[[aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$type = "PVR"
+            }
+          }else{
+            new_subtour_after_removal <- GENI_US(input, tour_origin, aggregated_list_info_after_removal$aggregated_clients[[i]][j])
+            subtours_after_removal <- subtours
+            subtours_after_removal[[subtour_index]]$tour <- new_subtour_after_removal
+            if(aggregated_list_info_after_removal$aggregated_clients[[i]][j]<=input$n1){
+              vc_index <- which(subtours_after_removal[[subtour_index]]$vc_clients == aggregated_list_info_after_removal$aggregated_clients[[i]][j])
+              subtours_after_removal[[subtour_index]]$vc_clients <- subtours_after_removal[[subtour_index]]$vc_clients[-vc_index] 
+            }else{
+              tc_index <- which(subtours_after_removal[[subtour_index]]$tc_clients == aggregated_list_info_after_removal$aggregated_clients[[i]][j])
+              subtours_after_removal[[subtour_index]]$tc_clients <- subtours_after_removal[[subtour_index]]$tc_clients[-tc_index] 
+            }
+            subtours_after_removal[[subtour_index]]$length <- subtours_after_removal[[subtour_index]]$length - 1
+            intermediate_solution[[aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$subtours <- subtours_after_removal
+            new_routes_after_removal[[i]] <- intermediate_solution[[aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$main_tour
+            for(ind_k in 1:length(subtours_after_removal)){
+              kk <- 1
+              if(length(which(new_routes_after_removal[[i]]==subtours_after_removal[[ind_k]]$root)) > 1){
+                kk <- sum(new_routes_after_removal[[i]]  == subtours_after_removal[[ind_k]]$root)
+              }
+              new_routes_after_removal[[i]] <- c(new_routes_after_removal[[i]][1:which(new_routes_after_removal[[i]]==subtours_after_removal[[ind_k]]$root)[kk] ], subtours_after_removal[[ind_k]]$tour[2:(length(subtours_after_removal[[ind_k]]$tour))], 
+                                                 new_routes_after_removal[[i]][(which(new_routes_after_removal[[i]]==subtours_after_removal[[ind_k]]$root)[kk]+1): length(new_routes_after_removal[[i]])] ) 
+              
+            }
+            intermediate_solution[[aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$route <- new_routes_after_removal[[i]]
+          }
           
         }
       }
       else{
-        
+        if( length(aggregated_list_info_after_removal$aggregated_routes[[i]]) == 3 ){
+          no_route_left[nr] <- aggregated_list_info_after_removal$aggregated_routes_index[[i]]
+          nr <- nr + 1
+        }
         new_routes_after_removal[[i]] <- GENI_US(input, aggregated_list_info_after_removal$aggregated_routes[[i]], aggregated_list_info_after_removal$aggregated_clients[[i]][j])
       }
       aggregated_list_info_after_removal$aggregated_routes[[i]] <- new_routes_after_removal[[i]]
@@ -164,6 +212,7 @@ perturbation <- function(input, initial_solution,penalty_max, problem_type){
   }
   
   # Ahora voy a modificar la intermediate_solution, poniendo las nuevas rutas, su coste, y eliminando a los removed_clients y todo lo relacionado con ellos 
+  # (ojo: para el caso en que los clientes eliminados provienen de CVRs, ya modifique la info relativa al main.tour y subtours en el bucle anterior)
   for(i in 1:length(aggregated_list_info_after_removal$aggregated_routes_index)){
     intermediate_solution[[ aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$route <- aggregated_list_info_after_removal$aggregated_routes[[i]]
     intermediate_solution[[ aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$cost <- calculateTotalDistance(input,intermediate_solution[[ aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$route )
@@ -214,7 +263,11 @@ perturbation <- function(input, initial_solution,penalty_max, problem_type){
       index_ins <- list()
       new_route_ins <- list()
       delta_ins <- list()
+      subtour_try <- list()
       t <- 1
+      modified_subtours <- list()
+      ind_subtour_wrt_route <- list()
+      tt <- 1
       for(r in 1:length(intermediate_solution)){
         if(aggregated_list_info$aggregated_routes_index[[k]]!= r){ # hay que mirar en rutas distintas de la ruta origen
           if(inserting_client <= input$n1){ # si el cliente es VC entonces podria insertarse en cualquier ruta que no sea la propia de origen
@@ -292,11 +345,86 @@ perturbation <- function(input, initial_solution,penalty_max, problem_type){
                 
                 t <- t + 1
               }
+            }else if(intermediate_solution[[r]]$type == "CVR"){
+              subtour_try <- list()
+              index_subtour <- list()
+              geni_subtour <- list()
+              new_subtour_ins <- list()
+              delta_subtour <- list()
+              candidate_destination_route <- intermediate_solution[[r]]
+              avail_subtour <- rep(1,length(intermediate_solution[[r]]$subtours))
+              kk <- 1
+              for(rr in 1:length(intermediate_solution[[r]]$subtours)){
+                if (problem_type == "MCTTRP") {
+                  res <- return_cap_and_route_permutation(candidate_destination_route, input, "MCTTRP")
+                  tcap <- res$tcap
+                  route <- res$route
+                  # meter penalizacion
+                  if (check_capacity_subroute_routes(inserting_client, route, intermediate_solution[[r]]$subtours, rr, input, "MCTTRP"))
+                    avail_subtour[rr] <- boolean_available_compartments_destination_route(input, result, intermediate_solution, 
+                                                                                          inserting_client, candidate_destination_route, initial_solution)
+                }
+                if (problem_type == "TTRP") { 
+                  res <- return_cap_and_route_permutation(candidate_destination_route, input, "TTRP")
+                  tcap <- res$tcap
+                  route <- res$route
+                  # meter penalizacion
+                  avail_subtour[rr] <- check_capacity_subroute_routes(inserting_client, route, intermediate_solution[[r]]$subtours, rr, input, "TTRP")
+                }
+                
+                if(avail_subtour[rr]){
+                  
+                  subtour_try[[kk]] <- candidate_destination_route$subtours[[rr]]$tour
+                  index_subtour[[kk]] <- rr
+                  
+                  geni_subtour[[kk]] <- GENI(input, subtour_try[[kk]], inserting_client)
+                  #print(paste0("GENI time ", difftime(Sys.time(), init_time, units = "secs","s)")))
+                  
+                  new_subtour_ins[[kk]] <- geni_subtour[[kk]]$best_route
+                  delta_subtour[[kk]] <- geni_subtour[[kk]]$delta_GENI
+                  
+                  subtour_try[[kk]] <- new_subtour_ins[[kk]]
+                  
+                  kk <- kk + 1
+                  
+                  
+                }
+              }
+              
+              if(sum(avail_subtour)!=0){
+                delta_min_subtour_pos <- which(delta_subtour == min(unlist(delta_subtour)))
+                if(length(delta_min_subtour_pos) == 1){
+                  delta_subtour_chosen_position <- delta_min_subtour_pos
+                }else{
+                  delta_subtour_chosen_position <- sample(delta_min_subtour_pos,1)
+                }
+                
+                index_subtour_insertion <- index_subtour[[delta_subtour_chosen_position]]
+                # La ruta de la solucion inicial cuyo indice es index_route_insertion la hay que actualizar, de modo que se le añade al cliente inserting_client
+                
+                best_subtour_ins <- new_subtour_ins[[delta_subtour_chosen_position]]
+                
+                
+                modified_subtours[[tt]] <- candidate_destination_route$subtours
+                modified_subtours[[tt]][[index_subtour_insertion]]$tour <- best_subtour_ins
+                modified_subtours[[tt]][[index_subtour_insertion]]$length <- modified_subtours[[tt]][[index_subtour_insertion]]$length + 1
+                modified_subtours[[tt]][[index_subtour_insertion]]$tc_clients <- c(modified_subtours[[tt]][[index_subtour_insertion]]$tc_clients, inserting_client)
+                ind_subtour_wrt_route[[tt]] <- t
+                
+                info_modified_subtours <- list(modified_subtours = modified_subtours, ind_subtour_wrt_route=ind_subtour_wrt_route)
+                
+                new_route_ins[[t]] <- create_route_from_main_route_and_subroutes(modified_subtours[[tt]], candidate_destination_route$main_tour)
+                delta_ins[[t]] <- delta_subtour[[delta_subtour_chosen_position]]
+                index_ins[[t]] <- r
+                route_try[[t]] <- new_route_ins[[t]]
+                
+                t <- t + 1
+                tt <- tt + 1
+              }
             }
           }
         }
       }
-      
       
       if(length(delta_ins) == 0){
         perturbation_not_obtained <- TRUE
@@ -319,8 +447,12 @@ perturbation <- function(input, initial_solution,penalty_max, problem_type){
         # Actualizamos la intermediate_solution:
         
         if (intermediate_solution[[index_route_insertion]]$type == "CVR") {
-          intermediate_solution[[index_route_insertion]]$main_tour <- best_route_ins
-          intermediate_solution[[index_route_insertion]]$route <- create_route_from_main_route_and_subroutes(intermediate_solution[[index_route_insertion]]$subtours, best_route_ins)
+          if(length(modified_subtours)==0){
+            intermediate_solution[[index_route_insertion]]$main_tour <- best_route_ins
+            intermediate_solution[[index_route_insertion]]$route <- create_route_from_main_route_and_subroutes(intermediate_solution[[index_route_insertion]]$subtours, best_route_ins)
+          }else{
+            intermediate_solution[[index_route_insertion]]$route <- best_route_ins
+          }
           
         } else {
           intermediate_solution[[index_route_insertion]]$route <- best_route_ins
@@ -332,7 +464,26 @@ perturbation <- function(input, initial_solution,penalty_max, problem_type){
                                                             intermediate_solution[[index_route_insertion]], initial_solution)$destination_route
           
           intermediate_solution[[index_route_insertion]] <- destination_route
+        }else if (problem_type == "TTRP"){
+          intermediate_solution[[index_route_insertion]]$total_load <- intermediate_solution[[index_route_insertion]]$total_load + input$vector.demandas[inserting_client+1]
+          new_client <- list()
+          new_client$id <- inserting_client
+          new_client$demands <- input$vector.demandas[inserting_client+1]
+          if(inserting_client <= input$n1){ # si el cliente es VC
+            intermediate_solution[[index_route_insertion]]$clients_vc[[length(intermediate_solution[[index_route_insertion]]$clients_vc)+1]] <- new_client
+            intermediate_solution[[index_route_insertion]]$VCs <- c(intermediate_solution[[index_route_insertion]]$VCs, inserting_client) 
+          }else{    # si el cliente es TC
+            intermediate_solution[[index_route_insertion]]$total_load_tc_clients <- intermediate_solution[[index_route_insertion]]$total_load_tc_clients + new_client$demands
+            intermediate_solution[[index_route_insertion]]$clients_tc[[length(intermediate_solution[[index_route_insertion]]$clients_tc)+1]] <- new_client
+            intermediate_solution[[index_route_insertion]]$TCs <- c(intermediate_solution[[index_route_insertion]]$TCs, inserting_client)
+            if( (intermediate_solution[[index_route_insertion]]$type == "CVR") && (length(modified_subtours)!=0) ){
+              ind_subt = which(unlist(info_modified_subtours$ind_subtour_wrt_route)==delta_chosen_position)
+              intermediate_solution[[index_route_insertion]]$subtours <- modified_subtours[[ind_subt]]
+            }
+          }
         }
+        
+        
       }
     }
     
@@ -346,6 +497,9 @@ perturbation <- function(input, initial_solution,penalty_max, problem_type){
     perturbed_solution <- initial_solution
     
   }else{
+    if(length(no_route_left) > 0){
+      intermediate_solution <- intermediate_solution[-no_route_left]
+    }
     intermediate_solution <- update_solution(intermediate_solution, input, problem_type)
     perturbed_solution <- intermediate_solution
     
@@ -356,6 +510,10 @@ perturbation <- function(input, initial_solution,penalty_max, problem_type){
   return(list(perturbation_not_obtained = perturbation_not_obtained, perturbed_solution = perturbed_solution, phi = phi))
   
 }
+
+
+
+
 
 return_cap_and_route_permutation<-function(intermediate_solution, input, type) {
   if (intermediate_solution$type == "CVR")  {

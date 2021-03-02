@@ -2388,26 +2388,29 @@ descent_search <- function(input, current_solution, type_problem){
   changed_list <- 1:length(current_solution)
   # improvement
   no_more_imp <- 0
+  # create mov list in C++
+  .Call('createMovsList', PACKAGE = "mcttrpcw")
   
   while (!no_more_imp) {
     
     current_solution <- result_improvement(input, current_solution, type_problem)
     current_cost <- calculateTotalDistanceTS(input, 0, current_solution)
     
-    mov_list <- list()
-      
-    mov_list <- movements_imp(mov_list, input, current_solution, type_problem, input$vecinity, 1, 0, changed_list, 1)
-    mov_list <- evaluate_cost_mov_list(input, mov_list, changed_list, current_solution, 0)
-      
+    movements_imp_new(input, current_solution, type_problem, input$vecinity, 1, 0, changed_list, 1)
+    size_mov_list <- .Call('return_size_mov_list', PACKAGE = "mcttrpcw")
+    
+    evaluate_cost_mov_list_new(input, changed_list, current_solution, 0, size_mov_list)
+    
     #concert list to vector
-    if (length(mov_list)) {
+    if (size_mov_list) {
       
-      index_order <- order_movs(mov_list, "cost")
-
-      if ((mov_list[[index_order[1]]]$mov_list_cost < current_cost)) {
-        
-          current_solution <- insert_selected_mov(input, mov_list[[index_order[1]]] , current_solution, type_problem)
+      order_movs_new("cost")
+      movid <- return_mov_struct(1)
       
+      if ((movid$mov_list_cost < current_cost)) {
+          changed_routes <- modified_changed_list(changed_routes, movid$indexr1,  movid$indexr2 )
+          current_solution <- insert_selected_mov_new(input, movid, current_solution, type_problem)
+          modified_mov_list_using_changed_list_new(changed_routes)
       } else no_more_imp <- 1
         
     } else no_more_imp <- 1

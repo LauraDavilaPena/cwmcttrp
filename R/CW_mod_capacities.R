@@ -41,6 +41,7 @@ calc_penalty_route<-function(input, route, capacity) {
 }
 
 
+
 calc_penalty_unique<-function(input, type, route) {
   
   exc <- 0

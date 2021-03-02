@@ -1,8 +1,8 @@
 MCTTRP_opt_solver<-function(string, option, n_trucks, n_trailers, total_time=3600, total_iterations=1000, vtr=-Inf, verbose=1, seed=100){
   
 ###################################
-    #dyn.load("src/mcttrpcw.dll")
-  
+    dyn.load("src/mcttrpcw.dll")
+    library(Rcpp)
 ###################################
     
     set.seed(seed)

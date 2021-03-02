@@ -1,0 +1,512 @@
+route <- delete_subroute(subroute$tour, route)
+new_route <- c(0)
+no_more_root <- 1
+for (i in 2:length(route)) {
+if ((route[i] == subroute$root)&&(no_more_root)) {
+new_route <- c(new_route, route[i])
+new_route <- c(new_route, clientvc)
+no_more_root <- 0
+} else new_route <- c(new_route, route[i])
+}
+return(new_route)
+}
+replace_route_client<-function(clienti, clientj, route){
+for (i in 1:length(route)) {
+if (route[i] == clienti) {
+route[i] <- clientj
+}
+}
+return(route)
+}
+replace_route_client_subroute<-function(clienti, clientj, clientz, route){
+# delete clienti
+new_route <- c(0)
+counter <- 0
+for (i in 2:length(route)) {
+if (route[i] != clienti) {
+new_route <- c(new_route, route[i])
+}
+if (route[i] == clientz) {
+counter <- counter + 1
+}
+}
+# add clientj as a subtour in clientz
+if (counter == 1) {
+new_route2 <- c(0)
+for (i in 2:length(new_route)) {
+if ((new_route[i] == clientz)) {
+new_route2 <- c(new_route2, clientz)
+new_route2 <- c(new_route2, clientj)
+new_route2 <- c(new_route2, clientz)
+} else {
+new_route2 <- c(new_route2, new_route[i])
+}
+}
+} else {
+index <- which (new_route == clientz)
+new_route2 <- c(0)
+for (i in 2:length(new_route)) {
+if (i == index[1]) {
+new_route2 <- c(new_route2, clientz)
+new_route2 <- c(new_route2, clientj)
+new_route2 <- c(new_route2, clientz)
+} else {
+new_route2 <- c(new_route2, new_route[i])
+}
+}
+}
+return(new_route2)
+}
+replace_route_client_vc_subroute<-function(clienti, clientj, route){
+# delete clienti from subroute
+for (i in 2:length(route)) {
+if (route[i] == clienti) {
+index_client_i <- i
+}
+}
+new_route <- c(route[1:(index_client_i-1)], clientj, route[(index_client_i+2):length(route)])
+return(new_route)
+}
+replace_subroute<-function(old_subroute, subroute, route){
+root <- old_subroute[1]
+route <- delete_subroute(old_subroute, route)
+route <- add_subroute(root, subroute, route)
+return(route)
+}
+add_subroute<-function(clienti, subroute, route){
+counter <- 0
+for (i in 2:length(route)) {
+if (route[i] == clienti) {
+counter <- counter + 1
+}
+}
+for (i in 2:length(route)) {
+if (route[i] == clienti) {
+index_client_i <- i
+break;
+}
+}
+if (counter == 1) {
+subroute <- subroute[2:(length(subroute)-1)]
+# add subroute
+new_route <- c(route[1:(index_client_i)], subroute, route[(index_client_i):length(route)])
+}
+else {
+subroute <- subroute[2:(length(subroute)-1)]
+# add subroute
+new_route <- c(route[1:(index_client_i)], subroute, route[(index_client_i):length(route)])
+}
+return(new_route)
+}
+delete_subroute<-function(subroute, route){
+subroute <- subroute[2:(length(subroute)-1)]
+new_route <- c(0)
+for (i in 2:length(route)) {
+if (sum(subroute==route[i])==0) {
+new_route <- c(new_route, route[i])
+}
+}
+new_route2 <- c(0)
+for (i in 2:length(new_route)) {
+if (new_route[i]!=new_route[i-1]) {
+new_route2 <- c(new_route2, new_route[i])
+}
+}
+return(new_route2)
+}
+delete_client<-function(client, route){
+new_route <- c(0)
+for (i in 2:length(route)) {
+if (client!=route[i]) {
+new_route <- c(new_route, route[i])
+}
+}
+return(new_route)
+}
+split_subroute<-function(clienti, route){
+for (i in 2:length(route)) {
+if (route[i] == clienti) {
+index_client_i <- i
+}
+}
+for (i in index_client_i:1) {
+if (sum(route[i] == route)>1) {
+root1 <- i
+break
+}
+}
+for (i in index_client_i:length(route)) {
+if (sum(route[i] == route)>1) {
+root2 <- i
+break
+}
+}
+route <-c( route[1:(index_client_i-1)], route[root1],  clienti, route[root2], route[(index_client_i+1):length(route)])
+return(route)
+}
+add_movements_to_list<-function(input, result, indexr1, indexr2, client1, client2, string,
+route1, route2, mov_list, mov_list_cost, mov_list_cost_pen, zeta, alpha, table_freq, counter_i) {
+if ((length(route2)>1))  {
+# type
+new_type1 <- check_new_type(result[[indexr1]]$type, route1, input)
+# penalty_freq
+if ((zeta!=0)&&(alpha!=0)) {
+penalty_freq <- 0
+for (i in 1:length(client1)) {
+penalty_freq <- penalty_freq + return_table_freq(table_freq, client1[i], indexr1)
+}
+if (length(client2)&&(client2!=0)) {
+for (i in 1:length(client2)) {
+penalty_freq <- penalty_freq + return_table_freq(table_freq, client2[i], indexr2)
+}
+}
+penalty_freq <- 1 + zeta * penalty_freq / counter_i
+# cost
+result[[indexr1]]$route <- route1
+result[[indexr2]]$route <- route2
+new_cost <- calculateTotalDistanceTS(input, alpha, result)
+new_cost_pen <- calculateTotalDistanceTS(input, alpha, result) * penalty_freq
+} else {
+# cost
+result[[indexr1]]$route <- route1
+result[[indexr2]]$route <- route2
+new_cost <- calculateTotalDistanceTS(input, alpha, result)
+new_cost_pen <- 0
+}
+}
+else {
+# type
+new_type1 <- check_new_type(result[[indexr1]]$type, route1, input)
+# penalty_freq
+if ((zeta!=0)&&(alpha!=0)) {
+penalty_freq <- 0
+for (i in 1:length(client1)) {
+penalty_freq <- penalty_freq + return_table_freq(table_freq, client1[i], indexr1)
+}
+penalty_freq <- 1 + zeta * penalty_freq / counter_i
+# cost
+result[[indexr1]]$route <- route1
+new_cost <- calculateTotalDistanceTS(input, alpha, result)
+new_cost_pen <- calculateTotalDistanceTS(input, alpha, result) * penalty_freq
+} else {
+# cost
+result[[indexr1]]$route <- route1
+new_cost <- calculateTotalDistanceTS(input, alpha, result)
+new_cost_pen <-0
+}
+result[[indexr1]]$route <- route1
+new_cost <- calculateTotalDistanceTS(input, alpha, result)
+}
+counter <- length(mov_list) + 1
+mov_list[[counter]] <- list()
+mov_list[[counter]]$indexr1 <- indexr1
+mov_list[[counter]]$indexr2 <- indexr2
+mov_list[[counter]]$mov_name <- string
+mov_list[[counter]]$route1 <- route1
+mov_list[[counter]]$route2 <- route2
+mov_list[[counter]]$client1 <- client1
+mov_list[[counter]]$client2 <- client2
+mov_list_cost[[counter]] <- new_cost
+mov_list_cost_pen[[counter]] <- new_cost_pen
+res <- list()
+res$mov_list <- mov_list
+res$mov_list_cost <- mov_list_cost
+res$mov_list_cost_pen <- mov_list_cost_pen
+return(res)
+}
+check_new_type<-function(type_root, route, input){
+all_vc <- 1
+subroutes <- 0
+for (i in 2:(length(route)-1)) {
+if (route[i] >  input$n1) all_vc <- 0
+if (sum(route==route[i])>1) subroutes <- 1
+}
+# determine new type
+if ((all_vc)&&(!subroutes)&&(type_root == "CVR")) type_root <- "PVR"
+if ((!all_vc)&&(!subroutes)&&(type_root == "CVR")) type_root <- "PTR"
+else if (subroutes) type_root <- "CVR"
+return(type_root)
+}
+is_in_vecinity<-function(clienti, clientw, vecinity, perc_vecinity){
+local_vecinity <- vecinity[[clienti]][1:ceiling(length(vecinity[[clienti]])*perc_vecinity)]
+if (sum(clientw %in% local_vecinity)) return (1)
+else return (0)
+}
+return_close_client<-function(clienti, route, vecinity) {
+index <- Inf
+for (i in 2:(length(route)-1)) {
+index_i <- which(vecinity[[clienti]] == route[i])
+if (index_i < index) {
+index <- index_i
+}
+}
+return(vecinity[[clienti]][index])
+}
+update_penalties <- function(input, alpha, gamma, current_solution){
+feasibility <- calc_penalty(input, current_solution)
+#print(paste0("CALIBRATE PENALTIES: current solution pen -> ", feasibility, " gamma ", gamma, " alpha ", alpha))
+if (feasibility > 0) {
+alpha <- min(( 1 + gamma) * alpha, 100)
+}
+else {
+alpha <- max(( 1 + gamma) / alpha, 0.01)
+}
+return(alpha)
+}
+library(mcttrpcw)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+result[[2]]$result_res[[1]]
+result[[2]]$result_res[[1]]$route
+result[[2]]$result_res[[2]]$route
+result[[2]]$result_res[[3]]$route
+result[[2]]$result_res[[4]]$route
+result[[2]]$result_res[[5]]$route
+duplicity
+duplicity(c(1,1))
+duplicity(c(1,1))
+duplicated(c(1,1))
+sum(duplicated(c(1,1)))
+library(mcttrpcw)
+sum(duplicated(c(1,1)))
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=20, verbose=0)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=20, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_09.txt", "TTRP", 8, 4, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_09.txt", "TTRP", 8, 4, total_time=3600, total_iterations=100, verbose=0)
+result[[13]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_13.txt", "TTRP", 17, 9,  total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+a <- c(2,2,3,4)
+sum(a>1)
+sum(a>2)
+sum(a>5)
+sum(a>5)>1
+sum(a>1)>1
+sum(a>1)==4
+duplicated(a)
+sum(duplicated(a))
+a<- c(1,2,3)
+sum(duplicated(a))
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+ç
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=2, verbose=0)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=10, verbose=0)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=10, verbose=0)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=10, verbose=0)
+library(mcttrpcw)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=10, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=10, verbose=0)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+R CMD
+library(mcttrpcw)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+install.packages(c("devtools", "Rcpp", "methods", "signal", "parallel",
+"timeSeries", "mFilter", "MASS", "robust", "magic", "knitr",
+"pixmap", "rgl", "misc3d"))
+install.packages(c("devtools", "Rcpp", "methods", "signal", "parallel", "timeSeries", "mFilter", "MASS", "robust", "magic", "knitr", "pixmap", "rgl", "misc3d"))
+install.packages(c("devtools", "Rcpp", "methods", "signal", "parallel", "timeSeries", "mFilter", "MASS", "robust", "magic", "knitr", "pixmap", "rgl", "misc3d"))
+install.packages(c("devtools", "Rcpp", "methods", "signal", "parallel", "timeSeries", "mFilter", "MASS", "robust", "magic", "knitr", "pixmap", "rgl", "misc3d"))
+install.packages(c("devtools", "Rcpp", "methods", "signal", "parallel", "timeSeries", "mFilter", "MASS", "robust", "magic", "knitr", "pixmap", "rgl", "misc3d"))
+install.packages(c("devtools", "Rcpp", "methods", "signal", "parallel", "timeSeries", "mFilter", "MASS", "robust", "magic", "knitr", "pixmap", "rgl", "misc3d"))
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+result[[13]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_13.txt", "TTRP", 17, 9,  total_time=3600, total_iterations=100, verbose=0)
+result[[13]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_13.txt", "TTRP", 17, 9,  total_time=3600, total_iterations=100, verbose=0)
+library(mcttrpcw)
+result[[13]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_13.txt", "TTRP", 17, 9,  total_time=3600, total_iterations=100, verbose=0)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_01.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_03.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+library(mcttrpcw)
+result[[2]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_02.txt", "TTRP", 5, 3, total_time=3600, total_iterations=100, verbose=0, seed=100)
+clear
+clean
+clear()
+pwd()
+gwd()
+load("~/GitHub/cwmcttrp/current_solution")
+View(current_solution)
+View(current_solution)
+current_solution
+all_routes(current_solution)

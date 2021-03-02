@@ -24,7 +24,7 @@ result[[3]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_03.txt", "TTRP", 5, 3, tot
 
 result[[4]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_04.txt", "TTRP", 9, 5, total_time=5000, total_iterations=200, verbose=0, seed=200)
 result[[5]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_05.txt", "TTRP", 9, 5, total_time=3600, total_iterations=1000, verbose=0)
-result[[6]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_06.txt", "TTRP", 9, 5,  total_time=3600, total_iterations=100, verbose=0)
+result[[6]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_06.txt", "TTRP", 9, 5, total_time=5000, total_iterations=100, verbose=0)
 
 result[[7]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_07.txt", "TTRP", 8, 4, total_time=3600, total_iterations=100, verbose=0)
 result[[8]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_08.txt", "TTRP", 8, 4,  total_time=3600, total_iterations=100, verbose=0)
@@ -34,7 +34,7 @@ result[[10]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_10.txt", "TTRP", 12, 6,  
 result[[11]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_11.txt", "TTRP", 12, 6,  total_time=3600, total_iterations=100, verbose=0)
 result[[12]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_12.txt", "TTRP", 12, 6,  total_time=3600, total_iterations=100, verbose=0)
 
-result[[13]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_13.txt", "TTRP", 17, 9,  total_time=3600, total_iterations=100, verbose=0)
+result[[13]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_13.txt", "TTRP", 17, 9,  total_time=36000, total_iterations=100, verbose=0)
 result[[14]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_14.txt", "TTRP", 17, 9,  total_time=3600, total_iterations=100, verbose=0)
 result[[15]] <- MCTTRP_opt_solver("instances/CHAO_TTRP_15.txt", "TTRP", 17, 9,  total_time=3600, total_iterations=100, verbose=0)
 
