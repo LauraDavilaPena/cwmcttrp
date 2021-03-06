@@ -248,7 +248,8 @@ CW_MCTTRPcore<-function(matriz.demandas, matriz.distancia, capacidad.truck, capa
   result <- createResultStruct_MCTTRP(rutas, coste.total, CWTTRP_struct$H.camion_res, CWTTRP_struct$H.trailer_res,
                                       input$matriz.demandas, rutas_res, input)
   rutas_res <- result$result_res
-  #rutas_res <- improvement_CW(input, result$result_res, "MCTTRP")
+  rutas_res <- descent_search(input, rutas_res, "MCTTRP")
+  
   rutas <- all_routes(rutas_res)
   rutas <- convert_in_route(rutas_res)
   rutas <- delete_dupl_zeros_route(rutas)

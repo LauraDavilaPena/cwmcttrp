@@ -20,6 +20,13 @@ struct MovsList
   std::vector<int>  route2;
   std::vector<int>  client1;
   std::vector<int>  client2;
+  int root1;
+  int root2;
+  int total_hoppers_truck1;
+  int total_hoppers_trailer1;
+  int total_hoppers_truck2;
+  int total_hoppers_trailer2;
+  int opt_reconf;
 };
 
 
@@ -235,6 +242,104 @@ RcppExport SEXP return_mov_list_client2(SEXP id){
   return result;
 }
 
+// return_root1
+// [[Rcpp::export]]
+RcppExport SEXP return_mov_list_root1(SEXP id){
+  
+  int c_id = index_ordered[INTEGER(id)[0]-1]; //index_ordered[INTEGER(id)[0]-1];
+  
+  
+  SEXP result = PROTECT(Rf_allocVector(INTSXP, 1));
+  INTEGER(result)[0] = mov_list[c_id].root1;
+  UNPROTECT(1);
+  
+  return result;
+}
+
+// return_root2
+// [[Rcpp::export]]
+RcppExport SEXP return_mov_list_root2(SEXP id){
+  
+  int c_id = index_ordered[INTEGER(id)[0]-1]; //index_ordered[INTEGER(id)[0]-1];
+  
+  
+  SEXP result = PROTECT(Rf_allocVector(INTSXP, 1));
+  INTEGER(result)[0] = mov_list[c_id].root2;
+  UNPROTECT(1);
+  
+  return result;
+}
+
+
+// return_root1
+// [[Rcpp::export]]
+RcppExport SEXP return_mov_list_hoppers_truck1(SEXP id){
+  
+  int c_id = index_ordered[INTEGER(id)[0]-1]; //index_ordered[INTEGER(id)[0]-1];
+  
+  
+  SEXP result = PROTECT(Rf_allocVector(INTSXP, 1));
+  INTEGER(result)[0] = mov_list[c_id].total_hoppers_truck1;
+  UNPROTECT(1);
+  
+  return result;
+}
+
+// return_root2
+// [[Rcpp::export]]
+RcppExport SEXP return_mov_list_hoppers_trailer1(SEXP id){
+  
+  int c_id = index_ordered[INTEGER(id)[0]-1]; //index_ordered[INTEGER(id)[0]-1];
+  
+  
+  SEXP result = PROTECT(Rf_allocVector(INTSXP, 1));
+  INTEGER(result)[0] = mov_list[c_id].total_hoppers_trailer1;
+  UNPROTECT(1);
+  
+  return result;
+}
+// return_root1
+// [[Rcpp::export]]
+RcppExport SEXP return_mov_list_hoppers_truck2(SEXP id){
+  
+  int c_id = index_ordered[INTEGER(id)[0]-1]; //index_ordered[INTEGER(id)[0]-1];
+  
+  
+  SEXP result = PROTECT(Rf_allocVector(INTSXP, 1));
+  INTEGER(result)[0] = mov_list[c_id].total_hoppers_truck2;
+  UNPROTECT(1);
+  
+  return result;
+}
+
+// return_mov_list_hoppers_trailer2
+// [[Rcpp::export]]
+RcppExport SEXP return_mov_list_hoppers_trailer2(SEXP id){
+  
+  int c_id = index_ordered[INTEGER(id)[0]-1]; //index_ordered[INTEGER(id)[0]-1];
+  
+  
+  SEXP result = PROTECT(Rf_allocVector(INTSXP, 1));
+  INTEGER(result)[0] = mov_list[c_id].total_hoppers_trailer2;
+  UNPROTECT(1);
+  
+  return result;
+}
+
+// return_mov_list_opt_reconf
+// [[Rcpp::export]]
+RcppExport SEXP return_mov_list_opt_reconf(SEXP id){
+  
+  int c_id = index_ordered[INTEGER(id)[0]-1]; //index_ordered[INTEGER(id)[0]-1];
+  
+  
+  SEXP result = PROTECT(Rf_allocVector(INTSXP, 1));
+  INTEGER(result)[0] = mov_list[c_id].opt_reconf;
+  UNPROTECT(1);
+  
+  return result;
+}
+
 // return_indexr1
 // [[Rcpp::export]]
 RcppExport SEXP return_mov_list_indexr1(SEXP id){
@@ -309,13 +414,15 @@ RcppExport SEXP order(SEXP option){
 // insertMovsList
 // [[Rcpp::export]]
 RcppExport SEXP  insertMovsList(SEXP indexr1, SEXP indexr2, SEXP client1, SEXP client2, 
-                                SEXP route1, SEXP route2, SEXP string) {
+                                SEXP route1, SEXP route2, SEXP string, SEXP origin1, SEXP origin2) {
 
   IntegerVector test(route1);
   
   MovsList new_mov;
   new_mov.indexr1 = INTEGER(indexr1)[0];
   new_mov.indexr2 = INTEGER(indexr2)[0];
+  new_mov.root1 = INTEGER(origin1)[0];
+  new_mov.root2 = INTEGER(origin2)[0];
   
   for (int i=0; i<LENGTH(client1); ++i) {
     new_mov.client1.push_back(INTEGER(client1)[i]);
@@ -350,6 +457,56 @@ RcppExport SEXP  insertMovsList(SEXP indexr1, SEXP indexr2, SEXP client1, SEXP c
   mov_list_cost_feas.push_back(0.0);
   mov_list_cost_nopen.push_back(0.0);
 
+  return(R_NilValue);
+};
+
+
+// insertMovsList
+// [[Rcpp::export]]
+RcppExport SEXP  insertMovsList_MCTTRP(SEXP indexr1, SEXP indexr2, SEXP client1, SEXP client2, 
+                                SEXP route1, SEXP route2, SEXP string, SEXP origin1, SEXP origin2,
+                                SEXP total_hoppers_truck1, SEXP total_hoppers_trailer1,
+                                SEXP total_hoppers_truck2, SEXP total_hoppers_trailer2, SEXP opt_reconf) {
+
+
+  IntegerVector test(route1);
+  
+  MovsList new_mov;
+  new_mov.indexr1 = INTEGER(indexr1)[0];
+  new_mov.indexr2 = INTEGER(indexr2)[0];
+  new_mov.root1 = INTEGER(origin1)[0];
+  new_mov.root2 = INTEGER(origin2)[0];
+  new_mov.total_hoppers_truck1   = INTEGER(total_hoppers_truck1)[0];
+  new_mov.total_hoppers_trailer1 = INTEGER(total_hoppers_trailer1)[0];
+  new_mov.total_hoppers_truck2   = INTEGER(total_hoppers_truck2)[0];
+  new_mov.total_hoppers_trailer2 = INTEGER(total_hoppers_trailer2)[0];
+  new_mov.opt_reconf = INTEGER(opt_reconf)[0];
+  
+  for (int i=0; i<LENGTH(client1); ++i) {
+    new_mov.client1.push_back(INTEGER(client1)[i]);
+  }
+  
+  for (int i=0; i<LENGTH(client2); ++i) {
+    new_mov.client2.push_back(INTEGER(client2)[i]);
+  }
+  
+  for (int i=0; i<LENGTH(route1); ++i) {
+    new_mov.route1.push_back(INTEGER(route1)[i]);
+  }
+  
+  
+  for (int i=0; i<LENGTH(route2); ++i) {
+    new_mov.route2.push_back(INTEGER(route2)[i]);
+  }
+  
+  new_mov.string1 = CHAR(STRING_ELT(string,0));
+  
+  mov_list.push_back(new_mov);
+  mov_list_cost.push_back(0.0);
+  mov_list_cost_pen.push_back(0.0);
+  mov_list_cost_feas.push_back(0.0);
+  mov_list_cost_nopen.push_back(0.0);
+  
   return(R_NilValue);
 };
 
@@ -415,6 +572,62 @@ double calc_penalty_route(std::vector<int> route, NumericVector c_demandas_vecto
   return exc;
 }
 
+// CALC_PENALTY_ROUTE
+// [[Rcpp::export]]
+double calc_penalty_route_MCTTRP(std::vector<int> route, int total_hoppers_truck, int total_hoppers_trailer,  
+                                 int max_h_truck, int max_h_trailer,
+                                 NumericMatrix c_demandas_vector, int size_dim,
+                                 double capacity_max, double cap_truck, double cap_trailer) {
+  
+  // calc load
+  std::map<int, std::vector<int>> check_ocurrence;
+  double load, exc;
+  
+  exc = 0.0;
+  load = 0.0;
+// total load  
+  /*for (int i=1; i < (((int)route.size())-1); ++i) {
+    if  (check_ocurrence.find(route[i]) == check_ocurrence.end()) {
+      std::vector<int> pos_vec;
+      pos_vec.push_back(i);
+      check_ocurrence.insert( std::make_pair(route[i], pos_vec));
+    }
+    else {
+      std::vector<int> pos_vec = check_ocurrence.at(route[i]);
+      pos_vec.push_back(i);
+      check_ocurrence.at(route[i]) = pos_vec;
+    }
+    
+    if ((check_ocurrence.at(route[i])).size() == 1) {
+      for (int j=0; j<size_dim; ++j) {
+        load = load + c_demandas_vector(route[i],j+1);
+      }
+    }
+  }*/
+  
+  exc = std::max(0.0 , load - capacity_max);
+  
+// subroutes
+/*  for (auto elem: check_ocurrence) {
+    if (elem.second.size() > 1) {
+      load = 0.0;
+      for (int i = 0; i < (((int)elem.second.size())-1); ++i){
+        for (int j = (elem.second[i]+1); j < elem.second[i+1]; ++j) {
+          for (int z = 0; z < size_dim; ++z ) load = load + c_demandas_vector(route[j], z+1);
+        }
+      }
+      exc = exc +  std::max(0.0, load - cap_truck);
+    }
+  }
+*/
+// hoppers
+  exc = exc + ((double) std::max(0, total_hoppers_truck - max_h_truck));
+  exc = exc + ((double) std::max(0, total_hoppers_trailer - max_h_trailer));
+
+  return exc;
+}
+
+
 // C_EVAL_MOVS
 // [[Rcpp::export]]
 RcppExport SEXP  c_eval_movs(SEXP changed_list, SEXP cap_routes_vector, SEXP dist_matrix, 
@@ -475,19 +688,6 @@ RcppExport SEXP  c_eval_movs(SEXP changed_list, SEXP cap_routes_vector, SEXP dis
             cost = cost + c_static_cost(j);
             feas = feas + c_static_feas(j);
         }
-        
-        /*if (i == 79) {
-          std::cout << "C " << c_cap_routes_vector.size() << std::endl;
-          std::cout << "mov_list_cost_nopen[i] " << mov_list_cost_nopen[i] << std::endl;
-          std::cout << "cost " << cost << std::endl;
-          std::cout << "c_alpha " << c_alpha << std::endl;
-          std::cout << "mov_list_cost_feas[i] " << mov_list_cost_feas[i] << std::endl;
-          std::cout << "feas " << feas << std::endl;
-          std::cout << "mov_list[i].indexr1 " << mov_list[i].indexr1 << std::endl;
-          std::cout << "mov_list[i].indexr2 " << mov_list[i].indexr2 << std::endl;
-          for (int jj=0; jj < route_local.size(); ++jj) std::cout << route_local[jj] << " ";
-          std::cout << std::endl;
-        }*/
       }
       mov_list_cost[i] = (mov_list_cost_nopen[i] + cost) + c_alpha * (mov_list_cost_feas[i] + feas);
       mov_list_cost_pen[i] = 0.0;
@@ -513,6 +713,95 @@ RcppExport SEXP  c_eval_movs(SEXP changed_list, SEXP cap_routes_vector, SEXP dis
 //    std::cout << mov_list_cost[i] << ", ";
 //  }
 //std::cout << ")" << std::endl;
+  return(R_NilValue);
+}
+
+// C_EVAL_MOVS
+// [[Rcpp::export]]
+RcppExport SEXP  c_eval_movs_MCTTRP(SEXP changed_list, SEXP cap_routes_vector, SEXP dist_matrix, SEXP size_dem, 
+                             SEXP demandas_matrix, SEXP input_cap_truck, SEXP input_cap_trailer,
+                             SEXP n_hoppers_truck, SEXP n_hoppers_trailer, 
+                             SEXP static_feas, SEXP static_cost, SEXP alpha, SEXP option) {
+
+  double c_input_cap_truck, c_input_cap_trailer, max_cap_h_trucks, max_cap_h_trailers;
+  int c_option, c_size_dem;
+  double c_alpha, feas, cost, cap;
+  std::vector<int> c_changed_list, route_local;
+  int total_hoppers_truck, total_hoppers_trailer;
+  std::vector<double> c_cap_routes_vector, c_h_trucks, c_h_trailers;
+  
+  c_input_cap_truck   = REAL(input_cap_truck)[0];
+  c_input_cap_trailer = REAL(input_cap_trailer)[0];
+  max_cap_h_trucks      = REAL(n_hoppers_truck)[0];
+  max_cap_h_trailers    = REAL(n_hoppers_trailer)[0];
+  c_size_dem          = INTEGER(size_dem)[0];
+  c_alpha = REAL(alpha)[0];
+  c_option = INTEGER(option)[0];
+  
+  for (int i=0; i<LENGTH(changed_list); ++i)  c_changed_list.push_back(INTEGER(changed_list)[i]-1);
+  
+  for (int i=0; i<LENGTH(cap_routes_vector); ++i) c_cap_routes_vector.push_back(REAL(cap_routes_vector)[i]);
+  
+  NumericMatrix c_dist_matrix(dist_matrix);
+  NumericMatrix c_demandas_matrix(demandas_matrix);
+  NumericVector c_static_feas(static_feas);
+  NumericVector c_static_cost(static_cost);
+  
+  
+  for (int i=0; i< ((int)mov_list.size()); ++i) {
+    std::vector<int>::iterator it1 = std::find(c_changed_list.begin(), c_changed_list.end(), mov_list[i].indexr1-1);
+    std::vector<int>::iterator it2 = std::find(c_changed_list.begin(), c_changed_list.end(), mov_list[i].indexr2-1);
+    
+    if ((it1 != c_changed_list.end())||(it2 != c_changed_list.end())){
+      feas = 0;
+      cost = 0;
+      mov_list_cost_feas[i] = 0.0;
+      mov_list_cost_nopen[i] = 0.0;
+      for (int j=0; j < ((int)c_cap_routes_vector.size()); ++j) {
+        cap = c_cap_routes_vector[j];
+        if ((j == (mov_list[i].indexr1-1))||(j == (mov_list[i].indexr2-1))) {
+          if (j == (mov_list[i].indexr1-1)) {
+            total_hoppers_truck = mov_list[i].total_hoppers_truck1;
+            total_hoppers_trailer = mov_list[i].total_hoppers_trailer1;
+            route_local  = mov_list[i].route1;
+          }
+          if (j == (mov_list[i].indexr2-1)) {
+            total_hoppers_truck = mov_list[i].total_hoppers_truck2;
+            total_hoppers_trailer = mov_list[i].total_hoppers_trailer2;
+            route_local = mov_list[i].route2;
+          }
+
+          mov_list_cost_feas[i]  = mov_list_cost_feas[i]  + calc_penalty_route_MCTTRP(route_local, total_hoppers_truck, total_hoppers_trailer,  
+                                                                                      max_cap_h_trucks, max_cap_h_trailers,
+                                                                                      c_demandas_matrix, c_size_dem, cap, 
+                                                                                      c_input_cap_truck, c_input_cap_trailer);
+                                                                                        
+          mov_list_cost_nopen[i] = mov_list_cost_nopen[i] + local_cost(route_local, c_dist_matrix);
+        }
+        else {
+          cost = cost + c_static_cost(j);
+          feas = feas + c_static_feas(j);
+        }
+      }
+      mov_list_cost[i] = (mov_list_cost_nopen[i] + cost) + c_alpha * (mov_list_cost_feas[i] + feas);
+      mov_list_cost_pen[i] = 0.0;
+      
+      
+    } else {
+      feas = 0;
+      cost = 0;
+      for (int j=0; j < ((int)c_cap_routes_vector.size()); ++j) {
+        if ((j != (mov_list[i].indexr1-1))&&(j != (mov_list[i].indexr2-1))) {
+          cost = cost + c_static_cost(j);
+          feas = feas + c_static_feas(j);
+        }
+      }
+      mov_list_cost[i] = (mov_list_cost_nopen[i] + cost) + c_alpha * (mov_list_cost_feas[i] + feas);
+      mov_list_cost_pen[i] = 0.0;
+      
+    }
+  }
+  
   return(R_NilValue);
 }
 

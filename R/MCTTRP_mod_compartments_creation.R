@@ -1,15 +1,17 @@
 
-boolean_available_compartments_destination_route <- function(input, result, intermediate_solution, inserted_client, destination_route, initial_solution){
+boolean_available_compartments_destination_route <- function(input, result, intermediate_solution, inserted_client, 
+                                                             destination_route, initial_solution){
   
   #resultado <- intermediate_solution
   
-  total_truck_hoppers <- dim(result$H.camion_res)[2]
-  total_trailer_hoppers <- dim(result$H.trailer_res)[2]
+  
+  total_truck_hoppers <- length(input$H.camion[1,])
+  total_trailer_hoppers <- length(input$H.trailer[1,])
+  
+  capacity_truck_hoppers <- input$H.camion[1,1]
+  capacity_trailer_hoppers <- input$H.trailer[1,1]
   
   # penalizacion
-  
-  capacity_trailer_hoppers <- input$h.trailer[1]
-  capacity_truck_hoppers <- input$h.camion[1]
   
   
   n1 <- input$n1
@@ -34,7 +36,6 @@ boolean_available_compartments_destination_route <- function(input, result, inte
     if(destination_route$type == "PTR"){
       needed_truck_hoppers_per_product <- ceiling(client_hoppers_demands/capacity_truck_hoppers)
       needed_truck_hoppers_total <- sum(needed_truck_hoppers_per_product)
-      
       if(needed_truck_hoppers_total <=  total_truck_hoppers - destination_route$used_hoppers_truck){
         
         avail <- TRUE
@@ -277,11 +278,12 @@ check_available_compartments <- function(input, result, intermediate_solution, i
   
   #resultado <- intermediate_solution
   
-  total_truck_hoppers <- dim(result$H.camion_res)[2]
-  total_trailer_hoppers <- dim(result$H.trailer_res)[2]
+  total_truck_hoppers <- length(input$H.camion[1,])
+  total_trailer_hoppers <- length(input$H.trailer[1,])
   
-  capacity_trailer_hoppers <- input$h.trailer[1]
-  capacity_truck_hoppers <- input$h.camion[1]
+  capacity_truck_hoppers <- input$H.camion[1,1]
+  capacity_trailer_hoppers <- input$H.trailer[1,1]
+  
   
   n1 <- input$n1
   avail <- FALSE
@@ -334,6 +336,7 @@ check_available_compartments <- function(input, result, intermediate_solution, i
           
         }
       }else{ # en caso de que si haya tolvas de trailer disponibles (en destination_route) hay que ver si me llegan (junto con las que haya disponibles de truck)
+
         needed_trailer_hoppers_per_product <- ceiling(client_hoppers_demands/capacity_trailer_hoppers)
         needed_trailer_hoppers_total <- sum(needed_trailer_hoppers_per_product)
         if(needed_trailer_hoppers_total <=  total_trailer_hoppers - destination_route$used_hoppers_trailer){ # me caben

@@ -53,6 +53,8 @@ MCTTRP_opt_solver<-function(string, option, n_trucks, n_trailers, total_time=360
     
     totaltime <- difftime(Sys.time(), init_time, units = "secs")
     print(paste0("ANALYZING ERRORS IN FINAL ROUTE (time ", difftime(Sys.time(), init_time, units = "secs"),"s)"))
+    result$time <- totaltime
+    result$init_cost <- results_CW$cost
     analyse(result$route, input, result$result_res,  option)
 
     print("FINAL RESULTS")

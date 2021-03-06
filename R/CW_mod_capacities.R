@@ -1,41 +1,111 @@
-calc_penalty<-function(input, routes_res) {
+calc_penalty<-function(input, routes_res, type_problem) {
   
   exc <- 0
-  # CARGA TOTAL
-  for (i in 1:length(routes_res)) {
-    if (routes_res[[i]]$type != "PTR") {
-      exc <- exc +  max(0, calc_load2(routes_res[[i]]$route, input$vector.demandas) - input$capacidad.vehiculo)
-    }
-    else {
-      exc <- exc + max(0, calc_load2(routes_res[[i]]$route, input$vector.demandas) - input$capacidad.truck)
-    }
+  if (type_problem == "TTRP") {
+      # CARGA TOTAL
+      for (i in 1:length(routes_res)) {
+        if (routes_res[[i]]$type != "PTR") {
+          exc <- exc +  max(0, calc_load2(routes_res[[i]]$route, input$vector.demandas) - input$capacidad.vehiculo)
+        }
+        else {
+          exc <- exc + max(0, calc_load2(routes_res[[i]]$route, input$vector.demandas) - input$capacidad.truck)
+        }
+      }
+      
+      for (i in 1:length(routes_res)) {
+        if ((sum(duplicated(routes_res[[i]]$route[2:(length(routes_res[[i]]$route)-1)])))) {
+          subroutes <- return_subroutes(routes_res[[i]]$route, input$n1)
+          for (s in 1:length(subroutes)) {
+            subroute_i <- subroutes[[s]]$tour[2:(length(subroutes[[s]]$tour)-1)]
+            exc <- exc + max(0, calc_load2(subroute_i, input$vector.demandas) - input$capacidad.truck)
+          }
+        }
+      }
   }
   
-  for (i in 1:length(routes_res)) {
-    if ((sum(duplicated(routes_res[[i]]$route[2:(length(routes_res[[i]]$route)-1)])))) {
-      subroutes <- return_subroutes(routes_res[[i]]$route, input$n1)
-      for (s in 1:length(subroutes)) {
-        subroute_i <- subroutes[[s]]$tour[2:(length(subroutes[[s]]$tour)-1)]
-        exc <- exc + max(0, calc_load2(subroute_i, input$vector.demandas) - input$capacidad.truck)
+  if (type_problem == "MCTTRP") {
+    # CARGA TOTAL
+    for (i in 1:length(routes_res)) {
+      if (routes_res[[i]]$type != "PTR") {
+        exc <- exc +  max(0, calc_load2_MC(routes_res[[i]]$route, input$matriz.demandas) - input$capacidad.vehiculo[1])
+      }
+      else {
+        exc <- exc + max(0, calc_load2_MC(routes_res[[i]]$route, input$matriz.demandas) - input$capacidad.truck[1])
       }
     }
+    # CARGA EN SUBRUTAS
+    #for (i in 1:length(routes_res)) {
+    #  if ((sum(duplicated(routes_res[[i]]$route[2:(length(routes_res[[i]]$route)-1)])))) {
+    #    subroutes <- return_subroutes(routes_res[[i]]$route, input$n1)
+    #    subroute_load <- 0
+    #    for (s in 1:length(subroutes)) {
+    #      subroute_i <- subroutes[[s]]$tour[2:(length(subroutes[[s]]$tour)-1)]
+    #      subroute_load <- subroute_load + calc_load2_MC(subroute_i, input$matriz.demandas)
+    #    }
+    #    exc <- exc + max(0, subroute_load - input$capacidad.truck[1])
+    #  }
+    #}
+    # CARGA EN TOLVAS
+    n_hoppers_truck <- length(input$H.camion[1,])
+    n_hoppers_trailer <- length(input$H.trailer[1,])
+
+    for (i in 1:length(routes_res)) {
+      exc <- exc + max(0, routes_res[[i]]$used_hoppers_truck   - n_hoppers_truck)
+      exc <- exc + max(0, routes_res[[i]]$used_hoppers_trailer - n_hoppers_trailer)
+    }
+    
   }
   
   return(exc)
 }
 
-calc_penalty_route<-function(input, route, capacity) {
+calc_penalty_route<-function(input, routes_res, capacity, type_problem) {
   
-  # CARGA TOTAL
-  exc <- max(0, calc_load2(route, input$vector.demandas) - capacity)
+  exc <- 0
   
-  if ((sum(duplicated(route[2:(length(route)-1)])))) {
-      subroutes <- return_subroutes(route, input$n1)
-      for (s in 1:length(subroutes)) {
-        subroute_i <- subroutes[[s]]$tour[2:(length(subroutes[[s]]$tour)-1)]
-        exc <- exc + max(0, calc_load2(subroute_i, input$vector.demandas) - input$capacidad.truck)
+  if (type_problem == "TTRP") {
+      # CARGA TOTAL
+      exc <- max(0, calc_load2(routes_res$route, input$vector.demandas) - capacity)
+      
+      if ((sum(duplicated(routes_res$route[2:(length(routes_res$route)-1)])))) {
+          subroutes <- return_subroutes(routes_res$route, input$n1)
+          for (s in 1:length(subroutes)) {
+            subroute_i <- subroutes[[s]]$tour[2:(length(subroutes[[s]]$tour)-1)]
+            exc <- exc + max(0, calc_load2(subroute_i, input$vector.demandas) - input$capacidad.truck)
+          }
       }
   }
+  
+  if (type_problem == "MCTTRP") {
+
+      # CARGA TOTAL
+      exc <- exc +  max(0, calc_load2_MC(routes_res$route, input$matriz.demandas) - capacity)
+
+      
+      # CARGA EN SUBRUTAS
+      #for (i in 1:length(routes_res)) {
+      #  if ((sum(duplicated(routes_res$route[2:(length(routes_res$route)-1)])))) {
+      #    subroutes <- return_subroutes(routes_res$route, input$n1)
+      #    subroute_load <- 0
+      #    for (s in 1:length(subroutes)) {
+      #      subroute_i <- subroutes[[s]]$tour[2:(length(subroutes[[s]]$tour)-1)]
+      #      subroute_load <- subroute_load + calc_load2_MC(subroute_i, input$matriz.demandas)
+      #    }
+      #    exc <- exc + max(0, subroute_load - input$capacidad.truck[1])
+      #  }
+      #}
+      # CARGA EN TOLVAS
+      n_hoppers_truck <- length(input$H.camion[1,])
+      n_hoppers_trailer <- length(input$H.trailer[1,])
+      
+      for (i in 1:length(routes_res)) {
+        exc <- exc + max(0, routes_res$used_hoppers_truck   - n_hoppers_truck)
+        exc <- exc + max(0, routes_res$used_hoppers_trailer - n_hoppers_trailer)
+      }
+
+      
+  }
+  
   
   return(exc)
 }
@@ -53,7 +123,7 @@ calc_penalty_unique<-function(input, type, route) {
 }
 
 
-check_feasibility<-function(routes_res, route, input, type_root, type_problem, penalty_capacity) {
+check_feasibility<-function(routes_res, route, input, type_root, type_problem, penalty_capacity, option_up) {
   all_vc <- 1
   subroutes <- 0
 
@@ -105,9 +175,16 @@ check_feasibility<-function(routes_res, route, input, type_root, type_problem, p
   }
   
   # check hoppers
-  if ((type_problem == "MCTTRP") && (feasible)){
-    if (type_root == "CVR") feasible <- check_capacity_hoppers_MCTTRP_CVR_analysis(route, routes_res, input) 
-    else feasible <- check_capacity_hoppers_MCTTRP_PR (route, routes_res, input, total_capacity ) 
+  if ((type_problem == "MCTTRP") && (feasible) && (option_up == "update")){
+    if (type_root == "CVR") feasible <- check_capacity_hoppers_MCTTRP_CVR_update(route, routes_res, input) 
+    if (type_root == "PVR") feasible <- check_capacity_hoppers_MCTTRP_PVR_update(route, routes_res, input) 
+    if (type_root == "PTR") feasible <- check_capacity_hoppers_MCTTRP_PR (route, routes_res, input, total_capacity ) 
+  } 
+  
+  if ((type_problem == "MCTTRP") && (feasible) && (option_up == "new")){
+    if (type_root == "CVR") feasible <- check_capacity_hoppers_MCTTRP_CVR_new(route, routes_res, input) 
+    if (type_root == "PVR") feasible <- check_capacity_hoppers_MCTTRP_PVR_new(route, routes_res, input) 
+    if (type_root == "PTR") feasible <- check_capacity_hoppers_MCTTRP_PR (route, routes_res, input, total_capacity ) 
   } 
   
   return(feasible)
@@ -228,51 +305,83 @@ check_capacity_merge_subroute_routes<-function(route_i, route_j, input, type_pro
 }
 
 check_capacity_hoppers_MCTTRP_CVR_update<-function(route_i, old_solution, input) {
-
+  
+  
   n_hoppers_truck <- length(input$H.camion[1,])
   n_hoppers_trailer <- length(input$H.trailer[1,])
   
   cap_hoppers_truck <- input$H.camion[1,1]
   cap_hoppers_trailer <- input$H.trailer[1,1]
   
-  clients_to_add <- unique(diff_clients(old_solution$route, route_i))
-  logic_clients_to_add <- position_to_add_in_truck( clients_to_add , route_i, input)
-
+  clients_to_add <- setdiff(route_i, old_solution$route)
+  clients_to_delete <- setdiff(old_solution$route, route_i)
+  
   counter_hoppers_truck <- old_solution$used_hoppers_truck
   counter_hoppers_trailer <- old_solution$used_hoppers_trailer
   
-  for (i in 1:length(clients_to_add)) {
-    i_client <- clients_to_add[i]
-    
-    # add clients in subroute
-    if (logic_clients_to_add[[i]] == 1) {
-      # demands
-      for (z in 1:length(input$matriz.demandas[i_client+1,])) {
-        demand <- input$matriz.demandas[i_client+1,z]
-        while (demand > 0) {
-          demand <- demand - cap_hoppers_truck
-          counter_hoppers_truck <- counter_hoppers_truck + 1
-        } 
-      }
-    }
-    # add clients in main tour
-    else {
-      for (j in 1:length(input$matriz.demandas[i_client+1,])){
-        demand <- input$matriz.demandas[i_client+1,j]
-        #trailers
-        while ((demand > 0) && (counter_hoppers_trailer < n_hoppers_trailer)){
-          demand <- demand - cap_hoppers_trailer
-          counter_hoppers_trailer <- counter_hoppers_trailer + 1
-        }
-        # trucks
-        while ((demand > 0)) {
-          demand <- demand - cap_hoppers_truck
-          counter_hoppers_truck <- counter_hoppers_truck + 1
+  
+  if (length(clients_to_delete)) {
+
+      counter_hoppers_truck <- 0
+      counter_hoppers_trailer <- 0
+      
+      for (i in 1:length(old_solution$clients_vc)) {
+        if ( sum(old_solution$clients_vc[[i]]$id ==  clients_to_delete) == 0) {
+          counter_hoppers_truck <-   counter_hoppers_truck + length(old_solution$clients_vc[[i]]$hoppers_trucks)
+          counter_hoppers_trailer <- counter_hoppers_trailer + length(old_solution$clients_vc[[i]]$hoppers_trailers)
         }
       }
-    }
+      
+      if (length(old_solution$clients_tc)) {
+        for (i in 1:length(old_solution$clients_tc)) {
+          if ( sum(old_solution$clients_tc[[i]]$id ==  clients_to_delete) == 0) {
+            counter_hoppers_truck <-   counter_hoppers_truck + length(old_solution$clients_tc[[i]]$hoppers_trucks)
+          }
+        }
+      }
+      
+      if (counter_hoppers_truck == 0)   counter_hoppers_truck <- old_solution$used_hoppers_truck
+      if (counter_hoppers_trailer == 0) counter_hoppers_trailer <- old_solution$used_hoppers_trailer  
   }
   
+  if (length(clients_to_add)) {
+    
+      logic_clients_to_add <- position_to_add_in_truck( clients_to_add , route_i, input)
+      
+      for (i in 1:length(clients_to_add)) {
+        i_client <- clients_to_add[i]
+        
+        # add clients in subroute
+        if (logic_clients_to_add[[i]] == 1) {
+          # demands
+          for (z in 1:length(input$matriz.demandas[i_client+1,])) {
+            demand <- input$matriz.demandas[i_client+1,z]
+            while (demand > 0) {
+              demand <- demand - cap_hoppers_truck
+              counter_hoppers_truck <- counter_hoppers_truck + 1
+            } 
+          }
+        }
+        # add clients in main tour
+        else {
+          for (j in 1:length(input$matriz.demandas[i_client+1,])){
+            demand <- input$matriz.demandas[i_client+1,j]
+            #trailers
+            while ((demand > 0) && (counter_hoppers_trailer < n_hoppers_trailer)){
+              demand <- demand - cap_hoppers_trailer
+              counter_hoppers_trailer <- counter_hoppers_trailer + 1
+            }
+            # trucks
+            while ((demand > 0)) {
+              demand <- demand - cap_hoppers_truck
+              counter_hoppers_truck <- counter_hoppers_truck + 1
+            }
+          }
+        }
+      }
+  
+  }
+
   if ((counter_hoppers_trailer <= n_hoppers_trailer)&&(counter_hoppers_truck <= n_hoppers_truck)) {
     return (1)
   } else {
@@ -280,6 +389,190 @@ check_capacity_hoppers_MCTTRP_CVR_update<-function(route_i, old_solution, input)
   }
   
 }
+
+
+
+check_capacity_hoppers_MCTTRP_return_hoppers<-function(route_i, old_solution, input) {
+  
+  
+  n_hoppers_truck <- length(input$H.camion[1,])
+  n_hoppers_trailer <- length(input$H.trailer[1,])
+  
+  cap_hoppers_truck <- input$H.camion[1,1]
+  cap_hoppers_trailer <- input$H.trailer[1,1]
+  
+  clients_to_add <- setdiff(route_i, old_solution$route)
+  clients_to_delete <- setdiff(old_solution$route, route_i)
+  
+  counter_hoppers_truck <- old_solution$used_hoppers_truck
+  counter_hoppers_trailer <- old_solution$used_hoppers_trailer
+  
+  
+  if (length(clients_to_delete)) {
+    
+    counter_hoppers_truck <- 0
+    counter_hoppers_trailer <- 0
+    
+    if (length(old_solution$clients_vc)) {
+      for (i in 1:length(old_solution$clients_vc)) {
+        if ( sum(old_solution$clients_vc[[i]]$id ==  clients_to_delete) == 0) {
+          counter_hoppers_truck <-   counter_hoppers_truck + length(old_solution$clients_vc[[i]]$hoppers_trucks)
+          counter_hoppers_trailer <- counter_hoppers_trailer + length(old_solution$clients_vc[[i]]$hoppers_trailers)
+        }
+      }
+    }
+    
+    if (length(old_solution$clients_tc)) {
+      if (length(old_solution$clients_tc)) {
+        for (i in 1:length(old_solution$clients_tc)) {
+          if ( sum(old_solution$clients_tc[[i]]$id ==  clients_to_delete) == 0) {
+            counter_hoppers_truck <-   counter_hoppers_truck + length(old_solution$clients_tc[[i]]$hoppers_trucks)
+          }
+        }
+      }
+    }
+    
+    if (counter_hoppers_truck == 0)    counter_hoppers_truck <- old_solution$used_hoppers_truck
+    if (counter_hoppers_trailer == 0)  counter_hoppers_trailer <- old_solution$used_hoppers_trailer
+  }
+  
+  if (length(clients_to_add)) {
+    new_type <- old_solution$type
+    rep_exist <- sum(duplicated(route_i[2:(length(route_i)-1)]))
+    if ((old_solution$type == "PTR") && (rep_exist))  new_type <- "CVR"
+    if ((old_solution$type == "PVR") && (rep_exist))  new_type <- "CVR"
+    if ((old_solution$type == "CVR") && (!rep_exist)) {
+      count_tc <- 0
+      for (i in 2:(length(route_i)-1)){
+        if (route_i[i]>input$n1) count_tc <- count_tc + 1
+      }
+      if (count_tc==0) new_type <- "PVR"
+      else new_type <- "PTR"
+    }
+    
+    if (new_type == "PTR") logic_clients_to_add <- rep(1, length(clients_to_add))
+    if (new_type == "PVR") logic_clients_to_add <- rep(0, length(clients_to_add))
+    if (new_type == "CVR") logic_clients_to_add <- position_to_add_in_truck( clients_to_add , route_i, input)
+    
+    for (i in 1:length(clients_to_add)) {
+      i_client <- clients_to_add[i]
+      
+      # add clients in subroute
+      if (logic_clients_to_add[[i]] == 1) {
+        # demands
+        for (z in 1:length(input$matriz.demandas[i_client+1,])) {
+          demand <- input$matriz.demandas[i_client+1,z]
+          while (demand > 0) {
+            demand <- demand - cap_hoppers_truck
+            counter_hoppers_truck <- counter_hoppers_truck + 1
+          } 
+        }
+      }
+      # add clients in main tour
+      else {
+        for (j in 1:length(input$matriz.demandas[i_client+1,])){
+          demand <- input$matriz.demandas[i_client+1,j]
+          #trailers
+          while ((demand > 0) && (counter_hoppers_trailer < n_hoppers_trailer)){
+            demand <- demand - cap_hoppers_trailer
+            counter_hoppers_trailer <- counter_hoppers_trailer + 1
+          }
+          # trucks
+          while ((demand > 0)) {
+            demand <- demand - cap_hoppers_truck
+            counter_hoppers_truck <- counter_hoppers_truck + 1
+          }
+        }
+      }
+    }
+    
+  }
+  
+  res <- list()
+  res$hoppers_trailer <- counter_hoppers_trailer
+  res$hoppers_truck   <- counter_hoppers_truck
+  
+  return(res)
+  
+}
+
+
+
+check_capacity_hoppers_MCTTRP_return_hoppers_new<-function(route_i, old_solution, input) {
+  
+  
+  n_hoppers_truck <- length(input$H.camion[1,])
+  n_hoppers_trailer <- length(input$H.trailer[1,])
+  
+  cap_hoppers_truck <- input$H.camion[1,1]
+  cap_hoppers_trailer <- input$H.trailer[1,1]
+  
+  clients_to_add <- unique(route_i[2:(length(route_i)-1)])
+
+  counter_hoppers_truck <- 1
+  counter_hoppers_trailer <- 1
+  
+  new_type <- old_solution$type
+  rep_exist <- sum(duplicated(route_i[2:(length(route_i)-1)]))
+  
+  if ((old_solution$type == "PTR") && (rep_exist))  new_type <- "CVR"
+  if ((old_solution$type == "PVR") && (rep_exist))  new_type <- "CVR"
+  if ((old_solution$type == "CVR") && (!rep_exist)) {
+    count_tc <- 0
+    for (i in 2:(length(route_i)-1)){
+      if (route_i[i]>input$n1) count_tc <- count_tc + 1
+    }
+    if (count_tc==0) new_type <- "PVR"
+    else new_type <- "PTR"
+  }
+    
+  if (new_type == "PTR") logic_clients_to_add <- rep(1, length(clients_to_add))
+  if (new_type == "PVR") logic_clients_to_add <- rep(0, length(clients_to_add))
+  if (new_type == "CVR") logic_clients_to_add <- position_to_add_in_truck( clients_to_add , route_i, input)
+    
+  for (i in 1:length(clients_to_add)) {
+      i_client <- clients_to_add[i]
+      
+      # add clients in subroute
+      if (logic_clients_to_add[[i]] == 1) {
+        # demands
+        for (z in 1:length(input$matriz.demandas[i_client+1,])) {
+          demand <- input$matriz.demandas[i_client+1,z]
+          while (demand > 0) {
+            demand <- demand - cap_hoppers_truck
+            counter_hoppers_truck <- counter_hoppers_truck + 1
+          } 
+        }
+      }
+      # add clients in main tour
+      else {
+        for (j in 1:length(input$matriz.demandas[i_client+1,])){
+          demand <- input$matriz.demandas[i_client+1,j]
+          #trailers
+          while ((demand > 0) && (counter_hoppers_trailer < n_hoppers_trailer)){
+            demand <- demand - cap_hoppers_trailer
+            counter_hoppers_trailer <- counter_hoppers_trailer + 1
+          }
+          # trucks
+          while ((demand > 0)) {
+            demand <- demand - cap_hoppers_truck
+            counter_hoppers_truck <- counter_hoppers_truck + 1
+          }
+        }
+      }
+    }
+    
+  
+  
+  res <- list()
+  res$hoppers_trailer <- counter_hoppers_trailer
+  res$hoppers_truck   <- counter_hoppers_truck
+  
+  return(res)
+  
+}
+
+
 
 check_capacity_hoppers_MCTTRP_PVR_update<-function(route_i, old_solution, input){
   
@@ -289,27 +582,52 @@ check_capacity_hoppers_MCTTRP_PVR_update<-function(route_i, old_solution, input)
   cap_hoppers_truck <- input$H.camion[1,1]
   cap_hoppers_trailer <- input$H.trailer[1,1]
   
-  old_route <- old_solution$route
-  clients_to_add <- unique(diff_clients(old_route, route_i))
-
+  clients_to_add <- setdiff(route_i, old_solution$route)
+  clients_to_delete <- setdiff(old_solution$route, route_i)
+  
+  
   counter_hoppers_truck <- old_solution$used_hoppers_truck
   counter_hoppers_trailer <- old_solution$used_hoppers_trailer
   
-  for (i in 1:length(clients_to_add)) {
-    i_client <- clients_to_add[i]
-
-    for (j in 1:length(input$matriz.demandas[i_client+1,])){
-        demand <- input$matriz.demandas[i_client+1,j]
-        #trailers
-        while ((demand > 0) && (counter_hoppers_trailer < n_hoppers_trailer)){
-          demand <- demand - cap_hoppers_trailer
-          counter_hoppers_trailer <- counter_hoppers_trailer + 1
+  
+  if (length(clients_to_delete)) {
+    
+    counter_hoppers_truck <- 0
+    counter_hoppers_trailer <- 0
+    
+    for (i in 1:length(old_solution$clients_vc)) {
+      if ( sum(old_solution$clients_vc[[i]]$id ==  clients_to_delete) == 0) {
+        counter_hoppers_truck <-   counter_hoppers_truck + length(old_solution$clients_vc[[i]]$hoppers_trucks)
+        counter_hoppers_trailer <- counter_hoppers_trailer + length(old_solution$clients_vc[[i]]$hoppers_trailers)
+      }
+    }
+    
+    old_solution$used_hoppers_truck <- counter_hoppers_truck
+    old_solution$used_hoppers_trailer <- counter_hoppers_trailer
+  }
+  
+  if (length(clients_to_add)) {
+    
+    counter_hoppers_truck <- old_solution$used_hoppers_truck
+    counter_hoppers_trailer <- old_solution$used_hoppers_trailer
+    
+    for (i in 1:length(clients_to_add)) {
+      i_client <- clients_to_add[i]
+      
+        for (j in 1:length(input$matriz.demandas[i_client+1,])){
+          demand <- input$matriz.demandas[i_client+1,j]
+          #trailers
+          while ((demand > 0) && (counter_hoppers_trailer < n_hoppers_trailer)){
+            demand <- demand - cap_hoppers_trailer
+            counter_hoppers_trailer <- counter_hoppers_trailer + 1
+          }
+          # trucks
+          while ((demand > 0)) {
+            demand <- demand - cap_hoppers_truck
+            counter_hoppers_truck <- counter_hoppers_truck + 1
+          }
         }
-        # trucks
-        while ((demand > 0)) {
-          demand <- demand - cap_hoppers_truck
-          counter_hoppers_truck <- counter_hoppers_truck + 1
-        }
+      
     }
     
   }
@@ -374,7 +692,7 @@ check_capacity_hoppers_MCTTRP_CVR_new<-function(route_i, routes_res, input) {
   
 }
 
-check_capacity_hoppers_MCTTRP_PVR_new<-function(route_i, routes_res, input, capacity){
+check_capacity_hoppers_MCTTRP_PVR_new<-function(route_i, routes_res, input){
   
   for (i in 1:(length(routes_res))) {
     if ( sum(routes_res[[i]]$route==route_i[2]) > 0 ) {
@@ -528,11 +846,9 @@ check_capacity_hoppers_MCTTRP_analysis<-function(solution, input) {
     }
   }
   
-  
   if ((hcounter_trailer != 0) && (hcounter_trailer > n_hoppers_trailer)) error <- error + 1
   if ((hcounter_truck != 0) && (hcounter_truck > n_hoppers_truck)) error <- error + 1
-  
-  
+
   return(!error)
 }
 

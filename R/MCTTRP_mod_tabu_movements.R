@@ -1,6 +1,4 @@
 # Algoritmo Tabu
-
-
 tabu_search <- function(input, current_solution, current_cost, best_cost, type_problem, maxi, counter_i, phi, pen_max) {
   #print("TABU SEARCH")
   # Extract tabulist_data vars
@@ -34,29 +32,25 @@ tabu_search <- function(input, current_solution, current_cost, best_cost, type_p
       current_solution <- result_improvement(input, current_solution, type_problem)
       #current_solution <- descending_search(input, current_solution, type_problem)
     }
-    current_solution <- update_solution(current_solution, input, type_problem)
-    current_cost <- calculateTotalDistanceTS(input, alpha, current_solution)
-    
-    #print(paste0("   improvement state ", difftime(Sys.time(), start_time, units = "secs")))
-    #start_time <- Sys.time()
+    #current_solution <- update_solution(current_solution, input, type_problem)
+    current_cost <- calculateTotalDistanceTS(input, alpha, current_solution, type_problem)
     
     movements_imp_new(input, current_solution, type_problem, vecinity, perc_v, 
                               tabulist_data$penalty_capacity, changed_routes, 0)
 
-    # print(paste0("   movements_imp ", difftime(Sys.time(), start_time, units = "secs")))
-    start_time <- Sys.time()
     size_mov_list <- .Call('return_size_mov_list', PACKAGE = "mcttrpcw")
-    evaluate_cost_mov_list_new(input, changed_routes, current_solution, alpha, size_mov_list)
-    # print(paste0("   evaluate_cost_mov_list ", difftime(Sys.time(), start_time, units = "secs")))
-    start_time <- Sys.time()
-    
+
+    evaluate_cost_mov_list_new(input, changed_routes, current_solution, alpha, size_mov_list, type_problem)
+
     if (size_mov_list) {
+      
       order_movs_new("cost")
-      # print(paste0("   loop_cost1 ", difftime(Sys.time(), start_time, units = "secs")))
-      #start_time <- Sys.time()
+      
       counter_index_order <- 1
       not_in_tabu_list <- 0
       enter_penalty_loop <- 0
+      
+      #print(" init cost values")
       
       while ((!not_in_tabu_list)&&(counter_index_order <= size_mov_list)) {
         
@@ -67,16 +61,43 @@ tabu_search <- function(input, current_solution, current_cost, best_cost, type_p
           not_in_tabu_list <- 1
           if ( movid$mov_list_cost < current_cost ) {
             
-            #print(paste0("cost -> ",  movid$mov_list_cost, 
-            #             " feas ",    movid$mov_list_cost_feas, 
-            #             " nopen ",   movid$mov_list_cost_nopen,
-            #             " indexr1 ", movid$indexr1, 
-            #             " indexr2 ", movid$indexr2))
+            #print("ANTES")
+            #for (jj in 1:length(current_solution)){
+            #  print(paste0("used_h_trailers ", current_solution[[jj]]$used_hoppers_trailer, 
+            #               "used_hoppers_truck ", current_solution[[jj]]$used_hoppers_truck ))
+            #}
+            
+            #print("ROUTES")
+            #for (jj in 1:length(current_solution)){
+            #  print(current_solution[[jj]]$route )
+            #}
             
             changed_routes <- modified_changed_list(changed_routes, movid$indexr1,  movid$indexr2 )
             current_solution <- insert_selected_mov_new(input, movid, current_solution, type_problem)
             tabulist_data <- insert_result_in_tabulist_new(movid, tabulist_data, tau)
             modified_mov_list_using_changed_list_new(changed_routes)
+            
+            #print(paste0("INSERT cost -> ",  movid$mov_list_cost, 
+            #             " mov ",     movid$string1, 
+            #             " nopen ",   movid$mov_list_cost_nopen,
+            #             " cost_feas ", movid$mov_list_cost_feas,  " feas ", calc_penalty(input, current_solution, type_problem),
+            #             " indexr1 ", movid$indexr1, " indexr2 ", movid$indexr2))
+            
+            #print(paste0(" hopptrucks1  ", movid$hoppers_truck1, "  hopptrailer1  ", movid$hoppers_trailer1,
+            #             "  hopptrucks2  ", movid$hoppers_truck2, "  hopptrailer2 ", movid$hoppers_trailer2))
+
+            #for (jj in 1:length(current_solution)){
+            #  print(paste0("used_h_trailers ", current_solution[[jj]]$used_hoppers_trailer, 
+            #               "  used_hoppers_truck ", current_solution[[jj]]$used_hoppers_truck ))
+            #  
+            #}
+            
+            #print("ROUTES")
+            #for (jj in 1:length(current_solution)){
+            #  print(current_solution[[jj]]$route )
+            #}
+            
+            #readline()
             
           } else enter_penalty_loop <- 1
           
@@ -89,13 +110,11 @@ tabu_search <- function(input, current_solution, current_cost, best_cost, type_p
         
       }
       
-      # print(paste0("   loop_cost2 ", difftime(Sys.time(), start_time, units = "secs")))
-      start_time <- Sys.time()
       
       if (enter_penalty_loop){
         
         .Call('c_eval_movs_pen',  tabulist_data$table_freq, zeta, counter_i, PACKAGE = "mcttrpcw")
-          
+        
         order_movs_new("cost_pen")
         
         counter_index_order2 <- 1
@@ -106,22 +125,19 @@ tabu_search <- function(input, current_solution, current_cost, best_cost, type_p
         while((enter_penalty_loop)&&(!not_in_tabu_list)&&(counter_index_order2 <= size_mov_list))  {
           
           movid <- return_mov_struct(counter_index_order2) 
-          
-          #print(paste0("  **  pen cost temp -> ", movid$mov_list_cost))
-                
+
           if ((!check_result_in_tabu_list_new(tabulist_data$tabulist, movid, best_local_cost))) {
-            
-            #print(paste0("pen cost -> ", movid$mov_list_cost, 
-            #             " feas ", movid$mov_list_cost_feas, 
-            #             " nopen ", movid$mov_list_cost_nopen,
-            #             " indexr1 ", movid$indexr1, 
-            #             " indexr2 ", movid$indexr2))
             
             not_in_tabu_list <- 1
             changed_routes <- modified_changed_list(changed_routes, movid$indexr1, movid$indexr2 )
             current_solution <- insert_selected_mov_new(input, movid, current_solution, type_problem)
             tabulist_data <- insert_result_in_tabulist_new(movid, tabulist_data, tau)
             modified_mov_list_using_changed_list_new(changed_routes)
+            
+            #print(paste0("INSERT pen cost -> ",  movid$mov_list_cost, 
+            #             " mov ",     movid$string1, 
+            #           " nopen ",   movid$mov_list_cost_nopen,
+            #           " cost_feas ", movid$mov_list_cost_feas, " feas ", calc_penalty(input, current_solution, type_problem)))
             
           }
           else not_in_tabu_list <- 0
@@ -134,12 +150,12 @@ tabu_search <- function(input, current_solution, current_cost, best_cost, type_p
       
     } else stop <- 1
     
-    # print(paste0("   loop_cost4 ", difftime(Sys.time(), start_time, units = "secs")))
-    start_time <- Sys.time()
-    
     current_solution <- update_solution(current_solution, input, type_problem)
-    current_cost <- calculateTotalDistanceTS(input, alpha, current_solution)
+    current_cost <- calculateTotalDistanceTS(input, alpha, current_solution, type_problem)
+
+    
     if ((current_cost < best_local_cost)) { #&&(!calc_penalty(input, current_solution))) {
+      
       best_local_solution <- current_solution
       best_local_cost <- current_cost
       counter_not_improve <- 0
@@ -148,14 +164,14 @@ tabu_search <- function(input, current_solution, current_cost, best_cost, type_p
       counter_not_improve <- counter_not_improve + 1
     } 
     
-    if ((current_cost < best_f_cost)&&(calc_penalty(input, current_solution)==0)) {
+    if ((current_cost < best_f_cost)&&(calc_penalty(input, current_solution, type_problem)==0)) {
       best_f_solution <- current_solution
       best_f_cost <- current_cost
     }
     
     if (stop) counter_not_improve <- stop_tabu
     
-    alpha <- update_penalties(input,  alpha, gamma, current_solution)
+    alpha <- update_penalties(input,  alpha, gamma, current_solution, type_problem)
     tabulist_data$tabulist <- update_counters_tabu_list(tabulist_data$tabulist)
     
     # print(paste0("   end iteration ", difftime(Sys.time(), start_time, units = "secs")))
@@ -181,11 +197,18 @@ return_mov_struct<-function(counter_index_order){
   mov_list$client2 <- .Call('return_mov_list_client2', as.integer(counter_index_order), PACKAGE = "mcttrpcw")
   mov_list$route1 <-  .Call('return_mov_list_route1' , as.integer(counter_index_order), PACKAGE = "mcttrpcw")
   mov_list$route2 <-  .Call('return_mov_list_route2' , as.integer(counter_index_order), PACKAGE = "mcttrpcw")
+  mov_list$hoppers_truck1 <-  .Call('return_mov_list_hoppers_truck1' , as.integer(counter_index_order), PACKAGE = "mcttrpcw")
+  mov_list$hoppers_trailer1 <-  .Call('return_mov_list_hoppers_trailer1' , as.integer(counter_index_order), PACKAGE = "mcttrpcw")
+  mov_list$hoppers_truck2 <-  .Call('return_mov_list_hoppers_truck2' , as.integer(counter_index_order), PACKAGE = "mcttrpcw")
+  mov_list$hoppers_trailer2 <-  .Call('return_mov_list_hoppers_trailer2' , as.integer(counter_index_order), PACKAGE = "mcttrpcw")
+  mov_list$root1 <-  .Call('return_mov_list_root1' , as.integer(counter_index_order), PACKAGE = "mcttrpcw")
+  mov_list$root2 <-  .Call('return_mov_list_root2' , as.integer(counter_index_order), PACKAGE = "mcttrpcw")
   mov_list$string1 <- .Call('return_mov_list_string' , as.integer(counter_index_order), PACKAGE = "mcttrpcw")
   mov_list$mov_list_cost <- .Call('return_mov_list_cost' , as.integer(counter_index_order), PACKAGE = "mcttrpcw")
   mov_list$mov_list_cost_pen <- .Call('return_mov_list_cost_pen' , as.integer(counter_index_order), PACKAGE = "mcttrpcw")
   mov_list$mov_list_cost_feas  <- .Call('return_mov_list_cost_feas' , as.integer(counter_index_order), PACKAGE = "mcttrpcw")
   mov_list$mov_list_cost_nopen  <- .Call('return_mov_list_cost_nopen' , as.integer(counter_index_order), PACKAGE = "mcttrpcw")
+  mov_list$opt_reconf  <- .Call('return_mov_list_opt_reconf' , as.integer(counter_index_order), PACKAGE = "mcttrpcw")
   
   return(mov_list)
 }
@@ -286,15 +309,15 @@ check_result_in_tabu_list_new<-function(tabulist, movid, bestcost) {
   if (movid$mov_list_cost >= bestcost) {
     
     
-    if ((length(movid$client2)>=1)&&(movid$client2 != 0)) {
+    if ((length(movid$client2)>=1)&&(movid$client2 != 0)&&(movid$root2 != -1)) {
       
-      tabu_check <- check_in_tabulist(tabulist, movid$client1, movid$indexr2)
+      tabu_check <- check_in_tabulist(tabulist, movid$client1, movid$indexr2, movid$root1)
       
-      tabu_check <- tabu_check + check_in_tabulist(tabulist, movid$client2, movid$indexr1)
+      tabu_check <- tabu_check + check_in_tabulist(tabulist, movid$client2, movid$indexr1, movid$root2)
       
     } else {
       
-      tabu_check <- check_in_tabulist(tabulist, movid$client1,  movid$indexr1)
+      tabu_check <- check_in_tabulist(tabulist, movid$client1,  movid$indexr1, movid$root1)
       
     }
     
@@ -306,52 +329,14 @@ check_result_in_tabu_list_new<-function(tabulist, movid, bestcost) {
 }
 
 
-# insert in tabu list
-insert_result_in_tabulist<-function(mov_list, index_order, counter_index_order, tabulist_data, tau) {
-  
-  
-  if ((length(mov_list[[index_order[counter_index_order]]]$client2)>=1)&&(mov_list[[index_order[counter_index_order]]]$client2!=0)) {
-    
-    # tabu list
-    tabulist_data$tabulist <- insert_in_tabu_list(mov_list[[index_order[counter_index_order]]]$client1, 
-                                                  mov_list[[index_order[counter_index_order]]]$indexr1, tau, tabulist_data$tabulist) 
-    # table freq
-    for (ii in 1:length(mov_list[[index_order[counter_index_order]]]$client1)) {
-      client <- mov_list[[index_order[counter_index_order]]]$client1[ii]
-      tabulist_data$table_freq <- update_table_freq(tabulist_data$table_freq, client, mov_list[[index_order[counter_index_order]]]$indexr2)
-    }
-    
-    # tabu list
-    tabulist_data$tabulist <- insert_in_tabu_list(mov_list[[index_order[counter_index_order]]]$client2, 
-                                                  mov_list[[index_order[counter_index_order]]]$indexr2, tau, tabulist_data$tabulist) 
-    # table freq
-    for (ii in 1:length(mov_list[[index_order[counter_index_order]]]$client2)) {
-      client <- mov_list[[index_order[counter_index_order]]]$client2[ii]
-      tabulist_data$table_freq <- update_table_freq(tabulist_data$table_freq, client, mov_list[[index_order[counter_index_order]]]$indexr1)
-    }
-  } else {
-    
-    # tabu list
-    tabulist_data$tabulist <- insert_in_tabu_list(mov_list[[index_order[counter_index_order]]]$client1, 
-                                                  mov_list[[index_order[counter_index_order]]]$indexr1, tau, tabulist_data$tabulist) 
-    # table freq
-    for (ii in 1:length(mov_list[[index_order[counter_index_order]]]$client1)) {
-      client <- mov_list[[index_order[counter_index_order]]]$client1[ii]
-      tabulist_data$table_freq <- update_table_freq(tabulist_data$table_freq, client, mov_list[[index_order[counter_index_order]]]$indexr1)
-    }
-    
-  }
-  
-  return(tabulist_data)
-}
-
+#
 insert_result_in_tabulist_new<-function(movid, tabulist_data, tau) {
   
   
-  if ((length(movid$client2)>=1)&&(movid$client2!=0)) {
+  if ((length(movid$client2)>=1)&&(movid$client2!=0)&&(movid$root2!=-1)) {
     
     # tabu list
-    tabulist_data$tabulist <- insert_in_tabu_list(movid$client1, movid$indexr1, tau, tabulist_data$tabulist) 
+    tabulist_data$tabulist <- insert_in_tabu_list(movid$client1, movid$indexr1, tau, tabulist_data$tabulist, movid$root1) 
     # table freq
     for (ii in 1:length(movid$client1)) {
       client <- movid$client1[ii]
@@ -359,7 +344,7 @@ insert_result_in_tabulist_new<-function(movid, tabulist_data, tau) {
     }
     
     # tabu list
-    tabulist_data$tabulist <- insert_in_tabu_list(movid$client2, movid$indexr2, tau, tabulist_data$tabulist) 
+    tabulist_data$tabulist <- insert_in_tabu_list(movid$client2, movid$indexr2, tau, tabulist_data$tabulist, movid$root2) 
     # table freq
     for (ii in 1:length(movid$client2)) {
       client <- movid$client2[ii]
@@ -368,7 +353,7 @@ insert_result_in_tabulist_new<-function(movid, tabulist_data, tau) {
   } else {
     
     # tabu list
-    tabulist_data$tabulist <- insert_in_tabu_list(movid$client1, movid$indexr1, tau, tabulist_data$tabulist) 
+    tabulist_data$tabulist <- insert_in_tabu_list(movid$client1, movid$indexr1, tau, tabulist_data$tabulist, movid$root1) 
     # table freq
     for (ii in 1:length(movid$client1)) {
       client <- movid$client1[ii]
@@ -493,21 +478,6 @@ movements_imp_new <- function(input, current_solution, type_problem, vecinity, p
 
 
 
-
-movements_imp_move <- function(movs, input, current_solution, type_problem, vecinity, perc_vecinity, penalty_capacity, changed_routes, check_feas) {
-  
-  # move function
-  movs <- move_tc(input, current_solution, movs, changed_routes, type_problem, vecinity, perc_vecinity, 
-                  penalty_capacity, check_feas)  
-  
-  # move function
-  movs <- move_vc(input, current_solution, movs, changed_routes, type_problem, vecinity, perc_vecinity, 
-                  penalty_capacity, check_feas) 
-  
-  return(movs)
-}
-
-
 insert_selected_mov<-function(input, mov, current_solution, type_problem){
   
   if (length(mov$route2)>1) {
@@ -538,17 +508,21 @@ insert_selected_mov<-function(input, mov, current_solution, type_problem){
 insert_selected_mov_new<-function(input, movid, current_solution, type_problem){
   
   if (length(movid$route2)>1) {
+    reconf <- 0
+    if ((type_problem == "MCTTRP")&&(movid$opt_reconf)) reconf <- 1
     
     # first  modification
-    current_solution <- insert_element_in_solution(input, movid$route1, movid$indexr1, current_solution, type_problem)
+    current_solution <- insert_element_in_solution(input, movid$route1, movid$indexr1, current_solution, type_problem, reconf)
     
     # second modification
-    current_solution <- insert_element_in_solution(input, movid$route2, movid$indexr2, current_solution, type_problem)
+    current_solution <- insert_element_in_solution(input, movid$route2, movid$indexr2, current_solution, type_problem, reconf)
     
   } else {
+    reconf <- 0
+    if ((type_problem == "MCTTRP")&&(movid$opt_reconf)) reconf <- 1
     
     # modification
-    current_solution <- insert_element_in_solution(input, movid$route1, movid$indexr1, current_solution, type_problem)
+    current_solution <- insert_element_in_solution(input, movid$route1, movid$indexr1, current_solution, type_problem, reconf)
     
   }
   
@@ -556,18 +530,12 @@ insert_selected_mov_new<-function(input, movid, current_solution, type_problem){
 }
 
 
-insert_element_in_solution<-function(input, new_route, pos, current_solution, type_problem){
-  
-  #print(paste0("ADD NEW ROUTE: "))
-  #print(new_route)
-  #print(paste0("OLD ROUTES: "))
-  #for (i in 1:length(current_solution)) {
-  #  print(current_solution[[i]]$route)
-  #}
+insert_element_in_solution<-function(input, new_route, pos, current_solution, type_problem, reconf){
   
   # first modification
   all_vc <- 1
   subroutes <- 0
+  old_solution <- current_solution
   type_root1 <- current_solution[[pos]]$type
   for (i in 2:(length(new_route)-1)) {
     if (new_route[i] >  input$n1) all_vc <- 0
@@ -596,21 +564,62 @@ insert_element_in_solution<-function(input, new_route, pos, current_solution, ty
     current_solution[[pos]]$total_load_tc_clients <- calc_load_only_truck_MC(current_solution[[pos]]$route, input$matriz.demandas, input)
   }
   current_solution[[pos]]$cost <- local_cost(current_solution[[pos]]$route, input$matriz.distancia)
-  if ((type_problem == "MCTTRP")&&(current_solution[[pos]]$type == "CVR")) {
-    res_r <- insert_hoppers_MCTTRP_CVR(current_solution[[pos]]$route, current_solution, input)
+  if (type_problem == "MCTTRP") {
+    if (reconf == 0) {
+      if (type_root1 == "PTR") res_r <- insert_hoppers_MCTTRP_PTR       (current_solution[[pos]], old_solution[[pos]], input)
+      if (type_root1 == "PVR") res_r <- insert_hoppers_MCTTRP_PVR_update(current_solution[[pos]]$route, old_solution[[pos]], input)
+      if (type_root1 == "CVR") res_r <- insert_hoppers_MCTTRP_CVR_update(current_solution[[pos]]$route, old_solution[[pos]], input)
+    } else {
+      if (type_root1 == "PTR") res_r <- insert_hoppers_MCTTRP_PTR       (current_solution[[pos]], old_solution[[pos]], input)
+      if (type_root1 == "PVR") res_r <- insert_hoppers_MCTTRP_PVR_new(current_solution[[pos]], old_solution[[pos]], input)
+      if (type_root1 == "CVR") res_r <- insert_hoppers_MCTTRP_CVR_new(current_solution[[pos]], old_solution[[pos]], input)
+    }
     current_solution[[pos]]$clients_tc <- res_r$clients_tc
     current_solution[[pos]]$clients_vc <- res_r$clients_vc
     current_solution[[pos]]$used_hoppers_truck <- res_r$used_hoppers_truck
     current_solution[[pos]]$used_hoppers_trailer <- res_r$used_hoppers_trailer
   }
   
-  #print(paste0("CURRENT ROUTES: "))
-  #for (i in 1:length(current_solution)) {
-  #  print(current_solution[[i]]$route)
-  #}
+
   return(current_solution)
 }
 
+calc_root_tc_client<-function(result_i, client_i, input) {
+  if(result_i$type == "CVR") {
+    subroutes <- return_subroutes(result_i$route, input$n1)
+    for (i in 1:length(subroutes)) {
+      subroutes_i <-  subroutes[[i]]$tour[2:(length(subroutes[[i]]$tour)-1)]
+      if (sum(subroutes_i == client_i)>0) {
+        rooti <- subroutes_i[1]
+        break
+      }
+    }
+  }
+  else rooti <- 0
+  
+  return(rooti)
+}
+
+calc_root_vc_client<-function(result_i, client_i, input) {
+  if(result_i$type == "CVR") {
+    main_root <- return_main_route(result_i$route)
+    if (sum(main_root == client_i)>0) {
+      rooti <- 0
+    } else  {
+      subroutes <- return_subroutes(result_i$route, input$n1)
+      for (i in 1:length(subroutes)) {
+        subroutes_i <-  subroutes[[i]]$tour[2:(length(subroutes[[i]]$tour)-1)]
+        if (sum(subroutes_i == client_i)>0) {
+          rooti <- subroutes_i[1]
+          break
+        }
+      } 
+    }
+  }
+  else rooti <- 0
+  
+  return(rooti)
+}
 
 exchange_tc_two_routes<-function(input, result, changed_routes, type_problem, vecinity, perc_vecinity, 
                                  penalty_capacity, check_feas) {
@@ -621,12 +630,14 @@ exchange_tc_two_routes<-function(input, result, changed_routes, type_problem, ve
         if ( sum(result[[i]]$route == result[[i]]$route[j]) == 1 ) {
           clienti <- result[[i]]$route[j]
           if (clienti > input$n1) {
+            rooti <- calc_root_tc_client(result[[i]], clienti, input) 
             for (w in (i+1):length(result)) {
               if ((result[[w]]$type != "PVR")&&(i!=w)&&((w %in% changed_routes)||(i %in% changed_routes))) {
                 for (t in 2:(length(result[[w]]$route)-1)) {
                   if ( sum(result[[w]]$route == result[[w]]$route[t]) == 1 ) {
                     clientw <- result[[w]]$route[t]
                     if (clientw > input$n1) {
+                      rootw <- calc_root_tc_client(result[[w]], clientw, input)
                       # create routes  
                       route1 <- replace_route_client(clienti, clientw, result[[i]]$route)
                       route2 <- replace_route_client(clientw, clienti, result[[w]]$route)
@@ -634,19 +645,37 @@ exchange_tc_two_routes<-function(input, result, changed_routes, type_problem, ve
                       feasible_route1 <- 1
                       feasible_route2 <- 1
                       if (check_feas) {
-                        feasible_route1 <- check_feasibility(result, route1, input, result[[i]]$type, type_problem, penalty_capacity) 
-                        feasible_route2 <- check_feasibility(result, route2, input, result[[w]]$type, type_problem, penalty_capacity) 
+                        feasible_route1 <- check_feasibility(result[[i]], route1, input, result[[i]]$type, type_problem, penalty_capacity, "update") 
+                        feasible_route2 <- check_feasibility(result[[w]], route2, input, result[[w]]$type, type_problem, penalty_capacity, "update") 
                       }
                       # add to mov list
                       if (feasible_route1 && feasible_route2) {
-                        #movs <- add_movements_to_list(input, i, w, c(clienti), c(clientw), 
-                        #                              "exchange_tc_two_routes", route1, route2,  movs)
+                        if (type_problem == "TTRP") {
+                          
+                          .Call('insertMovsList', as.integer(i), as.integer(w), 
+                                as.integer(c(clienti)), as.integer(c(clientw)), 
+                                as.integer(c(route1)), as.integer(c(route2)), 
+                                "exchange_tc_two_routes", as.integer(rooti), as.integer(rootw), 
+                                PACKAGE = "mcttrpcw")
+                        }
                         
-                        .Call('insertMovsList', as.integer(i), as.integer(w), 
-                              as.integer(c(clienti)), as.integer(c(clientw)), 
-                              as.integer(c(route1)), as.integer(c(route2)), 
-                              "exchange_tc_two_routes", 
-                              PACKAGE = "mcttrpcw")
+                        
+                        if (type_problem == "MCTTRP") {
+                          res1 <- check_capacity_hoppers_MCTTRP_return_hoppers(route1, result[[i]], input)
+                          res2 <- check_capacity_hoppers_MCTTRP_return_hoppers(route2, result[[w]], input)
+                          hoppers_truck1 <- res1$hoppers_truck
+                          hoppers_trailer1 <- res1$hoppers_trailer
+                          hoppers_truck2 <- res2$hoppers_truck                          
+                          hoppers_trailer2 <- res2$hoppers_trailer
+                          
+                          .Call('insertMovsList_MCTTRP', as.integer(i), as.integer(w), 
+                                as.integer(c(clienti)), as.integer(c(clientw)), 
+                                as.integer(c(route1)), as.integer(c(route2)), 
+                                "exchange_tc_two_routes", as.integer(rooti), as.integer(rootw), 
+                                as.integer(hoppers_truck1), as.integer(hoppers_trailer1), as.integer(hoppers_truck2), as.integer(hoppers_trailer2), 
+                                as.integer(0),
+                                PACKAGE = "mcttrpcw")
+                        }  
                       } 
                     }
                   }
@@ -662,7 +691,7 @@ exchange_tc_two_routes<-function(input, result, changed_routes, type_problem, ve
   
 }
 
-# move_tc
+
 move_tc<-function(input, result, changed_routes, type_problem, vecinity, perc_vecinity, 
                   penalty_capacity, check_feas) {
   
@@ -672,6 +701,8 @@ move_tc<-function(input, result, changed_routes, type_problem, vecinity, perc_ve
         # is not a depot and is a tc
         if (( sum(result[[i]]$route == result[[i]]$route[j]) == 1 ) &&  (result[[i]]$route[j] > input$n1)) {
           clienti <- result[[i]]$route[j]
+          rooti <- calc_root_tc_client(result[[i]], clienti, input) 
+          rootw <- -1
           for (w in (1:length(result))) {
             if ((i!=w)&&((w %in% changed_routes)||(i %in% changed_routes))) {
               # subroute
@@ -687,19 +718,38 @@ move_tc<-function(input, result, changed_routes, type_problem, vecinity, perc_ve
                     feasible_route1 <- 1
                     feasible_route2 <- 1
                     if (check_feas) {
-                      feasible_route1 <- check_feasibility(result, route1, input, result[[i]]$type, type_problem, penalty_capacity) 
-                      feasible_route2 <- check_feasibility(result, route2, input, result[[w]]$type, type_problem, penalty_capacity) 
+                      feasible_route1 <- check_feasibility(result[[i]], route1, input, result[[i]]$type, type_problem, penalty_capacity, "update") 
+                      feasible_route2 <- check_feasibility(result[[w]], route2, input, result[[w]]$type, type_problem, penalty_capacity, "update") 
                     }
                     # add to mov list
                     if (feasible_route1 && feasible_route2) {
-                      #movs <- add_movements_to_list(input, i, w, c(clienti), 0, "move_tc", 
-                      #                              route1, route2,  movs)
+
+                      if (type_problem == "TTRP") {
+                        
+                        .Call('insertMovsList', as.integer(i), as.integer(w), 
+                              as.integer(c(clienti)), as.integer(0), 
+                              as.integer(c(route1)), as.integer(c(route2)), 
+                              "move_tc", as.integer(rooti), as.integer(rootw), 
+                              PACKAGE = "mcttrpcw")
+                        
+                      }
                       
-                      .Call('insertMovsList', as.integer(i), as.integer(w), 
-                            as.integer(c(clienti)), as.integer(0), 
-                            as.integer(c(route1)), as.integer(c(route2)), 
-                            "move_tc", 
-                            PACKAGE = "mcttrpcw")
+                      if (type_problem == "MCTTRP") {
+                        res1 <- check_capacity_hoppers_MCTTRP_return_hoppers(route1, result[[i]], input)
+                        res2 <- check_capacity_hoppers_MCTTRP_return_hoppers(route2, result[[w]], input)
+                        hoppers_truck1 <- res1$hoppers_truck
+                        hoppers_trailer1 <- res1$hoppers_trailer
+                        hoppers_truck2 <- res2$hoppers_truck                          
+                        hoppers_trailer2 <- res2$hoppers_trailer
+                        
+                        .Call('insertMovsList_MCTTRP',  as.integer(i), as.integer(w), 
+                              as.integer(c(clienti)), as.integer(0), 
+                              as.integer(c(route1)), as.integer(c(route2)), 
+                              "move_tc", as.integer(rooti), as.integer(rootw), 
+                              as.integer(hoppers_truck1), as.integer(hoppers_trailer1), as.integer(hoppers_truck2), as.integer(hoppers_trailer2), 
+                              as.integer(0),
+                              PACKAGE = "mcttrpcw")
+                      }
                     } 
                   }
                 }
@@ -720,19 +770,37 @@ move_tc<-function(input, result, changed_routes, type_problem, vecinity, perc_ve
                   feasible_route1 <- 1
                   feasible_route2 <- 1
                   if (check_feas) {
-                    feasible_route1 <- check_feasibility(result, route1, input, result[[i]]$type, type_problem, penalty_capacity) 
-                    feasible_route2 <- check_feasibility(result, route2, input, result[[w]]$type, type_problem, penalty_capacity) 
+                    feasible_route1 <- check_feasibility(result[[i]], route1, input, result[[i]]$type, type_problem, penalty_capacity, "update") 
+                    feasible_route2 <- check_feasibility(result[[w]], route2, input, result[[w]]$type, type_problem, penalty_capacity, "update") 
                   }
                   # add to mov list
                   if (feasible_route1 && feasible_route2) {
-                    #movs <- add_movements_to_list(input, i, w, c(clienti), 0, "move_tc", 
-                    #                              route1, route2,  movs)
+                    if (type_problem == "TTRP") {
+                      
+                      .Call('insertMovsList', as.integer(i), as.integer(w), 
+                            as.integer(c(clienti)), as.integer(0), 
+                            as.integer(c(route1)), as.integer(c(route2)), 
+                            "move_tc", as.integer(rooti), as.integer(rootw), 
+                            PACKAGE = "mcttrpcw")
+                      
+                    }
                     
-                    .Call('insertMovsList', as.integer(i), as.integer(w), 
-                          as.integer(c(clienti)), as.integer(0), 
-                          as.integer(c(route1)), as.integer(c(route2)), 
-                          "move_tc", 
-                          PACKAGE = "mcttrpcw")
+                    if (type_problem == "MCTTRP") {
+                      res1 <- check_capacity_hoppers_MCTTRP_return_hoppers(route1, result[[i]], input)
+                      res2 <- check_capacity_hoppers_MCTTRP_return_hoppers(route2, result[[w]], input)
+                      hoppers_truck1 <- res1$hoppers_truck
+                      hoppers_trailer1 <- res1$hoppers_trailer
+                      hoppers_truck2 <- res2$hoppers_truck                          
+                      hoppers_trailer2 <- res2$hoppers_trailer
+                      
+                      .Call('insertMovsList_MCTTRP',  as.integer(i), as.integer(w), 
+                            as.integer(c(clienti)), as.integer(0), 
+                            as.integer(c(route1)), as.integer(c(route2)), 
+                            "move_tc", as.integer(rooti), as.integer(rootw), 
+                            as.integer(hoppers_truck1), as.integer(hoppers_trailer1), as.integer(hoppers_truck2), as.integer(hoppers_trailer2), 
+                            as.integer(0),
+                            PACKAGE = "mcttrpcw")
+                    }
                   } 
                 }
               }
@@ -746,19 +814,37 @@ move_tc<-function(input, result, changed_routes, type_problem, vecinity, perc_ve
                   feasible_route1 <- 1
                   feasible_route2 <- 1
                   if (check_feas) {
-                    feasible_route1 <- check_feasibility(result, route1, input, result[[i]]$type, type_problem, penalty_capacity) 
-                    feasible_route2 <- check_feasibility(result, route2, input, result[[w]]$type, type_problem, penalty_capacity) 
+                    feasible_route1 <- check_feasibility(result[[i]], route1, input, result[[i]]$type, type_problem, penalty_capacity, "update") 
+                    feasible_route2 <- check_feasibility(result[[w]], route2, input, result[[w]]$type, type_problem, penalty_capacity, "update") 
                   }
                   # add to mov list
                   if (feasible_route1 && feasible_route2) {
-                    #movs <- add_movements_to_list(input, i, w, c(clienti), 0, "move_tc", 
-                    #                              route1, route2,  movs )
+                    if (type_problem == "TTRP") {
+                      
+                      .Call('insertMovsList', as.integer(i), as.integer(w), 
+                            as.integer(c(clienti)), as.integer(0), 
+                            as.integer(c(route1)), as.integer(c(route2)), 
+                            "move_tc", as.integer(rooti), as.integer(rootw), 
+                            PACKAGE = "mcttrpcw")
+                      
+                    }
                     
-                    .Call('insertMovsList', as.integer(i), as.integer(w), 
-                          as.integer(c(clienti)), as.integer(0), 
-                          as.integer(c(route1)), as.integer(c(route2)), 
-                          "move_tc", 
-                          PACKAGE = "mcttrpcw")
+                    if (type_problem == "MCTTRP") {
+                      res1 <- check_capacity_hoppers_MCTTRP_return_hoppers(route1, result[[i]], input)
+                      res2 <- check_capacity_hoppers_MCTTRP_return_hoppers(route2, result[[w]], input)
+                      hoppers_truck1 <- res1$hoppers_truck
+                      hoppers_trailer1 <- res1$hoppers_trailer
+                      hoppers_truck2 <- res2$hoppers_truck                          
+                      hoppers_trailer2 <- res2$hoppers_trailer
+                      
+                      .Call('insertMovsList_MCTTRP',  as.integer(i), as.integer(w), 
+                            as.integer(c(clienti)), as.integer(0), 
+                            as.integer(c(route1)), as.integer(c(route2)), 
+                            "move_tc", as.integer(rooti), as.integer(rootw), 
+                            as.integer(hoppers_truck1), as.integer(hoppers_trailer1), as.integer(hoppers_truck2), as.integer(hoppers_trailer2), 
+                            as.integer(0),
+                            PACKAGE = "mcttrpcw")
+                    }
                   } 
                 }
               }
@@ -773,19 +859,37 @@ move_tc<-function(input, result, changed_routes, type_problem, vecinity, perc_ve
                   feasible_route1 <- 1
                   feasible_route2 <- 1
                   if (check_feas) {
-                    feasible_route1 <- check_feasibility(result, route1, input, result[[i]]$type, type_problem, penalty_capacity) 
-                    feasible_route2 <- check_feasibility(result, route2, input, result[[w]]$type, type_problem, penalty_capacity) 
+                    feasible_route1 <- check_feasibility(result[[i]], route1, input, result[[i]]$type, type_problem, penalty_capacity, "update") 
+                    feasible_route2 <- check_feasibility(result[[w]], route2, input, result[[w]]$type, type_problem, penalty_capacity, "update") 
                   }
                   # add to mov list
                   if (feasible_route1 && feasible_route2) {
-                    #movs <- add_movements_to_list(input, i, w, c(clienti), 0, "move_tc", 
-                    #                              route1, route2,  movs)
+                    if (type_problem == "TTRP") {
+                      
+                      .Call('insertMovsList', as.integer(i), as.integer(w), 
+                            as.integer(c(clienti)), as.integer(0), 
+                            as.integer(c(route1)), as.integer(c(route2)), 
+                            "move_tc", as.integer(rooti), as.integer(rootw), 
+                            PACKAGE = "mcttrpcw")
+                      
+                    }
                     
-                    .Call('insertMovsList', as.integer(i), as.integer(w), 
-                          as.integer(c(clienti)), as.integer(0), 
-                          as.integer(c(route1)), as.integer(c(route2)), 
-                          "move_tc", 
-                          PACKAGE = "mcttrpcw")
+                    if (type_problem == "MCTTRP") {
+                      res1 <- check_capacity_hoppers_MCTTRP_return_hoppers(route1, result[[i]], input)
+                      res2 <- check_capacity_hoppers_MCTTRP_return_hoppers(route2, result[[w]], input)
+                      hoppers_truck1 <- res1$hoppers_truck
+                      hoppers_trailer1 <- res1$hoppers_trailer
+                      hoppers_truck2 <- res2$hoppers_truck                          
+                      hoppers_trailer2 <- res2$hoppers_trailer
+                      
+                      .Call('insertMovsList_MCTTRP',  as.integer(i), as.integer(w), 
+                            as.integer(c(clienti)), as.integer(0), 
+                            as.integer(c(route1)), as.integer(c(route2)), 
+                            "move_tc", as.integer(rooti), as.integer(rootw), 
+                            as.integer(hoppers_truck1), as.integer(hoppers_trailer1), as.integer(hoppers_truck2), as.integer(hoppers_trailer2), 
+                            as.integer(0),
+                            PACKAGE = "mcttrpcw")
+                    }
                   } 
                 }
               }
@@ -797,9 +901,9 @@ move_tc<-function(input, result, changed_routes, type_problem, vecinity, perc_ve
     }
   }
   
-  #return(movs)
   
 }
+
 
 move_vc<-function(input, result, changed_routes, type_problem, vecinity, perc_vecinity, 
                   penalty_capacity, check_feas) {
@@ -810,6 +914,8 @@ move_vc<-function(input, result, changed_routes, type_problem, vecinity, perc_ve
         # is not a depot and is a vc
         if (( sum(result[[i]]$route == result[[i]]$route[j]) == 1 ) &&  (result[[i]]$route[j] <= input$n1)) {
           clienti <- result[[i]]$route[j]
+          rooti <- calc_root_vc_client(result[[i]], clienti, input)
+          rootw <- -1
           for (w in (1:length(result))) {
             if ((i!=w)&&((w %in% changed_routes)||(i %in% changed_routes))) {
               if (result[[w]]$type == "CVR") main_root <- return_main_route(result[[w]]$route)
@@ -824,19 +930,38 @@ move_vc<-function(input, result, changed_routes, type_problem, vecinity, perc_ve
                   feasible_route1 <- 1
                   feasible_route2 <- 1
                   if (check_feas) {
-                    feasible_route1 <- check_feasibility(result, route1, input, result[[i]]$type, type_problem, penalty_capacity) 
-                    feasible_route2 <- check_feasibility(result, route2, input, result[[w]]$type, type_problem, penalty_capacity) 
+                    feasible_route1 <- check_feasibility(result[[i]], route1, input, result[[i]]$type, type_problem, penalty_capacity, "update") 
+                    feasible_route2 <- check_feasibility(result[[w]], route2, input, result[[w]]$type, type_problem, penalty_capacity, "update") 
                   }
                   # add to mov list
                   if (feasible_route1 && feasible_route2) {
-                    #movs <- add_movements_to_list(input, i, w, c(clienti), 0, "move_tc", 
-                    #                              route1, route2,  movs)
-                  
-                    .Call('insertMovsList', as.integer(i), as.integer(w), 
-                          as.integer(c(clienti)), as.integer(0), 
-                          as.integer(c(route1)), as.integer(c(route2)), 
-                          "move_tc",
-                          PACKAGE = "mcttrpcw")
+                    
+                    if (type_problem == "TTRP") {
+                      
+                      .Call('insertMovsList', as.integer(i), as.integer(w), 
+                            as.integer(c(clienti)), as.integer(0), 
+                            as.integer(c(route1)), as.integer(c(route2)), 
+                            "move_vc", as.integer(rooti), as.integer(rootw), 
+                            PACKAGE = "mcttrpcw")
+                      
+                    }
+                    
+                    if (type_problem == "MCTTRP") {
+                      res1 <- check_capacity_hoppers_MCTTRP_return_hoppers(route1, result[[i]], input)
+                      res2 <- check_capacity_hoppers_MCTTRP_return_hoppers(route2, result[[w]], input)
+                      hoppers_truck1 <- res1$hoppers_truck
+                      hoppers_trailer1 <- res1$hoppers_trailer
+                      hoppers_truck2 <- res2$hoppers_truck                          
+                      hoppers_trailer2 <- res2$hoppers_trailer
+                      
+                      .Call('insertMovsList_MCTTRP',  as.integer(i), as.integer(w), 
+                            as.integer(c(clienti)), as.integer(0), 
+                            as.integer(c(route1)), as.integer(c(route2)), 
+                            "move_vc", as.integer(rooti), as.integer(rootw), 
+                            as.integer(hoppers_truck1), as.integer(hoppers_trailer1), as.integer(hoppers_truck2), as.integer(hoppers_trailer2), 
+                            as.integer(0),
+                            PACKAGE = "mcttrpcw")
+                    }
                   
                   } 
                 }
@@ -849,8 +974,7 @@ move_vc<-function(input, result, changed_routes, type_problem, vecinity, perc_ve
     }
   }
   
-  #return(movs)
-  
+
 }
 
 exchange_vc_two_routes<-function(input, result, changed_routes, type_problem, vecinity,
@@ -862,12 +986,15 @@ exchange_vc_two_routes<-function(input, result, changed_routes, type_problem, ve
       if ( sum(result[[i]]$route == result[[i]]$route[j]) == 1 ) {
         clienti <- result[[i]]$route[j]
         if (clienti <= input$n1) {
+          rooti <- calc_root_vc_client(result[[i]], clienti, input)
           for (w in (i+1):length(result)) {
             if ((w %in% changed_routes)||(i %in% changed_routes)) {
               for (t in 2:(length(result[[w]]$route)-1)) {
                 if ((i!=w)&&(sum(result[[w]]$route == result[[w]]$route[t]) == 1)) {
                   clientw <- result[[w]]$route[t]
                   if ((clientw <= input$n1)) {
+                    rootw <- calc_root_vc_client(result[[w]], clientw, input)
+                    
                     # create routes  
                     route1 <- replace_route_client(clienti, clientw, result[[i]]$route)
                     route2 <- replace_route_client(clientw, clienti, result[[w]]$route)
@@ -876,20 +1003,39 @@ exchange_vc_two_routes<-function(input, result, changed_routes, type_problem, ve
                     feasible_route1 <- 1
                     feasible_route2 <- 1
                     if (check_feas) {
-                      feasible_route1 <- check_feasibility(result, route1, input, result[[i]]$type, type_problem, penalty_capacity) 
-                      feasible_route2 <- check_feasibility(result, route2, input, result[[w]]$type, type_problem, penalty_capacity) 
+                      feasible_route1 <- check_feasibility(result[[i]], route1, input, result[[i]]$type, type_problem, penalty_capacity, "update") 
+                      feasible_route2 <- check_feasibility(result[[w]], route2, input, result[[w]]$type, type_problem, penalty_capacity, "update") 
                     }
                     
                     # add to mov list
                     if (feasible_route1 && feasible_route2) {
-                      #movs <- add_movements_to_list(input, i, w,  c(clienti), c(clientw), 
-                      #                              "exchange_vc_two_routes", route1, route2,  movs)
-                    
-                      .Call('insertMovsList', as.integer(i), as.integer(w), 
-                            as.integer(c(clienti)), as.integer(clientw), 
-                            as.integer(c(route1)), as.integer(c(route2)), 
-                            "exchange_vc_two_routes",
-                            PACKAGE = "mcttrpcw")
+
+                      if (type_problem == "TTRP") {
+                        
+                        .Call('insertMovsList', as.integer(i), as.integer(w), 
+                              as.integer(c(clienti)), as.integer(clientw), 
+                              as.integer(c(route1)), as.integer(c(route2)), 
+                              "exchange_vc_two_routes", as.integer(rooti), as.integer(rootw), 
+                              PACKAGE = "mcttrpcw")
+                        
+                      }
+                      
+                      if (type_problem == "MCTTRP") {
+                        res1 <- check_capacity_hoppers_MCTTRP_return_hoppers(route1, result[[i]], input)
+                        res2 <- check_capacity_hoppers_MCTTRP_return_hoppers(route2, result[[w]], input)
+                        hoppers_truck1 <- res1$hoppers_truck
+                        hoppers_trailer1 <- res1$hoppers_trailer
+                        hoppers_truck2 <- res2$hoppers_truck                          
+                        hoppers_trailer2 <- res2$hoppers_trailer
+                        
+                        .Call('insertMovsList_MCTTRP',  as.integer(i), as.integer(w), 
+                              as.integer(c(clienti)), as.integer(clientw), 
+                              as.integer(c(route1)), as.integer(c(route2)), 
+                              "exchange_vc_two_routes", as.integer(rooti), as.integer(rootw), 
+                              as.integer(hoppers_truck1), as.integer(hoppers_trailer1), as.integer(hoppers_truck2), as.integer(hoppers_trailer2), 
+                              as.integer(0),
+                              PACKAGE = "mcttrpcw")
+                      }
                     } 
                   }
                 }
@@ -913,12 +1059,14 @@ exchange_ptr_and_subtour<-function(input, result, changed_routes, type_problem, 
   for (i in 1:length(result)) {
     if (result[[i]]$type == "PTR") {
       subroutei <- result[[i]]$route
+      rooti <- 0
       for (z in 1:length(result)){
         if ((result[[z]]$type == "CVR")&&((z %in% changed_routes)||(i %in% changed_routes))) {
           if (i!=z) {
             subroutes <- return_subroutes(result[[z]]$route, input$n1)
             for (s in 1:length(subroutes)) {
               subroutez <- subroutes[[s]]$tour
+              rootz <- subroutes[[s]]$tour[1]
               
               route1 <- c(0, subroutez[2:(length(subroutez)-1)], 0)
               route2 <- replace_subroute(subroutez, subroutei, result[[z]]$route)
@@ -927,21 +1075,40 @@ exchange_ptr_and_subtour<-function(input, result, changed_routes, type_problem, 
               feasible_route1 <- 1
               feasible_route2 <- 1
               if (check_feas) {
-                feasible_route1 <- check_feasibility(result, route1, input, result[[i]]$type, type_problem, penalty_capacity) 
-                feasible_route2 <- check_feasibility(result, route2, input, result[[z]]$type, type_problem, penalty_capacity) 
+                feasible_route1 <- check_feasibility(result[[i]], route1, input, result[[i]]$type, type_problem, penalty_capacity, "update") 
+                feasible_route2 <- check_feasibility(result[[z]], route2, input, result[[z]]$type, type_problem, penalty_capacity, "update") 
               }
               # add to mov list
               if (feasible_route1 && feasible_route2) {
-                #movs <- add_movements_to_list(input, i, z,  subroutei[2:(length(subroutei)-1)], 
-                ##                              subroutez[2:(length(subroutez)-1)], 
-                #                              "exchange_ptr_and_subtour", route1, route2,  movs)
+
+                if (type_problem == "TTRP") {
+                  
+                  .Call('insertMovsList', as.integer(i), as.integer(z), 
+                        as.integer(subroutei[2:(length(subroutei)-1)]), 
+                        as.integer(subroutez[2:(length(subroutez)-1)]), 
+                        as.integer(c(route1)), as.integer(c(route2)), 
+                        "exchange_ptr_and_subtour", as.integer(rooti), as.integer(rootz),
+                        PACKAGE = "mcttrpcw")
+                  
+                }
                 
-                .Call('insertMovsList', as.integer(i), as.integer(z), 
-                      as.integer(subroutei[2:(length(subroutei)-1)]), 
-                      as.integer(subroutez[2:(length(subroutez)-1)]), 
-                      as.integer(c(route1)), as.integer(c(route2)), 
-                      "exchange_ptr_and_subtour",
-                      PACKAGE = "mcttrpcw")
+                if (type_problem == "MCTTRP") {
+                  res1 <- check_capacity_hoppers_MCTTRP_return_hoppers(route1, result[[i]], input)
+                  res2 <- check_capacity_hoppers_MCTTRP_return_hoppers(route2, result[[z]], input)
+                  hoppers_truck1 <- res1$hoppers_truck
+                  hoppers_trailer1 <- res1$hoppers_trailer
+                  hoppers_truck2 <- res2$hoppers_truck                          
+                  hoppers_trailer2 <- res2$hoppers_trailer
+                  
+                  .Call('insertMovsList_MCTTRP',  as.integer(i), as.integer(z), 
+                        as.integer(subroutei[2:(length(subroutei)-1)]), 
+                        as.integer(subroutez[2:(length(subroutez)-1)]), 
+                        as.integer(c(route1)), as.integer(c(route2)), 
+                        "exchange_ptr_and_subtour", as.integer(rooti), as.integer(rootz),
+                        as.integer(hoppers_truck1), as.integer(hoppers_trailer1), as.integer(hoppers_truck2), as.integer(hoppers_trailer2), 
+                        as.integer(0),
+                        PACKAGE = "mcttrpcw")
+                }
               } 
             }
           }
@@ -964,6 +1131,8 @@ move_vc_client_subroute_to_main_tour_and_split_same_route<-function(input, resul
       for (s in 1:length(subroutes)) {
         for (j in 2:(length(subroutes[[s]]$tour)-1)) {
           clienti <- subroutes[[s]]$tour[j]
+          rooti <- subroutes[[s]]$tour[1]
+          rootw <- -1
           prev <- subroutes[[s]]$tour[j-1]
           post <- subroutes[[s]]$tour[j+1]
           if ((clienti <= input$n1) && (sum(prev==subroutes[[s]]$tour)==1) &&(sum(post==subroutes[[s]]$tour)==1)){
@@ -973,18 +1142,36 @@ move_vc_client_subroute_to_main_tour_and_split_same_route<-function(input, resul
             # feasibility
             feasible_route1 <- 1
             if (check_feas) {
-              feasible_route1 <- check_feasibility(result, route1, input, result[[i]]$type, type_problem, penalty_capacity) 
+              feasible_route1 <- check_feasibility(result[[i]], route1, input, result[[i]]$type, type_problem, penalty_capacity, "new") 
             }
             # add to mov list
             if (feasible_route1) {
-              #movs <- add_movements_to_list(input, i, 0, clienti, 0, 
-              #                              "move_vc_client_subroute_to_main_tour_and_split_same_route", 
-              #                              route1, 0,  movs)
-              .Call('insertMovsList', as.integer(i), as.integer(0), 
-                    as.integer(clienti), as.integer(0), 
-                    as.integer(c(route1)), as.integer(c(0)), 
-                    "move_vc_client_subroute_to_main_tour_and_split_same_route",
-                    PACKAGE = "mcttrpcw")
+
+              if (type_problem == "TTRP") {
+                
+                .Call('insertMovsList', as.integer(i), as.integer(0), 
+                      as.integer(clienti), as.integer(0), 
+                      as.integer(c(route1)), as.integer(c(0)), 
+                      "move_vc_client_subroute_to_main_tour_and_split_same_route", as.integer(rooti), as.integer(rootw),
+                      PACKAGE = "mcttrpcw")
+                
+              }
+              
+              if (type_problem == "MCTTRP") {
+                res1 <- check_capacity_hoppers_MCTTRP_return_hoppers_new(route1, result[[i]], input)
+                hoppers_truck1 <- res1$hoppers_truck
+                hoppers_trailer1 <- res1$hoppers_trailer
+                hoppers_truck2 <- 0                         
+                hoppers_trailer2 <- 0
+                
+                .Call('insertMovsList_MCTTRP',  as.integer(i), as.integer(0), 
+                      as.integer(clienti), as.integer(0), 
+                      as.integer(c(route1)), as.integer(c(0)), 
+                      "move_vc_client_subroute_to_main_tour_and_split_same_route", as.integer(rooti), as.integer(rootw),
+                      as.integer(hoppers_truck1), as.integer(hoppers_trailer1), as.integer(hoppers_truck2), as.integer(hoppers_trailer2),  
+                      as.integer(1),
+                      PACKAGE = "mcttrpcw")
+              }
             } 
             
           }
@@ -1006,6 +1193,8 @@ move_subroute<-function(input, result, changed_routes, type_problem, penalty_cap
       subroutes <- return_subroutes(result[[i]]$route, input$n1)
       for (s in 1:length(subroutes))  {
         subroutei <- subroutes[[s]]$tour
+        rooti <- subroutes[[s]]$tour[1]
+        rootw <- -1
         for (z in 1:length(result)) {
           if ((i!=z)&&(result[[z]]$type != "PTR")&&((i %in% changed_routes)||(z %in% changed_routes))) {
             if (result[[z]]$type == "CVR") main_root <- return_main_route(result[[z]]$route)
@@ -1022,20 +1211,39 @@ move_subroute<-function(input, result, changed_routes, type_problem, penalty_cap
                 feasible_route1 <- 1
                 feasible_route2 <- 1
                 if (check_feas) {                
-                  feasible_route1 <- check_feasibility(result, route1, input, result[[i]]$type, type_problem, penalty_capacity) 
-                  feasible_route2 <- check_feasibility(result, route2, input, result[[z]]$type, type_problem, penalty_capacity) 
+                  feasible_route1 <- check_feasibility(result[[i]], route1, input, result[[i]]$type, type_problem, penalty_capacity, "update") 
+                  feasible_route2 <- check_feasibility(result[[z]], route2, input, result[[z]]$type, type_problem, penalty_capacity, "update") 
                 }
                 # add to mov list
                 if (feasible_route1 && feasible_route2) {
-                  #movs <- add_movements_to_list(input, i, z, subroutei[2:(length(subroutei)-1)], 0,
-                  #                              "move_subroute", 
-                  #                              route1, route2,  movs)
                   
-                  .Call('insertMovsList', as.integer(i), as.integer(z), 
-                        as.integer(subroutei[2:(length(subroutei)-1)]), as.integer(0), 
-                        as.integer(c(route1)), as.integer(c(route2)), 
-                        "move_subroute", 
-                        PACKAGE = "mcttrpcw")
+                  if (type_problem == "TTRP") {
+                    
+                    .Call('insertMovsList', as.integer(i), as.integer(z), 
+                          as.integer(subroutei[2:(length(subroutei)-1)]), as.integer(0), 
+                          as.integer(c(route1)), as.integer(c(route2)), 
+                          "move_subroute", as.integer(rooti), as.integer(rootw),
+                          PACKAGE = "mcttrpcw")
+                    
+                  }
+                  
+                  if (type_problem == "MCTTRP") {
+                    res1 <- check_capacity_hoppers_MCTTRP_return_hoppers(route1, result[[i]], input)
+                    res2 <- check_capacity_hoppers_MCTTRP_return_hoppers(route2, result[[z]], input)
+                    hoppers_truck1 <- res1$hoppers_truck
+                    hoppers_trailer1 <- res1$hoppers_trailer
+                    hoppers_truck2 <- res2$hoppers_truck                          
+                    hoppers_trailer2 <- res2$hoppers_trailer
+                    
+                    .Call('insertMovsList_MCTTRP',  as.integer(i), as.integer(z), 
+                          as.integer(subroutei[2:(length(subroutei)-1)]), as.integer(0), 
+                          as.integer(c(route1)), as.integer(c(route2)), 
+                          "move_subroute", as.integer(rooti), as.integer(rootw),
+                          as.integer(hoppers_truck1), as.integer(hoppers_trailer1), as.integer(hoppers_truck2), as.integer(hoppers_trailer2), 
+                          as.integer(0),
+                          PACKAGE = "mcttrpcw")
+                  }
+                  
                 } 
               }
             }
@@ -1058,6 +1266,7 @@ move_subroute_same_route<-function(input, result, changed_routes, type_problem, 
       subroutes <- return_subroutes(result[[i]]$route, input$n1)
       for (s in 1:length(subroutes))  {
         subroutei <- subroutes[[s]]$tour
+        rooti <- subroutes[[s]]$tour[1]
         main_root <- return_main_route(result[[i]]$route)
         for (t in 2:(length(main_root)-1)) {
           if ((main_root[t]<= input$n1)&&(sum(main_root[t]==result[[i]]$route)==1)){
@@ -1069,19 +1278,36 @@ move_subroute_same_route<-function(input, result, changed_routes, type_problem, 
             # feasibility
             feasible_route1 <- 1
             if (check_feas) {  
-              feasible_route1 <- check_feasibility(result, route1, input, result[[i]]$type, type_problem, penalty_capacity) 
+              feasible_route1 <- check_feasibility(result[[i]], route1, input, result[[i]]$type, type_problem, penalty_capacity, "new") 
             }
             # add to mov list
             if (feasible_route1) {
-              #movs <- add_movements_to_list(input, i, 0, subroutei[2:(length(subroutei)-1)], 0, 
-              #                              "move_subroute_same_route", route1, 0,  movs)
               
+              if (type_problem == "TTRP") {
+                
+                .Call('insertMovsList', as.integer(i), as.integer(0), 
+                      as.integer(subroutei[2:(length(subroutei)-1)]), as.integer(c(0)), 
+                      as.integer(route1), as.integer(c(0)), 
+                      "move_subroute_same_route", as.integer(rooti), as.integer(-1),
+                      PACKAGE = "mcttrpcw")
+                
+              }
               
-              .Call('insertMovsList', as.integer(i), as.integer(0), 
-                    as.integer(subroutei[2:(length(subroutei)-1)]), as.integer(c(0)), 
-                    as.integer(route1), as.integer(c(0)), 
-                    "move_subroute_same_route", 
-                    PACKAGE = "mcttrpcw")
+              if (type_problem == "MCTTRP") {
+                res1 <- check_capacity_hoppers_MCTTRP_return_hoppers_new(route1, result[[i]], input)
+                hoppers_truck1 <- res1$hoppers_truck
+                hoppers_trailer1 <- res1$hoppers_trailer
+                hoppers_truck2 <- 0                         
+                hoppers_trailer2 <- 0
+                
+                .Call('insertMovsList_MCTTRP', as.integer(i), as.integer(0), 
+                      as.integer(subroutei[2:(length(subroutei)-1)]), as.integer(c(0)), 
+                      as.integer(route1), as.integer(c(0)), 
+                      "move_subroute_same_route", as.integer(rooti), as.integer(-1),
+                      as.integer(hoppers_truck1), as.integer(hoppers_trailer1), as.integer(hoppers_truck2), as.integer(hoppers_trailer2), 
+                      as.integer(1),
+                      PACKAGE = "mcttrpcw")
+              }
             } 
           }
         }
@@ -1104,6 +1330,7 @@ create_new_subtour_vc_same_route<-function(input, result, changed_routes, type_p
       for (t in 2:(length(main_root)-1)) {
         if ((main_root[t]<= input$n1)&&(sum(main_root[t]==result[[i]]$route)==1)){
           clienti <- main_root[t]
+          rooti <- 0
           for (z in 2:(length(main_root)-1)) {
             if ((main_root[z]<= input$n1)&&(sum(main_root[z]==result[[i]]$route)==1)&&(main_root[z]!=main_root[t])){
               
@@ -1114,18 +1341,36 @@ create_new_subtour_vc_same_route<-function(input, result, changed_routes, type_p
               # feasibility
               feasible_route1 <- 1
               if (check_feas) {  
-                feasible_route1 <- check_feasibility(result, route1, input, result[[i]]$type, type_problem, penalty_capacity) 
+                feasible_route1 <- check_feasibility(result[[i]], route1, input, result[[i]]$type, type_problem, penalty_capacity, "new") 
               }
               # add to mov list
               if (feasible_route1) {
-                #movs <- add_movements_to_list(input, i, 0, c(clientz), 0, 
-                #                              "create_new_subtour_vc_unique", 
-                #                              route1, 0,  movs)
-                .Call('insertMovsList', as.integer(i), as.integer(0), 
-                      as.integer(c(clientz)), as.integer(0), 
-                      as.integer(c(route1)), as.integer(c(0)), 
-                      "create_new_subtour_vc_unique", 
-                      PACKAGE = "mcttrpcw")
+
+                if (type_problem == "TTRP") {
+                  
+                  .Call('insertMovsList', as.integer(i), as.integer(0), 
+                        as.integer(c(clientz)), as.integer(0), 
+                        as.integer(c(route1)), as.integer(c(0)), 
+                        "create_new_subtour_vc_unique", as.integer(rooti), as.integer(-1),
+                        PACKAGE = "mcttrpcw")
+                  
+                }
+                
+                if (type_problem == "MCTTRP") {
+                  res1 <- check_capacity_hoppers_MCTTRP_return_hoppers_new(route1, result[[i]], input)
+                  hoppers_truck1 <- res1$hoppers_truck
+                  hoppers_trailer1 <- res1$hoppers_trailer
+                  hoppers_truck2 <- 0                         
+                  hoppers_trailer2 <- 0
+                  
+                  .Call('insertMovsList_MCTTRP', as.integer(i), as.integer(0), 
+                        as.integer(c(clientz)), as.integer(0), 
+                        as.integer(c(route1)), as.integer(c(0)), 
+                        "create_new_subtour_vc_unique", as.integer(rooti), as.integer(-1),
+                        as.integer(hoppers_truck1), as.integer(hoppers_trailer1), as.integer(hoppers_truck2), as.integer(hoppers_trailer2), 
+                        as.integer(1),
+                        PACKAGE = "mcttrpcw")
+                }
               } 
             }
           }
@@ -1134,7 +1379,6 @@ create_new_subtour_vc_same_route<-function(input, result, changed_routes, type_p
     }
   }
   
-  #return(movs)
 }
 
 
@@ -1146,6 +1390,7 @@ exchange_movement_change_parking<-function(input, result, changed_routes, type_p
       subroutes <- return_subroutes(result[[i]]$route, input$n1)
       for (s in 1:length(subroutes))  {
         clienti <- subroutes[[s]]$root
+        rooti <- subroutes[[s]]$root
         if ( clienti <= input$n1 ) {
           for (z in 1:length(result)){
             if ((i!=z)&&(result[[z]]$type != "PTR")&&((z %in% changed_routes)||(i %in% changed_routes))) {
@@ -1154,6 +1399,7 @@ exchange_movement_change_parking<-function(input, result, changed_routes, type_p
               for (t in 2:(length(main_root)-1)) {
                 if (main_root[t] <= input$n1) {
                   clientz <- main_root[t]
+                  rootz <- 0
                   if (( clientz <= input$n1 )) {
                     
                     route1 <- replace_subroute_vc(subroutes[[s]], clientz, result[[i]]$route)
@@ -1164,20 +1410,40 @@ exchange_movement_change_parking<-function(input, result, changed_routes, type_p
                     feasible_route1 <- 1
                     feasible_route2 <- 1
                     if (check_feas) {  
-                      feasible_route1 <- check_feasibility(result, route1, input, result[[i]]$type, type_problem, penalty_capacity) 
-                      feasible_route2 <- check_feasibility(result, route2, input, result[[z]]$type, type_problem, penalty_capacity) 
+                      feasible_route1 <- check_feasibility(result[[i]], route1, input, result[[i]]$type, type_problem, penalty_capacity, "update") 
+                      feasible_route2 <- check_feasibility(result[[z]], route2, input, result[[z]]$type, type_problem, penalty_capacity, "update") 
                     }
                     # add to mov list
                     if (feasible_route1 && feasible_route2) {
                       subroutei <- subroutes[[s]]$tour
-                      #movs <- add_movements_to_list(input, i, z, subroutei[2:(length(subroutei)-1)], 0,
-                      #                              "exchange_movement_change_parking", 
-                      #                              route1, route2,  movs)
-                      .Call('insertMovsList', as.integer(i), as.integer(z), 
-                            as.integer(subroutei[2:(length(subroutei)-1)]), as.integer(0), 
-                            as.integer(c(route1)), as.integer(c(route2)), 
-                            "exchange_movement_change_parking", 
-                            PACKAGE = "mcttrpcw")
+                      
+                      if (type_problem == "TTRP") {
+                        
+                        .Call('insertMovsList', as.integer(i), as.integer(z), 
+                              as.integer(subroutei[2:(length(subroutei)-1)]), as.integer(0), 
+                              as.integer(c(route1)), as.integer(c(route2)), 
+                              "exchange_movement_change_parking", as.integer(rooti), as.integer(rootz), 
+                              PACKAGE = "mcttrpcw")
+                        
+                      }
+                      
+                      if (type_problem == "MCTTRP") {
+                        res1 <- check_capacity_hoppers_MCTTRP_return_hoppers(route1, result[[i]], input)
+                        res2 <- check_capacity_hoppers_MCTTRP_return_hoppers(route2, result[[z]], input)
+                        hoppers_truck1 <- res1$hoppers_truck
+                        hoppers_trailer1 <- res1$hoppers_trailer
+                        hoppers_truck2 <- res2$hoppers_truck                          
+                        hoppers_trailer2 <- res2$hoppers_trailer
+
+                        .Call('insertMovsList_MCTTRP',  as.integer(i), as.integer(z), 
+                              as.integer(subroutei[2:(length(subroutei)-1)]), as.integer(0), 
+                              as.integer(c(route1)), as.integer(c(route2)), 
+                              "exchange_movement_change_parking", as.integer(rooti), as.integer(rootz), 
+                              as.integer(hoppers_truck1), as.integer(hoppers_trailer1), as.integer(hoppers_truck2), as.integer(hoppers_trailer2), 
+                              as.integer(0),
+                              PACKAGE = "mcttrpcw")
+
+                      }
                     }   
                   }
                 }
@@ -1202,6 +1468,7 @@ exchange_movement_vc_main_tour_tc_subtour<-function(input, result, changed_route
       else main_root <- result[[i]]$route
       for (j in 2:(length(main_root)-1)) {
         clienti <- main_root[j]
+        rooti <- 0
         # vc
         if (clienti <= input$n1) {
           for ( z in 1:length(result)) {
@@ -1210,6 +1477,7 @@ exchange_movement_vc_main_tour_tc_subtour<-function(input, result, changed_route
               for (s in 1:length(subroutes))  {
                 for (t in 2:(length(subroutes[[s]]$tour)-1)) {
                   clientz <- subroutes[[s]]$tour[t]
+                  rootz <- subroutes[[s]]$tour[1]
                   # tc
                   if ((clientz > input$n1)) {
                     if (result[[i]]$type == "CVR") main_root2 <- return_main_route(result[[i]]$route)
@@ -1224,19 +1492,38 @@ exchange_movement_vc_main_tour_tc_subtour<-function(input, result, changed_route
                       feasible_route1 <- 1
                       feasible_route2 <- 1
                       if (check_feas) {
-                        feasible_route1 <- check_feasibility(result, route1, input, result[[i]]$type, type_problem, penalty_capacity) 
-                        feasible_route2 <- check_feasibility(result, route2, input, result[[z]]$type, type_problem, penalty_capacity) 
+                        feasible_route1 <- check_feasibility(result[[i]], route1, input, result[[i]]$type, type_problem, penalty_capacity, "update") 
+                        feasible_route2 <- check_feasibility(result[[z]], route2, input, result[[z]]$type, type_problem, penalty_capacity, "update") 
                       }
                       # add to mov list
                       if (feasible_route1 && feasible_route2) {
-                        #movs <- add_movements_to_list(input, i, z, c(clienti), c(clientz), 
-                        #                              "exchange_movement_vc_main_tour_tc_subtour", 
-                        #                              route1, route2,  movs)
-                        .Call('insertMovsList', as.integer(i), as.integer(z), 
-                              as.integer(c(clienti)), as.integer(c(clientz)), 
-                              as.integer(c(route1)), as.integer(c(route2)), 
-                              "exchange_movement_vc_main_tour_tc_subtour", 
-                              PACKAGE = "mcttrpcw")
+
+                        if (type_problem == "TTRP") {
+                          
+                          .Call('insertMovsList', as.integer(i), as.integer(z), 
+                                as.integer(c(clienti)), as.integer(c(clientz)), 
+                                as.integer(c(route1)), as.integer(c(route2)), 
+                                "exchange_movement_vc_main_tour_tc_subtour", as.integer(rooti), as.integer(rootz), 
+                                PACKAGE = "mcttrpcw")
+                          
+                        }
+                        
+                        if (type_problem == "MCTTRP") {
+                          res1 <- check_capacity_hoppers_MCTTRP_return_hoppers(route1, result[[i]], input)
+                          res2 <- check_capacity_hoppers_MCTTRP_return_hoppers(route2, result[[z]], input)
+                          hoppers_truck1 <- res1$hoppers_truck
+                          hoppers_trailer1 <- res1$hoppers_trailer
+                          hoppers_truck2 <- res2$hoppers_truck                          
+                          hoppers_trailer2 <- res2$hoppers_trailer
+                          
+                          .Call('insertMovsList_MCTTRP',  as.integer(i), as.integer(z), 
+                                as.integer(c(clienti)), as.integer(c(clientz)), 
+                                as.integer(c(route1)), as.integer(c(route2)), 
+                                "exchange_movement_vc_main_tour_tc_subtour", as.integer(rooti), as.integer(rootz), 
+                                as.integer(hoppers_truck1), as.integer(hoppers_trailer1), as.integer(hoppers_truck2), as.integer(hoppers_trailer2),
+                                as.integer(0),
+                                PACKAGE = "mcttrpcw")
+                        }
                       }                        
                     }
                   }
@@ -1249,8 +1536,6 @@ exchange_movement_vc_main_tour_tc_subtour<-function(input, result, changed_route
     }
   }
   
-  #return(movs)
-  
 }
 
 
@@ -1262,12 +1547,14 @@ exchange_movement_tc_PTR_and_vc_in_main_tour<-function(input, result, changed_ro
       for (j in 2:(length(result[[i]]$route)-1)) {
         if (result[[i]]$route[j] > input$n1) {
           clienti <- result[[i]]$route[j]
+          rooti <- 0
           for (z in 1:length(result)) {
             if ((i!=z)&&(result[[z]]$type != "PTR")&&((z %in% changed_routes)||(i %in% changed_routes))) {
               if (result[[z]]$type == "CVR") main_root <- return_main_route(result[[z]]$route)
               else main_root <- result[[z]]$route
               for (t in 2:(length(main_root)-1)) {
                 clientz <- main_root[t]
+                rootz <- 0
                 if ((clientz <= input$n1)&&(sum(clientz==result[[z]]$route)==1)) {
                   if (result[[z]]$type == "CVR") main_root2 <- return_main_route(result[[z]]$route)
                   else main_root2 <- result[[z]]$route
@@ -1281,20 +1568,38 @@ exchange_movement_tc_PTR_and_vc_in_main_tour<-function(input, result, changed_ro
                     feasible_route1 <- 1
                     feasible_route2 <- 1
                     if (check_feas) {
-                      feasible_route1 <- check_feasibility(result, route1, input, result[[i]]$type, type_problem, penalty_capacity) 
-                      feasible_route2 <- check_feasibility(result, route2, input, result[[z]]$type, type_problem, penalty_capacity) 
+                      feasible_route1 <- check_feasibility(result[[i]], route1, input, result[[i]]$type, type_problem, penalty_capacity, "update") 
+                      feasible_route2 <- check_feasibility(result[[z]], route2, input, result[[z]]$type, type_problem, penalty_capacity, "update") 
                     }
                     # add to mov list
                     if (feasible_route1 && feasible_route2) {
                       
-                      #movs <- add_movements_to_list(input, i, z,  c(clienti), c(clientz), 
-                      #                              "exchange_movement_tc_PTR_and_vc_in_main_tour", 
-                      #                              route1, route2,  movs)
-                      .Call('insertMovsList', as.integer(i), as.integer(z), 
-                            as.integer(c(clienti)), as.integer(c(clientz)), 
-                            as.integer(c(route1)), as.integer(c(route2)), 
-                            "exchange_movement_tc_PTR_and_vc_in_main_tour", 
-                            PACKAGE = "mcttrpcw")
+                      if (type_problem == "TTRP") {
+                        
+                        .Call('insertMovsList', as.integer(i), as.integer(z), 
+                              as.integer(c(clienti)), as.integer(c(clientz)), 
+                              as.integer(c(route1)), as.integer(c(route2)), 
+                              "exchange_movement_tc_PTR_and_vc_in_main_tour", as.integer(rooti), as.integer(rootz), 
+                              PACKAGE = "mcttrpcw")
+                        
+                      }
+                      
+                      if (type_problem == "MCTTRP") {
+                        res1 <- check_capacity_hoppers_MCTTRP_return_hoppers(route1, result[[i]], input)
+                        res2 <- check_capacity_hoppers_MCTTRP_return_hoppers(route2, result[[z]], input)
+                        hoppers_truck1 <- res1$hoppers_truck
+                        hoppers_trailer1 <- res1$hoppers_trailer
+                        hoppers_truck2 <- res2$hoppers_truck                          
+                        hoppers_trailer2 <- res2$hoppers_trailer
+                        
+                        .Call('insertMovsList_MCTTRP',  as.integer(i), as.integer(z), 
+                              as.integer(c(clienti)), as.integer(c(clientz)), 
+                              as.integer(c(route1)), as.integer(c(route2)), 
+                              "exchange_movement_tc_PTR_and_vc_in_main_tour", as.integer(rooti), as.integer(rootz), 
+                              as.integer(hoppers_truck1), as.integer(hoppers_trailer1), as.integer(hoppers_truck2), as.integer(hoppers_trailer2), 
+                              as.integer(0),
+                              PACKAGE = "mcttrpcw")
+                      }
                     }   
                   }
                 }
@@ -1320,12 +1625,14 @@ exchange_movement_client_short_subtour_and_client_in_main_tour<-function(input, 
       for (s in 1:length(subroutes))  {
         if (length(subroutes[[s]]$tour)==3) {
           clienti <- subroutes[[s]]$tour[2]
+          rooti <- subroutes[[s]]$tour[1]
           for (z in 1:length(result)) {
             if ((i!=z)&&((z %in% changed_routes)||(i %in% changed_routes))) {
               if (result[[z]]$type == "CVR") route_z <- result[[z]]$main_tour
               else route_z <- result[[z]]$route
               for (t in 2:(length(route_z)-1)) {
                 clientz <- route_z[t]
+                rootz <- 0
                 if ((clientz <= input$n1)&&(sum(clientz==result[[z]]$route)==1)) {
                   if (result[[z]]$type == "PTR") {
                     # new routes
@@ -1336,20 +1643,39 @@ exchange_movement_client_short_subtour_and_client_in_main_tour<-function(input, 
                     feasible_route1 <- 1
                     feasible_route2 <- 1
                     if (check_feas) {
-                      feasible_route1 <- check_feasibility(result, route1, input, result[[i]]$type, type_problem, penalty_capacity) 
-                      feasible_route2 <- check_feasibility(result, route2, input, result[[z]]$type, type_problem, penalty_capacity) 
+                      feasible_route1 <- check_feasibility(result[[i]], route1, input, result[[i]]$type, type_problem, penalty_capacity, "update") 
+                      feasible_route2 <- check_feasibility(result[[z]], route2, input, result[[z]]$type, type_problem, penalty_capacity, "update") 
                     }
                     # add to mov list
                     if (feasible_route1 && feasible_route2) {
-                      #movs <- add_movements_to_list(input, i, z,  c(clienti), c(clientz), 
-                      #                              "exchange_movement_client_short_subtour_and_client_in_main_tour", 
-                      #                              route1, route2,  movs)
+
                       
-                      .Call('insertMovsList', as.integer(i), as.integer(z), 
-                            as.integer(c(clienti)), as.integer(c(clientz)), 
-                            as.integer(c(route1)), as.integer(c(route2)), 
-                            "exchange_movement_client_short_subtour_and_client_in_main_tour", 
-                            PACKAGE = "mcttrpcw")
+                      if (type_problem == "TTRP") {
+                        
+                        .Call('insertMovsList', as.integer(i), as.integer(z), 
+                              as.integer(c(clienti)), as.integer(c(clientz)), 
+                              as.integer(c(route1)), as.integer(c(route2)), 
+                              "exchange_movement_client_short_subtour_and_client_in_main_tour", as.integer(rooti), as.integer(rootz), 
+                              PACKAGE = "mcttrpcw")
+                        
+                      }
+                      
+                      if (type_problem == "MCTTRP") {
+                        res1 <- check_capacity_hoppers_MCTTRP_return_hoppers(route1, result[[i]], input)
+                        res2 <- check_capacity_hoppers_MCTTRP_return_hoppers(route2, result[[z]], input)
+                        hoppers_truck1 <- res1$hoppers_truck
+                        hoppers_trailer1 <- res1$hoppers_trailer
+                        hoppers_truck2 <- res2$hoppers_truck                          
+                        hoppers_trailer2 <- res2$hoppers_trailer
+                        
+                        .Call('insertMovsList_MCTTRP',  as.integer(i), as.integer(z), 
+                              as.integer(c(clienti)), as.integer(c(clientz)), 
+                              as.integer(c(route1)), as.integer(c(route2)), 
+                              "exchange_movement_client_short_subtour_and_client_in_main_tour", as.integer(rooti), as.integer(rootz), 
+                              as.integer(hoppers_truck1), as.integer(hoppers_trailer1), as.integer(hoppers_truck2), as.integer(hoppers_trailer2), 
+                              as.integer(0),
+                              PACKAGE = "mcttrpcw")
+                      }
                       
                     }
                   }
@@ -1368,20 +1694,38 @@ exchange_movement_client_short_subtour_and_client_in_main_tour<-function(input, 
                       feasible_route1 <- 1
                       feasible_route2 <- 1
                       if (check_feas) {                                
-                        feasible_route1 <- check_feasibility(result, route1, input, result[[i]]$type, type_problem, penalty_capacity) 
-                        feasible_route2 <- check_feasibility(result, route2, input, result[[z]]$type, type_problem, penalty_capacity) 
+                        feasible_route1 <- check_feasibility(result[[i]], route1, input, result[[i]]$type, type_problem, penalty_capacity, "update") 
+                        feasible_route2 <- check_feasibility(result[[z]], route2, input, result[[z]]$type, type_problem, penalty_capacity, "update") 
                       }
                       # add to mov list
                       if (feasible_route1 && feasible_route2) {
                         
-                        #movs <- add_movements_to_list(input, i, z,  c(clienti), c(clientz),
-                        #                              "exchange_movement_client_short_subtour_and_client_in_main_tour", 
-                        #                              route1, route2,  movs )
-                        .Call('insertMovsList', as.integer(i), as.integer(z), 
-                              as.integer(c(clienti)), as.integer(c(clientz)), 
-                              as.integer(c(route1)), as.integer(c(route2)), 
-                              "exchange_movement_client_short_subtour_and_client_in_main_tour", 
-                              PACKAGE = "mcttrpcw")
+                        if (type_problem == "TTRP") {
+                          
+                          .Call('insertMovsList', as.integer(i), as.integer(z), 
+                                as.integer(c(clienti)), as.integer(c(clientz)), 
+                                as.integer(c(route1)), as.integer(c(route2)), 
+                                "exchange_movement_client_short_subtour_and_client_in_main_tour",  as.integer(rooti), as.integer(rootz),
+                                PACKAGE = "mcttrpcw")
+                          
+                        }
+                        
+                        if (type_problem == "MCTTRP") {
+                          res1 <- check_capacity_hoppers_MCTTRP_return_hoppers(route1, result[[i]], input)
+                          res2 <- check_capacity_hoppers_MCTTRP_return_hoppers(route2, result[[z]], input)
+                          hoppers_truck1 <- res1$hoppers_truck
+                          hoppers_trailer1 <- res1$hoppers_trailer
+                          hoppers_truck2 <- res2$hoppers_truck                          
+                          hoppers_trailer2 <- res2$hoppers_trailer
+                          
+                          .Call('insertMovsList_MCTTRP',  as.integer(i), as.integer(z), 
+                                as.integer(c(clienti)), as.integer(c(clientz)), 
+                                as.integer(c(route1)), as.integer(c(route2)), 
+                                "exchange_movement_client_short_subtour_and_client_in_main_tour",  as.integer(rooti), as.integer(rootz),
+                                as.integer(hoppers_truck1), as.integer(hoppers_trailer1), as.integer(hoppers_truck2), as.integer(hoppers_trailer2),
+                                as.integer(0),
+                                PACKAGE = "mcttrpcw")
+                        }
                       }
                     }
                     #} 
@@ -1410,6 +1754,7 @@ exchange_movement_client_subtour_and_vc_creating_subtour<-function(input, result
         if (length(subroutes[[s]]$tour)==3) {
           for (j in 2:(length(subroutes[[s]]$tour)-1)) {
             clienti <- subroutes[[s]]$tour[j]
+            rooti <- subroutes[[s]]$tour[1]
             for (z in 1:length(result)) {
               if ((i!=z)&&(result[[z]]$type == "CVR")&&((z %in% changed_routes)||(i %in% changed_routes))) {
                 subroutes2 <- return_subroutes(result[[z]]$route, input$n1)
@@ -1417,7 +1762,7 @@ exchange_movement_client_subtour_and_vc_creating_subtour<-function(input, result
                   for (t in 2:(length(subroutes2[[ss]]$tour)-1)) {
                     clientz <- subroutes2[[ss]]$tour[t]
                     if (clientz <= input$n1) {
-                      
+                      rootz <-  subroutes2[[ss]]$tour[1]
                       # new routes
                       route1 <- replace_route_client_vc_subroute(clienti, clientz, result[[i]]$route)
                       route2 <- replace_route_client(clientz, clienti, result[[z]]$route)
@@ -1426,19 +1771,38 @@ exchange_movement_client_subtour_and_vc_creating_subtour<-function(input, result
                       feasible_route1 <- 1
                       feasible_route2 <- 1
                       if (check_feas) { 
-                        feasible_route1 <- check_feasibility(result, route1, input, result[[i]]$type, type_problem, penalty_capacity) 
-                        feasible_route2 <- check_feasibility(result, route2, input, result[[z]]$type, type_problem, penalty_capacity) 
+                        feasible_route1 <- check_feasibility(result[[i]], route1, input, result[[i]]$type, type_problem, penalty_capacity, "update") 
+                        feasible_route2 <- check_feasibility(result[[z]], route2, input, result[[z]]$type, type_problem, penalty_capacity, "update") 
                       }
                       # add to mov list
                       if (feasible_route1 && feasible_route2) {
-                        #movs <- add_movements_to_list(input, i, z,  c(clienti), c(clientz),
-                        #                              "exchange_movement_client_subtour_and_vc_creating_subtour", 
-                        #                              route1, route2,  movs)
-                        .Call('insertMovsList', as.integer(i), as.integer(z), 
-                              as.integer(c(clienti)), as.integer(c(clientz)), 
-                              as.integer(c(route1)), as.integer(c(route2)), 
-                              "exchange_movement_client_subtour_and_vc_creating_subtour",
-                              PACKAGE = "mcttrpcw")
+
+                        if (type_problem == "TTRP") {
+                          
+                          .Call('insertMovsList', as.integer(i), as.integer(z), 
+                                as.integer(c(clienti)), as.integer(c(clientz)), 
+                                as.integer(c(route1)), as.integer(c(route2)), 
+                                "exchange_movement_client_subtour_and_vc_creating_subtour",as.integer(rooti), as.integer(rootz),
+                                PACKAGE = "mcttrpcw")
+                          
+                        }
+                        
+                        if (type_problem == "MCTTRP") {
+                          res1 <- check_capacity_hoppers_MCTTRP_return_hoppers(route1, result[[i]], input)
+                          res2 <- check_capacity_hoppers_MCTTRP_return_hoppers(route2, result[[z]], input)
+                          hoppers_truck1 <- res1$hoppers_truck
+                          hoppers_trailer1 <- res1$hoppers_trailer
+                          hoppers_truck2 <- res2$hoppers_truck                          
+                          hoppers_trailer2 <- res2$hoppers_trailer
+                          
+                          .Call('insertMovsList_MCTTRP',  as.integer(i), as.integer(z), 
+                                as.integer(c(clienti)), as.integer(c(clientz)), 
+                                as.integer(c(route1)), as.integer(c(route2)), 
+                                "exchange_movement_client_subtour_and_vc_creating_subtour",as.integer(rooti), as.integer(rootz),
+                                as.integer(hoppers_truck1), as.integer(hoppers_trailer1), as.integer(hoppers_truck2), as.integer(hoppers_trailer2), 
+                                as.integer(0),
+                                PACKAGE = "mcttrpcw")
+                        }
 
                       }
                       
@@ -1453,7 +1817,6 @@ exchange_movement_client_subtour_and_vc_creating_subtour<-function(input, result
     }
   }
   
-  #return(movs)
 }
 
 
@@ -1801,9 +2164,9 @@ return_close_client<-function(clienti, route, vecinity) {
 
 
 # update_penalties
-update_penalties <- function(input, alpha, gamma, current_solution){
+update_penalties <- function(input, alpha, gamma, current_solution, type_problem){
   
-  feasibility <- calc_penalty(input, current_solution)
+  feasibility <- calc_penalty(input, current_solution, type_problem)
   
   #print(paste0("CALIBRATE PENALTIES: current solution pen -> ", feasibility, " gamma ", gamma, " alpha ", alpha))
   if (feasibility > 0) {
@@ -1867,7 +2230,7 @@ modified_mov_list_using_changed_list_new <- function (changed_list) {
 }
 
 # evaluate_cost_mov_list
-evaluate_cost_mov_list<-function(input, movs, changed_list, solution, alpha) {
+evaluate_cost_mov_list<-function(input, movs, changed_list, solution, alpha, type_problem) {
   
   
   #.Call("evaluate_cost_mov_list", input, mov_list, changed_list, solution, alpha, PACKAGE = "mcttrpcw")
@@ -1882,7 +2245,7 @@ evaluate_cost_mov_list<-function(input, movs, changed_list, solution, alpha) {
       cap <- input$capacidad.truck
       if (solution[[index]]$type != "PTR") cap <- input$capacidad.vehiculo
       cap_routes_vector <- c(cap_routes_vector, cap)
-      static_feas <- c(static_feas, calc_penalty_route(input, solution[[index]]$route, cap))
+      static_feas <- c(static_feas, calc_penalty_route(input, solution[[index]], cap, type_problem))
       static_cost <- c(static_cost, local_cost(solution[[index]]$route, input$matriz.distancia))
     }
 
@@ -1907,7 +2270,7 @@ evaluate_cost_mov_list<-function(input, movs, changed_list, solution, alpha) {
           if (j %in% c(movs$mov_list[[i]]$indexr1, movs$mov_list[[i]]$indexr2)) {
             if (j == movs$mov_list[[i]]$indexr1) route <- movs$mov_list[[i]]$route1
             if (j == movs$mov_list[[i]]$indexr2) route <- movs$mov_list[[i]]$route2
-            movs$mov_list_cost_feas[[i]] <- movs$mov_list_cost_feas[[i]] + calc_penalty_route(input, route, cap)   
+            movs$mov_list_cost_feas[[i]] <- movs$mov_list_cost_feas[[i]] + calc_penalty_route(input, route, cap, type_problem)   
             movs$mov_list_cost_nopen[[i]] <- movs$mov_list_cost_nopen[[i]] + local_cost(route, input$matriz.distancia) 
           } 
           else {
@@ -1942,28 +2305,50 @@ evaluate_cost_mov_list<-function(input, movs, changed_list, solution, alpha) {
 
 
 
-evaluate_cost_mov_list_new<-function(input, changed_list, solution, alpha, size_mov) {
+evaluate_cost_mov_list_new<-function(input, changed_list, solution, alpha, size_mov, type_problem) {
   
-  
-  #.Call("evaluate_cost_mov_list", input, mov_list, changed_list, solution, alpha, PACKAGE = "mcttrpcw")
   
   if ((size_mov>0)&&(length(changed_list)>0)) {
     #static unfeasibility
     #static cost
-    static_feas <- c()
-    static_cost <- c()
-    cap_routes_vector <- c()
-    for (index in 1:length(solution)){
-      cap <- input$capacidad.truck
-      if (solution[[index]]$type != "PTR") cap <- input$capacidad.vehiculo
-      cap_routes_vector <- c(cap_routes_vector, cap)
-      static_feas <- c(static_feas, calc_penalty_route(input, solution[[index]]$route, cap))
-      static_cost <- c(static_cost, local_cost(solution[[index]]$route, input$matriz.distancia))
+    if (type_problem == "TTRP"){
+      static_feas <- c()
+      static_cost <- c()
+      cap_routes_vector <- c()
+      for (index in 1:length(solution)){
+        cap <- input$capacidad.truck
+        if (solution[[index]]$type != "PTR") cap <- input$capacidad.vehiculo
+        cap_routes_vector <- c(cap_routes_vector, cap)
+        static_feas <- c(static_feas, calc_penalty_route(input, solution[[index]], cap, type_problem))
+        static_cost <- c(static_cost, local_cost(solution[[index]]$route, input$matriz.distancia))
+      }
+      
+      .Call('c_eval_movs', as.integer(changed_list), cap_routes_vector, input$matriz.distancia,
+            input$vector.demandas, input$capacidad.truck, static_feas, static_cost, alpha,
+            as.integer(0), PACKAGE = "mcttrpcw")
     }
     
-    .Call('c_eval_movs', as.integer(changed_list), cap_routes_vector, input$matriz.distancia,
-          input$vector.demandas, input$capacidad.truck, static_feas, static_cost, alpha,
-          as.integer(0), PACKAGE = "mcttrpcw")
+    if (type_problem == "MCTTRP"){
+      static_feas <- c()
+      static_cost <- c()
+      cap_routes_vector <- c()
+      for (index in 1:length(solution)){
+        cap <- input$capacidad.truck[1]
+        if (solution[[index]]$type != "PTR") cap <- input$capacidad.vehiculo[1]
+        cap_routes_vector <- c(cap_routes_vector, cap)
+        static_feas <- c(static_feas, calc_penalty_route(input, solution[[index]], cap, type_problem))
+        static_cost <- c(static_cost, local_cost(solution[[index]]$route, input$matriz.distancia))
+      }
+
+      n_hoppers_truck <- length(input$H.camion[1,])
+      n_hoppers_trailer <- length(input$H.trailer[1,])
+      
+      .Call('c_eval_movs_MCTTRP', as.integer(changed_list), cap_routes_vector, input$matriz.distancia,
+            as.integer(length(input$matriz.demandas[1,])), input$matriz.demandas, input$capacidad.truck[1], input$capacidad.trailer[1], 
+            as.numeric(n_hoppers_truck), as.numeric(n_hoppers_trailer), static_feas, static_cost, alpha,  as.integer(0), PACKAGE = "mcttrpcw")
+
+      
+    }
     
   }
   

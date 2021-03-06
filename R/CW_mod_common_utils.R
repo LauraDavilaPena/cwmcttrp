@@ -565,12 +565,53 @@ analyse<-function(rutas, input, rutas_res, option) {
         } 
       }
       
+      for (j in 2:(length(rutas_res[[i]]$route)-1)) {
+        if (rutas_res[[i]]$route[j] > input$n1) {
+          found <- 0
+          is_null <- 0
+          if (length(rutas_res[[i]]$clients_tc)) {
+              for (z in 1:length(rutas_res[[i]]$clients_tc)) {
+                if (is.null(rutas_res[[i]]$clients_tc[[z]])) {
+                  is_null <- 1
+                  break
+                }
+                if (rutas_res[[i]]$route[j] == rutas_res[[i]]$clients_tc[[z]]$id) {
+                  found <- 1
+                  break
+                }
+              }
+          }
+        }
+        else {
+          found <- 0
+          is_null <- 0
+          if (length(rutas_res[[i]]$clients_vc)) {
+            for (z in 1:length(rutas_res[[i]]$clients_vc)) {
+              if (is.null(rutas_res[[i]]$clients_vc[[z]])) {
+                is_null <- 1
+                break
+              }
+              if (rutas_res[[i]]$route[j] == rutas_res[[i]]$clients_vc[[z]]$id) {
+                found <- 1
+                break
+              }
+            }
+          }
+        }
+        if (is_null) print(paste0("null value in route ", i))
+        else {
+          if (found == 0) print(paste0("client not found ", rutas_res[[i]]$route[j]))
+        }
+      }
+      
     }
   }
+  
   print(paste0("   total nodes in final route  ---> ", length(unique(rutas))))
   print(paste0("   n  ---> ", input$n))
   print(paste0("   n1 ---> ", input$n1))
   print(paste0("   NUMBER OF ERRORS -> ", counter_errors))
+
 }
 
 

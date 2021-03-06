@@ -2,25 +2,17 @@
 perturbation_core<-function(input, current_solution, penalty_max, type_problem) {
   
   perturbation_not_obtained <- TRUE
-  counter_p <- 1
+  penalty <- 0
   
-  while ((perturbation_not_obtained)&&(counter_p < 2)) {
-    perturbed_solution <-  perturbation(input, current_solution, 0, type_problem)
+  while ((perturbation_not_obtained)) {
+    
+    perturbed_solution <-  perturbation(input, current_solution, penalty, type_problem)
     current_solution <- perturbed_solution[["perturbed_solution"]]
     perturbation_not_obtained <- perturbed_solution$perturbation_not_obtained
     phi <- perturbed_solution$phi
-    counter_p <- counter_p + 1
+    penalty <- 100
   }
   
-  if (perturbation_not_obtained) {
-    while ((perturbation_not_obtained)) {
-      perturbed_solution <-  perturbation(input, current_solution, penalty_max, type_problem)
-      current_solution <- perturbed_solution[["perturbed_solution"]]
-      perturbation_not_obtained <- perturbed_solution$perturbation_not_obtained
-      phi <- perturbed_solution$phi
-      counter_p <- counter_p + 1
-    }
-  }
   current_solution <- update_solution(current_solution, input, type_problem)
   
   res_p <- list()
@@ -30,55 +22,8 @@ perturbation_core<-function(input, current_solution, penalty_max, type_problem) 
   return(res_p)
 }
 
-# Aqui como argumento de entrada le habr?a que pasar una soluci?n "rutas_des" por ejemplo
-# y la salida debe ser una soluci?n perturbada: "rutas_des_perturb"
-full_random_perturbation<-function(input, current_solution, type_problem, perc_v, penalty_capacity)  {
+perturbation <- function(input, initial_solution, penalty_max, problem_type){
   
-  n_random_of_movs <- sample(2:5,1)
-  alpha <- 1
-  gamma <- runif(1)
-  
-  counter_movs <- 0
-  candidate_list <- sample(1:input$n, sample(ceiling(input$n/10):input$n, 1))
-  current_cost <- calculateTotalDistanceTS(input, alpha, current_solution)
-  
-  while (counter_movs < n_random_of_movs) {
-    
-    prev_cost  <- current_cost
-    
-    res <- movements_imp(input, current_solution, type_problem, input$vecinity, perc_v, penalty_capacity, 0, 0, list(), 1, candidate_list)
-    mov_list <- res$mov_list
-    mov_list_cost <- res$mov_list_cost
-    mov_list_cost_pen <- res$mov_list_cost_pen
-    
-    if (length(mov_list_cost)) {
-
-      index_order <- order_movs(mov_list_cost_pen)
-      
-      index_r <- sample(1:(length(index_order)), (length(index_order)))
-      
-      current_solution <- insert_selected_mov(input, mov_list[[index_order[index_r[1]]]] , current_solution, type_problem)
-
-      alpha <- update_penalties(input,  alpha, gamma, current_solution)
-      current_solution <- result_improvement(input, current_solution, type_problem)
-      current_cost <- calculateTotalDistanceTS(input, alpha, current_solution)
-      
-      if (prev_cost != current_cost) counter_movs <- counter_movs + 1
-    }
-    else counter_movs <- n_random_of_movs
-  }
-  
-  result <- list()
-  result$current_solution <- current_solution
-  result$phi <- n_random_of_movs
-  
-  return(result)
-}
-
-
-perturbation <- function(input, initial_solution,penalty_max, problem_type){
-  
-  initial_solution <- update_solution(initial_solution, input, problem_type)
   intermediate_solution <- initial_solution
   perturbation_not_obtained <- FALSE
   
@@ -86,8 +31,14 @@ perturbation <- function(input, initial_solution,penalty_max, problem_type){
   
   # Nuestros clientes candidatos a ser eliminados deben estar en PTR, PVR, o CVR y no ser parking
   removed_candidates <- numeric()
+  
+  #for(i in 1:length(initial_solution)){
+  #  print(initial_solution[[i]]$route)
+  #}
+  
   for(i in 1:n){ #numero total de clientes
-    if(client_is_parking(i, initial_solution)==0){
+    route_i <- route_of_client(i,initial_solution)$route
+    if((length(route_i)>3)&&(sum(route_i==i)==1)){
       removed_candidates <- c(removed_candidates,i) 
     }
   }
@@ -97,6 +48,9 @@ perturbation <- function(input, initial_solution,penalty_max, problem_type){
   
   # Ahora que ya sabemos que vamos a eliminar phi clientes, escogemos cuales 
   removed_clients <- sample(removed_candidates, phi)
+
+  
+  
   
   # Una vez los tenemos, vemos en que rutas estan, y agrupamos aquellos que esten en las mismas rutas
   routes_indices <- numeric()
@@ -138,14 +92,17 @@ perturbation <- function(input, initial_solution,penalty_max, problem_type){
   for(i in 1:length(aggregated_list_info_after_removal$aggregated_routes)){
     for (j in 1:length(aggregated_list_info_after_removal$aggregated_clients[[i]])){
       if(intermediate_solution[[aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$type == "CVR"){
-        if(client_in_main_tour(aggregated_list_info_after_removal$aggregated_clients[[i]][j], initial_solution)==1){ #si el cliente esta en el main tour, hago lo que tenia 
+        if(client_in_main_tour(aggregated_list_info_after_removal$aggregated_clients[[i]][j], initial_solution)==1){
+          #si el cliente esta en el main tour, hago lo que tenia 
           # Basicamente aqui lo que hago es: si la ruta es de tipo CVR y el cliente a eliminar esta en el main tour, entonces el "GENI_US" se lo voy a aplicar 
           # solo al main_tour. Pero luego tengo que reconstruir
           # la ruta completa, añadiendo los subtours en el orden en que estaban
           new_routes_after_removal[[i]] <- GENI_US(input, intermediate_solution[[aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$main_tour, 
                                                    aggregated_list_info_after_removal$aggregated_clients[[i]][j])
+          
           intermediate_solution[[aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$main_tour <- new_routes_after_removal[[i]]
           subtours <- intermediate_solution[[aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$subtours
+          
           for(k in 1:length(subtours)){
             kk <- 1
             if(length(which(new_routes_after_removal[[i]]==subtours[[k]]$root)) > 1){
@@ -155,8 +112,13 @@ perturbation <- function(input, initial_solution,penalty_max, problem_type){
                                                new_routes_after_removal[[i]][(which(new_routes_after_removal[[i]]==subtours[[k]]$root)[kk]+1): length(new_routes_after_removal[[i]])] ) 
             
           }
-        }else{ # en cambio, si el cliente esta en el subtour, procedo asi:
+          
+          intermediate_solution[[aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$route <- new_routes_after_removal[[i]]
+        }
+        else{ 
+          # en cambio, si el cliente esta en el subtour, procedo asi:
           # primero debo mirar cual es el subtour en el que se encuentra
+          #print(paste0("DELETE -> ", aggregated_list_info_after_removal$aggregated_routes_index[[i]]))
           subtours <- intermediate_solution[[aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$subtours
           for(k in 1:length(subtours)){
             if(sum(subtours[[k]]$tour == aggregated_list_info_after_removal$aggregated_clients[[i]][j])>0){
@@ -195,9 +157,10 @@ perturbation <- function(input, initial_solution,penalty_max, problem_type){
                                                  new_routes_after_removal[[i]][(which(new_routes_after_removal[[i]]==subtours_after_removal[[ind_k]]$root)[kk]+1): length(new_routes_after_removal[[i]])] ) 
               
             }
-            intermediate_solution[[aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$route <- new_routes_after_removal[[i]]
           }
           
+          intermediate_solution[[aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$route <- new_routes_after_removal[[i]]
+          #print(intermediate_solution[[aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$route)
         }
       }
       else{
@@ -207,6 +170,7 @@ perturbation <- function(input, initial_solution,penalty_max, problem_type){
         }
         new_routes_after_removal[[i]] <- GENI_US(input, aggregated_list_info_after_removal$aggregated_routes[[i]], aggregated_list_info_after_removal$aggregated_clients[[i]][j])
       }
+      
       aggregated_list_info_after_removal$aggregated_routes[[i]] <- new_routes_after_removal[[i]]
     }
   }
@@ -231,7 +195,8 @@ perturbation <- function(input, initial_solution,penalty_max, problem_type){
         intermediate_solution[[ aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$VCs <- intermediate_solution[[ aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$VCs[-client_index]
         intermediate_solution[[ aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$clients_vc <- intermediate_solution[[ aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$clients_vc[-client_index]
         
-      }else{ # si el cliente que elimino es de tipo TC
+      }
+      else{ # si el cliente que elimino es de tipo TC
         client_index <- which(intermediate_solution[[ aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$TCs == aggregated_list_info_after_removal$aggregated_clients[[i]][j] )
         removed_load <- sum(intermediate_solution[[ aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$clients_tc[[client_index]]$demands)
         intermediate_solution[[ aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$total_load <- intermediate_solution[[ aggregated_list_info_after_removal$aggregated_routes_index[[i]] ]]$total_load - removed_load
@@ -505,12 +470,13 @@ perturbation <- function(input, initial_solution,penalty_max, problem_type){
     
   }
   
-  
+  #for(i in 1:length(perturbed_solution)){
+  #  print(perturbed_solution[[i]]$route)
+  #}
   
   return(list(perturbation_not_obtained = perturbation_not_obtained, perturbed_solution = perturbed_solution, phi = phi))
   
 }
-
 
 
 
