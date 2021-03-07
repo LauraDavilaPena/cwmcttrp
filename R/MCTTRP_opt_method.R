@@ -44,9 +44,9 @@ MCTTRP_opt_method<-function(result, initial_solution, input, init_time, type_pro
       start_time <- Sys.time()
       
       # perturbation
-      res_p <- perturbation_core(input, current_solution, penalty_max, type_problem)
-      current_solution <- res_p$current_solution
-      phi <- res_p$phi
+      #res_p <- perturbation_core(input, current_solution, penalty_max, type_problem)
+      #current_solution <- res_p$current_solution
+      phi <- 10#res_p$phi
       # perturbation
 
       

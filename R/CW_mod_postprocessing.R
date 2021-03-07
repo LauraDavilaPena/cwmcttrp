@@ -1150,7 +1150,7 @@ check_insert_segment_in_route<-function(routes_to_add, rutas_res, index, input, 
 }
 
 switch_routes<-function(rutas_res, routes_selected, routes_to_add, input, type_problem) {
-  
+
   
   for (j in 1:length(routes_to_add)) {
     flag_exit <- 0
@@ -1322,7 +1322,7 @@ create_switch_route<-function(res_list, n_route, solution, selected_node, input,
     if (!insert_as_subroute){
       prev_node <- n_route[z]
       logic_n_route <- (n_route == n_route[z])
-      for (ii in 1:length(logic_n_route)) {
+      for (ii in 2:length(logic_n_route)) {
         if (logic_n_route[ii]) {
           n_route[ii] <- selected_node
         }
@@ -1331,7 +1331,7 @@ create_switch_route<-function(res_list, n_route, solution, selected_node, input,
       prev_node <- n_route[z]
       old_route <- n_route
       n_route <- c(0)
-      for (ii in 2:length(old_route)) {
+      for (ii in 3:length(old_route)) {
         if (old_route[ii]==prev_node) {
           n_route <- c(n_route, selected_node, old_route[ii-1])
         } else {
@@ -2631,7 +2631,7 @@ add_to_route_TTRP<-function(R, rutas, ruta_origin, position, newclient) {
 descent_search <- function(input, current_solution, type_problem){
 
   #current_solution <- update_solution(current_solution, input, type_problem)
-  
+  print("init descent_search")
   # Partimos de una solucion perturbada
   counter <- 1
   changed_list <- 1:length(current_solution)
@@ -2656,15 +2656,16 @@ descent_search <- function(input, current_solution, type_problem){
       order_movs_new("cost")
       movid <- return_mov_struct(1)
       
-      #print(paste0(movid$mov_list_cost, " < ", current_cost, " mov ", movid$string1, 
-      #             " indexr1 ", movid$indexr1, " indexr2 ", movid$indexr2,
-      #             " mov_list_cost ",  movid$mov_list_cost,
-      #             " mov_list_cost_feas ", movid$mov_list_cost_feas,
-      #             " mov_list$opt_reconf ", movid$opt_reconf
-      #             ))
+      print(paste0("it ", movid$mov_list_cost, " < ", current_cost, " mov ", movid$string1, 
+                   " indexr1 ", movid$indexr1, " indexr2 ", movid$indexr2,
+                   " mov_list_cost ",  movid$mov_list_cost,
+                   " mov_list_cost_feas ", movid$mov_list_cost_feas,
+                   " mov_list$opt_reconf ", movid$opt_reconf
+                   ))
 
 #print(movid$route1)
 #print(movid$route2)
+#readline()
 #print(current_solution[[movid$indexr1]]$route)
 #if (movid$indexr2 != -1 ) print(current_solution[[movid$indexr2]]$route)
       

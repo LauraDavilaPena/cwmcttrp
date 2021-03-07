@@ -1,0 +1,24 @@
+{
+    "id": "A66B5479",
+    "path": "~/GitHub/cwmcttrp/src/movlist.cpp",
+    "project_path": "src/movlist.cpp",
+    "type": "cpp",
+    "hash": "2163219243",
+    "contents": "",
+    "dirty": false,
+    "created": 1615072538584.0,
+    "source_on_save": false,
+    "relative_order": 9,
+    "properties": {
+        "cursorPosition": "620,5",
+        "scrollLine": "601"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1615073058,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1615073058554,
+    "read_only": false,
+    "read_only_alternatives": []
+}
