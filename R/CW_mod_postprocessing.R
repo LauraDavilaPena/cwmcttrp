@@ -569,6 +569,108 @@ postproc_TTRP<-function(rutas_res, rutas, input, R, Rhat){
   return(rutas_res)
 }
 
+
+delete_duplicities<-function(solution, input) {
+  
+  vector_to_delete_i <- list()
+  counter_i <- 1
+  vector_to_delete_j <- list()
+  counter_j <- 1
+  
+  for (i in 1:(length(solution)-1)) {
+    for (j in 2:(length(solution[[i]]$route)-1)) {
+      for (ii in (i+1):length(solution)) {
+        for (jj in 2:(length(solution[[ii]]$route)-1)) {
+          if (solution[[i]]$route[j] == solution[[ii]]$route[jj]) {
+            vector_to_delete_i[[counter_i]] <- ii
+            vector_to_delete_j[[counter_j]] <- jj
+            counter_i <- counter_i + 1
+            counter_j <- counter_j + 1
+          }
+        }
+      }
+    }
+  }
+
+  if (length(vector_to_delete_i)) {
+    for (i in 1:length(vector_to_delete_i)){
+      route <- c(0)
+      ii <- vector_to_delete_i[[i]]
+      solution_i <- solution[[ii]]
+      for (j in 2:(length(solution_i$route)-1)) {
+        if (j != vector_to_delete_j[[i]]) route <- c(route, solution_i$route[j])
+        else index_to_delete <- solution_i$route[j]
+      }
+      route <- c(route, 0)
+      solution_i$route <- route
+
+      if (index_to_delete > input$n1) {
+        index_to_del <- 0
+        for (z in 1:length(solution_i$clients_tc)) {
+          if (solution_i$clients_tc[[z]]$id == index_to_delete) index_to_del <- z
+        }
+        solution_i$used_hoppers_truck <- solution_i$used_hoppers_truck - length(solution_i$clients_tc[[index_to_del]]$hoppers_trucks)
+        solution_i$used_hoppers_trailer <- solution_i$used_hoppers_trailer - length(solution_i$clients_tc[[index_to_del]]$hoppers_trailers)
+        solution_i$clients_tc[[index_to_del]] <- NULL
+        
+        TCs_1 <- c()
+        for (z in 1:length(solution_i$TCs)){
+          if (solution_i$TCs[z] != index_to_delete) {
+            TCs_1 <- c(TCs_1, solution_i$TCs[z])
+          }
+        }
+        solution_i$TCs <- TCs_1
+      } 
+      else {
+        index_to_del <- 0
+        for (z in 1:length(solution_i$clients_vc)) {
+          if (solution_i$clients_vc[[z]]$id == index_to_delete) index_to_del <- z
+        }
+        solution_i$used_hoppers_truck <- solution_i$used_hoppers_truck - length(solution_i$clients_vc[[index_to_del]]$hoppers_trucks)
+        solution_i$used_hoppers_trailer <- solution_i$used_hoppers_trailer - length(solution_i$clients_vc[[index_to_del]]$hoppers_trailers)
+        solution_i$clients_vc[[index_to_del]] <- NULL
+        
+        VCs_1 <- c()
+        for (z in 1:length(solution_i$VCs)){
+          if (solution_i$VCs[z] != index_to_delete) {
+            VCs_1 <- c(VCs_1, solution_i$VCs[z])
+          }
+        }
+        solution_i$VCs <- VCs_1
+      }
+      
+      solution[[ii]] <- solution_i
+      
+    }
+  }
+  
+  
+  for (i in 1:(length(solution))) {
+    solution_i <- solution[[i]]
+    counter_h_truck <- 0
+    counter_h_trailer <- 0
+    if (length(solution_i$clients_vc)) {
+        for (j in 1:length(solution_i$clients_vc)) {
+          counter_h_truck <- counter_h_truck + length(solution_i$clients_vc[[j]]$hoppers_trucks)
+          counter_h_trailer <- counter_h_trailer+ length(solution_i$clients_vc[[j]]$hoppers_trailers)
+        }
+    }
+    if (length(solution_i$clients_tc)) {
+      for (j in 1:length(solution_i$clients_tc)) {
+        counter_h_truck <- counter_h_truck + length(solution_i$clients_tc[[j]]$hoppers_trucks)
+        counter_h_trailer <- counter_h_trailer + length(solution_i$clients_tc[[j]]$hoppers_trailers)
+      }
+    }
+    solution_i$used_hoppers_truck <- counter_h_truck
+    solution_i$used_hoppers_trailer <- counter_h_trailer
+    solution[[i]] <- solution_i
+  }
+
+  return(solution)
+}
+
+
+
 #' Postproc ...
 #'
 #' @param rutas
@@ -576,7 +678,6 @@ postproc_TTRP<-function(rutas_res, rutas, input, R, Rhat){
 #' @return A list of results ...
 #' 
 postproc_MCTTRP<-function(routes, input, R, Rhat, Hoppers, CWTTRP_struct, nf){
-
   
     # ADD DISCONNECTED CLIENTS
     result_postproc1 <- postproc_add_disconnected_clients_MCTTRP(routes, input, Hoppers, 
@@ -586,6 +687,7 @@ postproc_MCTTRP<-function(routes, input, R, Rhat, Hoppers, CWTTRP_struct, nf){
     CWTTRP_struct <- result_postproc1$CWTTRP_struct
     num_clientes <- result_postproc1$num_clientes #rev1
     
+    
     result_postproc2 <- postproc_subroutes_trailer_routes(routes, input$matriz.distancia,
                                                           Hoppers, R, Rhat, CWTTRP_struct$H.trailer_res, CWTTRP_struct$H.truck_res, input, 0)
     
@@ -596,7 +698,7 @@ postproc_MCTTRP<-function(routes, input, R, Rhat, Hoppers, CWTTRP_struct, nf){
     Hoppers <- result_postproc2$Hoppers
     
     result_postproc2 <- postproc_subroutes_trailer_routes(routes, input$matriz.distancia,
-                                                          Hoppers, R, Rhat, CWTTRP_struct$H.trailer_res, CWTTRP_struct$H.truck_res, input, 0)
+                                                          Hoppers, R, Rhat, CWTTRP_struct$H.trailer_res, CWTTRP_struct$H.truck_res, input, 1)
     routes <- result_postproc2$rutas
     R <- result_postproc2$R
     Rhat <- result_postproc2$Rhat
@@ -606,6 +708,7 @@ postproc_MCTTRP<-function(routes, input, R, Rhat, Hoppers, CWTTRP_struct, nf){
     
     rutas_res <-  create_result_struct(routes, input, "MCTTRP")
     rutas_res <-  extract_info_from_hoppers(rutas_res, Hoppers, input)
+    rutas_res <-  delete_duplicities(rutas_res, input) # PARCHE
       
     
     n_current_trucks <- length(rutas_res)
@@ -2669,10 +2772,13 @@ descent_search <- function(input, current_solution, type_problem){
 #print(current_solution[[movid$indexr1]]$route)
 #if (movid$indexr2 != -1 ) print(current_solution[[movid$indexr2]]$route)
       
-      if ((movid$mov_list_cost < current_cost)) {
+#      print(movid$mov_list_cost - current_cost)
+
+      if (((movid$mov_list_cost - current_cost) < -0.01)) {
           changed_routes <- modified_changed_list(changed_routes, movid$indexr1,  movid$indexr2 )
           current_solution <- insert_selected_mov_new(input, movid, current_solution, type_problem)
           modified_mov_list_using_changed_list_new(changed_routes)
+
       } else no_more_imp <- 1
         
     } else no_more_imp <- 1

@@ -5,6 +5,8 @@ perturbation_core<-function(input, current_solution, penalty_max, type_problem) 
   penalty <- 0
   
   while ((perturbation_not_obtained)) {
+    print("*************************perturbation_not_obtained")
+    print(all_routes(current_solution))
     
     perturbed_solution <-  perturbation(input, current_solution, penalty, type_problem)
     current_solution <- perturbed_solution[["perturbed_solution"]]
@@ -31,25 +33,30 @@ perturbation <- function(input, initial_solution, penalty_max, problem_type){
   
   # Nuestros clientes candidatos a ser eliminados deben estar en PTR, PVR, o CVR y no ser parking
   removed_candidates <- numeric()
-  
-  #for(i in 1:length(initial_solution)){
-  #  print(initial_solution[[i]]$route)
-  #}
-  
+
   for(i in 1:n){ #numero total de clientes
     route_i <- route_of_client(i,initial_solution)$route
     if((length(route_i)>3)&&(sum(route_i==i)==1)){
       removed_candidates <- c(removed_candidates,i) 
     }
   }
+
+  removed_routes <- numeric()
+  for (i in 1:length(initial_solution)) {
+    route_i <- initial_solution[[i]]$route
+    if((length(route_i)>3)&&(sum(route_i==i)==1)){
+      removed_routes <- c(removed_routes,i) 
+    }
+  }
   
   # De esos candidatos, elijo entre un 5% y un 15% aleatoriamente 
   phi <- sample(ceiling(0.01*length(removed_candidates)):ceiling(0.05*length(removed_candidates)),1)
-  
+  phi <- 1
+
   # Ahora que ya sabemos que vamos a eliminar phi clientes, escogemos cuales 
   removed_clients <- sample(removed_candidates, phi)
-
   
+  print(removed_clients)
   
   
   # Una vez los tenemos, vemos en que rutas estan, y agrupamos aquellos que esten en las mismas rutas

@@ -43,11 +43,24 @@ MCTTRP_opt_method<-function(result, initial_solution, input, init_time, type_pro
 
       start_time <- Sys.time()
       
+#current_cost <- calculateTotalDistanceTS(input, alpha, current_solution, type_problem)
+##print(paste0("before global solution ", current_cost, "   penalty ", calc_penalty(input, current_solution, type_problem)))
+##all_routes(current_solution)
+##analyse(all_routes(current_solution), input, current_solution, "MCTTRP")
+#readline()
+      
       # perturbation
-      #res_p <- perturbation_core(input, current_solution, penalty_max, type_problem)
-      #current_solution <- res_p$current_solution
-      phi <- 10#res_p$phi
-      # perturbation
+      res_p <- perturbation_core(input, current_solution, penalty_max, type_problem)
+      current_solution <- res_p$current_solution
+      phi <- res_p$phi
+      
+      
+current_cost <- calculateTotalDistanceTS(input, alpha, current_solution, type_problem)
+print(paste0("after global solution ", current_cost, "   penalty ", calc_penalty(input, current_solution, type_problem)))
+all_routes(current_solution)
+analyse(all_routes(current_solution), input, current_solution, "MCTTRP")
+readline()
+      
 
       
       # improvement

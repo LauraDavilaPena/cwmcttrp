@@ -846,9 +846,13 @@ check_capacity_hoppers_MCTTRP_analysis<-function(solution, input) {
     }
   }
   
+  if (hcounter_trailer!=solution$used_hoppers_trailer ) print("discrepancia en used_hoppers_trailers ")
+  if (hcounter_truck!=solution$used_hoppers_truck)   print("discrepancia en used_hoppers_truck ")
+  
   if ((hcounter_trailer != 0) && (hcounter_trailer > n_hoppers_trailer)) error <- error + 1
   if ((hcounter_truck != 0) && (hcounter_truck > n_hoppers_truck)) error <- error + 1
 
+  
   return(!error)
 }
 

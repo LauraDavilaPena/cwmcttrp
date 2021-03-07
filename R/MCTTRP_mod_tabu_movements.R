@@ -167,6 +167,11 @@ tabu_search <- function(input, current_solution, current_cost, best_cost, type_p
     alpha <- update_penalties(input,  alpha, gamma, current_solution, type_problem)
     tabulist_data$tabulist <- update_counters_tabu_list(tabulist_data$tabulist)
     
+    #print(paste0("global solution ", best_f_cost, "   penalty ", calc_penalty(input, best_f_solution, type_problem)))
+    #all_routes(best_f_solution)
+    #analyse(all_routes(best_f_solution), input, best_f_solution, "MCTTRP")
+    #readline()
+    
     # print(paste0("   end iteration ", difftime(Sys.time(), start_time, units = "secs")))
     # print("")
   }
@@ -509,6 +514,10 @@ insert_selected_mov_new<-function(input, movid, current_solution, type_problem){
     }
     if ((type_problem == "MCTTRP")&&(movid$opt_reconf==2)) {
       reconf1 <- 0
+      reconf2 <- 1
+    }
+    if ((type_problem == "MCTTRP")&&(movid$opt_reconf==3)) {
+      reconf1 <- 1
       reconf2 <- 1
     }
     
@@ -1444,10 +1453,8 @@ exchange_movement_change_parking<-function(input, result, changed_routes, type_p
                     feasible_route1 <- 1
                     feasible_route2 <- 1
                     if (check_feas) {  
-                      if ( result[[i]]$type == "CVR" && (sum(duplicated(route1[2:(length(route1)-1)]))==0) ) opt_check <- "new"
-                      else opt_check <- "update"
-                      feasible_route1 <- check_feasibility(result[[i]], route1, input, result[[i]]$type, type_problem, penalty_capacity, opt_check) 
-                      feasible_route2 <- check_feasibility(result[[z]], route2, input, result[[z]]$type, type_problem, penalty_capacity, "update") 
+                      feasible_route1 <- check_feasibility(result[[i]], route1, input, result[[i]]$type, type_problem, penalty_capacity, "new") 
+                      feasible_route2 <- check_feasibility(result[[z]], route2, input, result[[z]]$type, type_problem, penalty_capacity, "new") 
                     }
                     # add to mov list
                     if (feasible_route1 && feasible_route2) {
@@ -1464,8 +1471,6 @@ exchange_movement_change_parking<-function(input, result, changed_routes, type_p
                       }
                       
                       if (type_problem == "MCTTRP") {
-                        if ( result[[i]]$type == "CVR" && (sum(duplicated(route1[2:(length(route1)-1)]))==0) ) opt_check <- 1
-                        else opt_check <- 0
                         
                         res1 <- check_capacity_hoppers_MCTTRP_return_hoppers(route1, result[[i]], input)
                         res2 <- check_capacity_hoppers_MCTTRP_return_hoppers(route2, result[[z]], input)
@@ -1479,7 +1484,7 @@ exchange_movement_change_parking<-function(input, result, changed_routes, type_p
                               as.integer(c(route1)), as.integer(c(route2)), 
                               "exchange_movement_change_parking", as.integer(rooti), as.integer(rootz), 
                               as.integer(hoppers_truck1), as.integer(hoppers_trailer1), as.integer(hoppers_truck2), as.integer(hoppers_trailer2), 
-                              as.integer(opt_check),
+                              as.integer(3),
                               PACKAGE = "mcttrpcw")
 
                       }
@@ -1533,7 +1538,7 @@ exchange_movement_vc_main_tour_tc_subtour<-function(input, result, changed_route
                       if (check_feas) {
                         feasible_route1 <- check_feasibility(result[[i]], route1, input, result[[i]]$type, type_problem, penalty_capacity, "update") 
                         
-                        if ( result[[i]]$type == "CVR" && (sum(duplicated(route2[2:(length(route2)-1)]))==0) ) opt_check <- "new"
+                        if ( result[[z]]$type == "CVR" && (sum(duplicated(route2[2:(length(route2)-1)]))==0) ) opt_check <- "new"
                         else opt_check <- "update"
                         feasible_route2 <- check_feasibility(result[[z]], route2, input, result[[z]]$type, type_problem, penalty_capacity, opt_check) 
                       }
